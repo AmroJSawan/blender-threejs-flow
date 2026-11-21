@@ -4,6 +4,7 @@ Design the scene in Blender, press Export (or just save), and the browser refres
 Scroll, mouse, hover and fragment shaders are handled by a small vanilla three.js app.
 
 **Live demo:** https://amrojsawan.github.io/blender-threejs-flow/ (republished automatically on every push to `main`)
+**Glass cards:** https://amrojsawan.github.io/blender-threejs-flow/glass.html
 
 **Stack:** three.js (WebGL 2) · GSAP ScrollTrigger · Lenis · Vite · TypeScript
 
@@ -104,6 +105,39 @@ The Assembly element in the demo uses no shader at all: its parts are moved apar
 ### Screen effects
 
 A screen effect redraws the finished picture through one fragment shader in `src/shaders/effects/`. Included: `ascii`, `bloom`, `dither`, `grain`, `pixels`. An effect reads the picture from `uScene` (size `uBuffer`, in device pixels) and also gets `uTime`, `uResolution` and `uPixelRatio`. Add `#pragma mipmap` to also get smaller, blurred versions of the picture through `textureLod` (used by `bloom`). Set `config.look.effectPicker = false` to hide the switcher.
+
+## Glass cards page
+
+`glass.html` is a second page for fragment shaders on a flat card: one glass card over a moving background, with a switcher for the kind of glass (also `glass.html?glass=frost`, or the arrow keys). It does not use the Blender scene.
+
+| File | What it is for |
+|---|---|
+| `src/glass/shaders/variants/*.glsl` | **One file per kind of glass.** Drop a file in and it appears in the switcher |
+| `src/glass/shaders/card.frag` | The shared part: card shape, shadow, blur, colour split, light, print |
+| `src/glass/shaders/background.frag` | What lies behind the glass (colour lights, grid, rows of type) |
+| `src/glass/shaders/liquid.frag` | The liquid skin: a height map that behaves like the surface of water |
+| `src/glass/body.ts` | The card as a body on springs; all tuning is in `feel` at the top |
+| `src/glass/liquid.ts` | Runs the liquid; tuning in `flow` at the top |
+| `src/glass/main.ts` | Page set-up; card size and the words behind it are in `settings` at the top |
+
+A variant starts with comment lines that describe it (`// title:`, `// note:`, `// order:`, optional `// springs:` where higher = looser, wobblier) and defines one function that fills in the look of the glass at each point:
+
+```glsl
+void glass(vec2 p, vec2 uv, inout Look look) {  // p: px from the card centre, uv: 0–1
+  look.slope = ...;   // which way the surface leans; bends the picture behind
+  look.depth = 48.0;  // px moved per unit of slope
+  look.blur = 18.0;   // blur radius, px
+  look.split = 0.16;  // colour fringe, as a share of the bend
+  look.tint, look.milk, look.grain  // body colour, how solid it is, speckle
+  look.liquid = 2.6;  // how strongly the liquid skin shows (default 0.35)
+}
+```
+
+`rim(p, width)` gives the band along the edge (1 at the rim → 0 at `width` px inside, plus the outward direction); `noise`, `hash`, `uTime` and `uSize` are available too.
+
+Included: `clear` (progressive refraction toward the rim), `frost`, `fade` (progressive blur), `fluted`, `prism`, `dome`, `hammered`, `liquid`, `jelly`.
+
+Physical movement, on every variant: the card hangs on springs (drag it and let go; it lags, leans, stretches along its path and settles), leans under the pointer, and carries a liquid skin that the pointer stirs, the card's own movement sloshes, and small drops keep alive.
 
 ## Phones: card view
 

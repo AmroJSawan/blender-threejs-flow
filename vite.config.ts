@@ -38,4 +38,6 @@ export default defineConfig({
   base: './', // relative asset paths: the built site works at any URL
   plugins: [reloadOnExport(), saveRecordings()],
   server: { port: 5173 },
+  // Two pages: the 3D scene (index.html) and the glass cards (glass.html).
+  build: { rollupOptions: { input: ['index.html', 'glass.html'] } },
 })
