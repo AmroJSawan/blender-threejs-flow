@@ -60,10 +60,10 @@ ring["label"] = "Ring: looping Blender animation"
 ring["link"] = "https://threejs.org"
 
 
-def capsule(name, location, radius=0.55, half_length=0.6, tube=0.12, bulge=0.07):
+def capsule(name, location, radius=0.55, half_length=0.6, tube=0.12, bulge=0.12):
     """A pill-shaped mirror with a glass rim: two meshes under one empty."""
     outline = []  # (x, z, outward x, outward z), standing upright and facing the camera (-Y)
-    steps = 40
+    steps = 48
     for centre, start in ((half_length, 0.0), (-half_length, math.pi)):
         for i in range(steps + 1):
             a = start + math.pi * i / steps
@@ -81,16 +81,23 @@ def capsule(name, location, radius=0.55, half_length=0.6, tube=0.12, bulge=0.07)
         return obj
 
     # Mirror face: concentric rings so it can bulge slightly toward the camera.
-    rings = 10
-    verts = [(0.0, -bulge, 0.0)]
+    # The bulge is one smooth dome (not tied to the outline), so reflections flow without kinks.
+    def dome(x, z):
+        return -bulge * (1 - (x / radius) ** 2 * 0.5 - (z / (half_length + radius)) ** 2 * 0.5)
+
+    rings = 32
+    verts = [(0.0, dome(0, 0), 0.0)]
     for k in range(1, rings + 1):
         s = k / rings
-        verts += [(x * s, -bulge * (1 - s * s), z * s) for x, z, _, _ in outline]
+        verts += [(x * s, dome(x * s, z * s), z * s) for x, z, _, _ in outline]
     faces = [(0, 1 + i, 1 + (i + 1) % count) for i in range(count)]
     for k in range(rings - 1):
         a, b = 1 + k * count, 1 + (k + 1) * count
         faces += [(a + i, b + i, b + (i + 1) % count, a + (i + 1) % count) for i in range(count)]
     mirror = mesh_object("Mirror", verts, faces, material(f"{name}_Mirror", (0.05, 0.35, 1.0), metallic=1.0, roughness=0.05))
+    # Exact normals from the dome formula; averaged mesh normals leave faint creases in a mirror.
+    slope_x, slope_z = bulge / radius ** 2, bulge / (half_length + radius) ** 2
+    mirror.data.normals_split_custom_set_from_vertices([Vector((x * slope_x, -1.0, z * slope_z)).normalized() for x, _, z in verts])
 
     # Glass rim: a tube swept around the outline.
     sides = 20
