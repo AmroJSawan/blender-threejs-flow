@@ -46,7 +46,7 @@ Tags are added with the buttons in the three.js panel (they are ordinary custom 
 | `src/shaders/*.frag` | Fragment shaders. Drop a file in, reference it by name from Blender or from `config.look.backgroundShader` |
 | `src/shaders/*.vert` | Optional. A `.vert` with the same name as a `.frag` also moves the surface (see `pulse.vert`: wave displacement) |
 | `src/shaders/*.glsl` | Shared snippets pulled in with `#include "file.glsl"` (see `studio.glsl`, the fake studio the mirror and glass reflect) |
-| `src/cards.ts` | Card view for small screens: one card per object, drag to rotate, pinch to zoom |
+| `src/cards.ts` | Card view for small screens: one card per object; tap to open full screen, then drag to rotate and pinch to zoom |
 | `src/stage.ts` | Renderer, GLB loading, camera |
 | `src/scroll.ts` | Blender animations ↔ scroll |
 | `src/hover.ts` | Raycasting, hover, click |
@@ -74,7 +74,7 @@ Shaders also get `uBoundsMin` / `uBoundsMax` (the object's own box) and varyings
 
 On screens up to `config.cards.maxWidth` (768 px) the scroll scene is replaced by a vertical list of cards.
 Every top-level object with a `label` tag gets a card (or list names in `config.cards.names`); the label is the caption and a `link` tag becomes a button.
-Drag rotates, pinch zooms (Ctrl + wheel on a laptop), double-tap resets. Looping animations keep playing; scroll animations and the Blender camera are not used there.
+In the list the cards are previews only, so the page scrolls freely. Tapping a card opens it full screen with a Back button (the phone's own Back works too); there, drag rotates, pinch zooms (wheel on a laptop) and double-tap resets. Looping animations keep playing; scroll animations and the Blender camera are not used there.
 Set `config.cards.enabled = false` to show the scroll scene on every screen.
 
 ## Commands

@@ -42,7 +42,7 @@ export const config = {
     ease: 0.08,
   },
 
-  /** Small screens: one card per object, stacked vertically, each with drag-to-rotate and pinch-to-zoom. */
+  /** Small screens: one card per object, stacked vertically. Tap a card to open it full screen, where drag rotates and pinch zooms. */
   cards: {
     enabled: true,
     /** Screens up to this width (px) get the card view; wider ones get the scroll scene. */
@@ -50,7 +50,9 @@ export const config = {
     /** Objects shown as cards ("Card_*" wildcards allowed). Empty = every object with a `label` in Blender. */
     names: [] as string[],
     /** Text above the cards, or '' for none. */
-    hint: 'Drag to rotate · pinch to zoom · double-tap to reset',
+    hint: 'Tap a card to explore it in 3D',
+    /** Text shown in the full-screen view, or '' for none. */
+    viewerHint: 'Drag to rotate · pinch to zoom · double-tap to reset',
     /** Camera angle of view in degrees. Lower = flatter, more like a drawing. */
     fov: 28,
     /** Starting tilt of the camera above the object, in degrees. */
