@@ -83,6 +83,14 @@ export function createShaders(stage: Stage) {
     let owner: THREE.Object3D = object
     while (!owner.userData.hoverAmount && owner.parent) owner = owner.parent
     const uHover = (owner.userData.hoverAmount ?? (object.userData.hoverAmount = { value: 0 })) as THREE.IUniform<number>
+    // `copies = 140` in Blender: the mesh is drawn that many times in one go, and the vertex
+    // shader tells the copies apart with gl_InstanceID (used by echo.vert for its light tail).
+    const copies = Number(object.userData.copies)
+    if (copies > 1) {
+      const instanced = new THREE.InstancedBufferGeometry().copy(object.geometry)
+      instanced.instanceCount = Math.round(copies)
+      object.geometry = instanced
+    }
     // The object's own size, for shaders that draw relative to its box (e.g. lineart).
     object.geometry.computeBoundingBox()
     const box = object.geometry.boundingBox!
@@ -115,6 +123,7 @@ export function createShaders(stage: Stage) {
       // Ground sheets blend over the ordinary scene (the floor) and are painted before the other
       // shader objects, so they can never cut into the drawing that stands on them.
       material.blending = THREE.CustomBlending // blends while staying in the solid pass
+      material.blendSrcAlpha = THREE.OneFactor // keeps the canvas itself opaque
       material.depthTest = material.depthWrite = false
       object.renderOrder = 0.5
       object.userData.underlay = true
@@ -133,9 +142,12 @@ export function createShaders(stage: Stage) {
     }
   }
 
-  stage.onResize((w, h) => shared.uResolution.value.set(w, h))
+  /** Size in pixels of the picture being drawn (the window, or one card). */
+  const setResolution = (width: number, height: number) => shared.uResolution.value.set(width, height)
+  stage.onResize(setResolution)
 
   return {
+    setResolution,
     update(time: number, scroll: number, mouse: THREE.Vector2) {
       shared.uTime.value = time
       shared.uScroll.value = scroll

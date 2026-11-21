@@ -34,6 +34,7 @@ Open http://localhost:5173. The repo ships with a demo scene (`blender/demo.blen
 | Add tag `link` | URL opened on click |
 | Add tag `shader` = `pulse` | The object is drawn with `src/shaders/pulse.frag` |
 | Add a number property (e.g. `floors` = 12) | The object's shader receives it as `uniform float uFloors` |
+| Add the number property `copies` = 140 | The mesh is drawn that many times in one go; its vertex shader tells the copies apart (`gl_InstanceID`) |
 | Set the scene camera | It becomes the web camera (framing is kept on phones) |
 
 Tags are added with the buttons in the three.js panel (they are ordinary custom properties).
@@ -66,6 +67,8 @@ Included shaders:
 | `wire` | See-through wireframe version of the same slab | `radius` |
 | `dash` | Dashed guide line on a thin post | `dash` |
 | `grid` | Dark drawing paper with a faint grid under a group | `cell`, `shade` |
+| `echo` | Tumbling ring of light with a fading tail (the ring drawn at its past positions) | `copies` |
+| `shade` | Soft dark ball behind glowing things, so light reads on any background | `shade` |
 | `lamp` | Flat colour | |
 | `backdrop` | Full-screen background | |
 

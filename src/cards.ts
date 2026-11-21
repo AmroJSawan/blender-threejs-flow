@@ -34,7 +34,7 @@ interface Card {
  * cards that are on screen one after another, and each frame is copied into its preview.
  * Only the full-screen viewer shows the 3D canvas itself.
  */
-export function createCards(stage: Stage) {
+export function createCards(stage: Stage, shaders: { setResolution(width: number, height: number): void }) {
   const opts = config.cards
   const { renderer, scene } = stage
   const canvas = renderer.domElement
@@ -281,6 +281,7 @@ export function createCards(stage: Stage) {
     setDrawingSize(size.width, size.height)
     excite(card, pressed ? 1 : 0)
     frame(card, width / height)
+    shaders.setResolution(width, height)
     renderer.setScissorTest(false)
     renderer.clear()
     renderer.setScissorTest(true)
@@ -301,6 +302,7 @@ export function createCards(stage: Stage) {
     setDrawingSize(size.preview, size.preview)
     renderer.setScissorTest(false)
     renderer.setViewport(0, 0, size.preview, size.preview)
+    shaders.setResolution(size.preview, size.preview)
     for (const card of cards) {
       if (!card.onScreen) continue
       frame(card, 1)

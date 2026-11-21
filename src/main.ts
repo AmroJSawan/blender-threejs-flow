@@ -19,7 +19,7 @@ async function start() {
   if (config.cards.enabled && small.matches) {
     const loops = createScroll(stage, false)
     const shaders = createShaders(stage)
-    const cards = createCards(stage)
+    const cards = createCards(stage, shaders)
     const still = new THREE.Vector2()
     let time = 0
     gsap.ticker.add((_time, deltaMs) => {

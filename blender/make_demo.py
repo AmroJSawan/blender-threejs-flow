@@ -19,7 +19,7 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
 scene.render.resolution_x, scene.render.resolution_y = 1920, 1080
 scene.render.fps = 24
-scene.frame_start, scene.frame_end = 1, 280
+scene.frame_start, scene.frame_end = 1, 320
 
 
 def material(name, color, metallic=0.0, roughness=0.5):
@@ -43,7 +43,7 @@ def add(op, name, mat, **kwargs):
     return obj
 
 
-floor = add(bpy.ops.mesh.primitive_plane_add, "Floor", material("Floor", (0.08, 0.09, 0.12), roughness=0.8), size=40, location=(6, 0, 0))
+floor = add(bpy.ops.mesh.primitive_plane_add, "Floor", material("Floor", (0.08, 0.09, 0.12), roughness=0.8), size=48, location=(8, 0, 0))
 
 cube = add(bpy.ops.mesh.primitive_cube_add, "Cube", material("Coral", (0.95, 0.35, 0.3), roughness=0.4), size=1.2, location=(-2.4, 0, 0.6))
 cube["hover"] = True
@@ -309,6 +309,48 @@ district = blocks("Blocks", (14.4, 0, 0.03))
 district["hover"] = True
 district["label"] = "Blocks: blueprint shader with floor lines"
 
+def halo(name, location, radius=0.85, segments=160, copies=140):
+    """A tumbling ring of light with a fading tail: one thin strip, drawn `copies` times by the echo shader."""
+    # The strip only carries "where along the ring" (u) and "which side of the line" (v);
+    # echo.vert places and widens it on screen.
+    verts, uvs = [], []
+    for i in range(segments + 1):
+        a = math.tau * i / segments
+        for side in (0.0, 1.0):
+            verts.append((radius * math.cos(a), radius * math.sin(a), (side - 0.5) * 0.002))
+            uvs.append((i / segments, side))
+    faces = [(2 * i, 2 * i + 1, 2 * i + 3, 2 * i + 2) for i in range(segments)]
+    mesh = bpy.data.meshes.new(name)
+    mesh.from_pydata(verts, [], faces)
+    layer = mesh.uv_layers.new(name="UVMap")
+    for loop in mesh.loops:
+        layer.data[loop.index].uv = uvs[loop.vertex_index]
+    mesh.materials.append(material(f"{name}_Light", (1.0, 1.0, 1.0)))
+    ring_of_light = bpy.data.objects.new(f"{name}_Ring", mesh)
+    scene.collection.objects.link(ring_of_light)
+    ring_of_light["shader"] = "echo"
+    ring_of_light["copies"] = float(copies)
+
+    # A soft dark ball behind it, so the light shows up against the bright floor.
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=radius * 1.45, segments=48, ring_count=24)
+    dark = bpy.context.active_object
+    dark.name = f"{name}_Shade"
+    for poly in dark.data.polygons:
+        poly.use_smooth = True
+    dark.data.materials.append(material(f"{name}_Shade", (0.0, 0.0, 0.0)))
+    dark["shader"] = "shade"
+    dark["shade"] = 0.92
+
+    parent = bpy.data.objects.new(name, None)
+    scene.collection.objects.link(parent)
+    parent.location = location
+    ring_of_light.parent = dark.parent = parent
+    return parent
+
+
+orbit = halo("Halo", (18.2, 0, 1.45))
+orbit["label"] = "Halo: orbiting ring with a tail of light"
+
 bpy.ops.object.light_add(type="SUN", location=(3, -3, 6), rotation=(math.radians(40), 0, math.radians(35)))
 bpy.context.active_object.name = "Sun"
 bpy.context.active_object.data.energy = 3.0
@@ -368,7 +410,7 @@ camera.name = "Camera"
 camera.data.lens = 35
 scene.camera = camera
 shots = [  # frame, camera position, point it looks at
-    (1, (6.0, -21.0, 5.4), (6.0, 0, 0.9)),
+    (1, (7.9, -25.0, 6.2), (7.9, 0, 0.9)),
     (40, (-4.2, -3.2, 1.6), (-2.4, 0, 0.6)),
     (80, (0.6, -3.4, 1.4), (0, 0, 0.8)),
     (120, (3.6, -3.0, 2.2), (2.4, 0, 1.1)),
@@ -376,6 +418,7 @@ shots = [  # frame, camera position, point it looks at
     (200, (7.6, -6.2, 2.9), (7.6, 0, 1.05)),
     (240, (10.8, -4.4, 3.7), (10.8, 0, 1.1)),
     (280, (14.4, -6.2, 5.2), (14.4, 0, 1.0)),
+    (320, (18.2, -5.6, 2.3), (18.2, 0, 1.45)),
 ]
 for frame, position, look_at in shots:
     camera.location = position
