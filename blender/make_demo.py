@@ -205,6 +205,15 @@ for frame, lift in ((1, 0.0), (49, 0.12), (97, 0.0)):
     lamp.keyframe_insert("location", frame=frame)
 lamp.animation_data.action.name = "Loop_Float"
 
+# The whole stack turns slowly: one full turn every 16 seconds.
+prefs.keyframe_new_interpolation_type = "LINEAR"
+tower.rotation_euler = (0, 0, 0)
+tower.keyframe_insert("rotation_euler", frame=1)
+tower.rotation_euler = (0, 0, math.tau)
+tower.keyframe_insert("rotation_euler", frame=385)
+tower.animation_data.action.name = "Loop_Turn"
+prefs.keyframe_new_interpolation_type = "BEZIER"
+
 # --- Scroll action: the camera path. Any action not named "Loop…" follows the scrollbar.
 bpy.ops.object.camera_add()
 camera = bpy.context.active_object
