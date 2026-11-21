@@ -43,7 +43,7 @@ export const config = {
   },
 
   hover: {
-    /** Extra hoverable objects by name ("Door_*" wildcards allowed). Objects tagged in Blender need no entry. */
+    /** Extra hoverable objects by name ("Card_*" wildcards allowed). Objects tagged in Blender need no entry. */
     names: [] as string[],
     scale: 1.08,
     glow: '#ffffff',

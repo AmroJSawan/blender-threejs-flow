@@ -11,7 +11,7 @@ interface Target {
   amount: { value: number }
 }
 
-/** "Door_*" style wildcard match. */
+/** "Card_*" style wildcard match. */
 function matches(name: string, pattern: string): boolean {
   const escaped = pattern.split('*').map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
   return new RegExp(`^${escaped.join('.*')}$`).test(name)
