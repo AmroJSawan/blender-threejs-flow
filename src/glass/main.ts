@@ -3,6 +3,7 @@ import '../style.css'
 import './glass.css'
 import { createBody } from './body'
 import { createLiquid } from './liquid'
+import { createSand } from './sand'
 import backgroundShader from './shaders/background.frag?raw'
 import cardShader from './shaders/card.frag?raw'
 import screenShader from './shaders/screen.vert?raw'
@@ -28,7 +29,7 @@ const variants = Object.entries(sources)
   .map(([path, source]) => {
     const name = path.replace(/^.*\/|\.glsl$/g, '')
     const tag = (key: string) => source.match(new RegExp(`^// ${key}:\\s*(.+)$`, 'm'))?.[1].trim()
-    return { name, source, title: tag('title') ?? name, note: tag('note') ?? '', order: Number(tag('order') ?? 99), springs: Number(tag('springs') ?? 1) }
+    return { name, source, sandy: source.includes('uSand'), title: tag('title') ?? name, note: tag('note') ?? '', order: Number(tag('order') ?? 99), springs: Number(tag('springs') ?? 1) }
   })
   .sort((a, b) => a.order - b.order)
 
@@ -112,10 +113,13 @@ const background = new THREE.ShaderMaterial({
 
 const body = createBody()
 const liquid = createLiquid(draw, settings.aspect)
+const sand = createSand(draw, settings.aspect)
 const uniforms = {
   uScene: { value: scene.texture },
   uLiquid: { value: liquid.texture },
   uLiquidTexel: { value: liquid.texel },
+  uSand: { value: sand.texture },
+  uSandTexel: { value: sand.texel },
   uFace: { value: faceTexture },
   uBuffer: { value: new THREE.Vector2(1, 1) },
   uPixelRatio: { value: 1 },
@@ -144,6 +148,7 @@ function show(name: string) {
   }
   card = material
   body.loose = current.springs
+  if (current.sandy) sand.reset() // fresh raked sand every time it is chosen
   printFace(current.title, variants.indexOf(current))
   note.textContent = current.note
   for (const [key, button] of buttons) button.setAttribute('aria-pressed', String(key === current.name))
@@ -244,10 +249,12 @@ function frame(now: number) {
   const spot = onCard()
   const touch: [number, number] | null = spot && over ? [spot[0] / (half[0] * 2) + 0.5, spot[1] / (half[1] * 2) + 0.5] : null
   liquid.update(dt, touch, dt > 0 ? moved / dt : 0, body.push)
+  if (current.sandy) sand.update(touch, moved, body.push)
   moved = 0
 
   uniforms.uTime.value = time
   uniforms.uLiquid.value = liquid.texture
+  uniforms.uSand.value = sand.texture
   uniforms.uCenter.value.set(rest.x + body.x, rest.y + body.y)
   uniforms.uToCard.value.set(...body.toCard)
   uniforms.uToScreen.value.set(...body.toScreen)

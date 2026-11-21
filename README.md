@@ -118,6 +118,7 @@ A screen effect redraws the finished picture through one fragment shader in `src
 | `src/glass/shaders/liquid.frag` | The liquid skin: a height map that behaves like the surface of water |
 | `src/glass/body.ts` | The card as a body on springs; all tuning is in `feel` at the top |
 | `src/glass/liquid.ts` | Runs the liquid; tuning in `flow` at the top |
+| `src/glass/shaders/sand.frag`, `src/glass/sand.ts` | Dry sand: a height map that only moves where a slope is steeper than its angle of rest; tuning in `grit` |
 | `src/glass/main.ts` | Page set-up; card size and the words behind it are in `settings` at the top |
 
 A variant starts with comment lines that describe it (`// title:`, `// note:`, `// order:`, optional `// springs:` where higher = looser, wobblier) and defines one function that fills in the look of the glass at each point:
@@ -135,7 +136,9 @@ void glass(vec2 p, vec2 uv, inout Look look) {  // p: px from the card centre, u
 
 `rim(p, width)` gives the band along the edge (1 at the rim → 0 at `width` px inside, plus the outward direction); `noise`, `hash`, `uTime` and `uSize` are available too.
 
-Included: `clear` (progressive refraction toward the rim), `frost`, `fade` (progressive blur), `fluted`, `prism`, `dome`, `hammered`, `liquid`, `jelly`.
+Included: `clear` (progressive refraction toward the rim), `frost`, `fade` (progressive blur), `fluted`, `prism`, `dome`, `hammered`, `waves` (stacked sheets with swaying wave edges), `silk` (slow wide folds), `sand` (rake it, shake it), `liquid`, `jelly`.
+
+A variant can read the simulations directly: `uLiquid` / `uLiquidTexel` (water height) and `uSand` / `uSandTexel` (sand height). The sand only runs while a variant that mentions `uSand` is shown. `look.shine = 0.0` makes a surface matte.
 
 Physical movement, on every variant: the card hangs on springs (drag it and let go; it lags, leans, stretches along its path and settles), leans under the pointer, and carries a liquid skin that the pointer stirs, the card's own movement sloshes, and small drops keep alive.
 

@@ -4,9 +4,11 @@
 precision highp float;
 uniform sampler2D uScene;   // the background, with smaller blurred versions (mip levels)
 uniform sampler2D uLiquid;  // liquid height map (see liquid.frag)
+uniform sampler2D uSand;    // sand height map (see sand.frag)
 uniform sampler2D uFace;    // the print on the card
 uniform vec2 uBuffer;       // canvas size, device pixels
 uniform vec2 uLiquidTexel;
+uniform vec2 uSandTexel;
 uniform float uPixelRatio;
 uniform float uTime;
 uniform vec2 uCenter;       // card centre, CSS pixels from the bottom left
@@ -28,6 +30,7 @@ struct Look {
   float milk;    // 0 = clear, 1 = solid tint
   float grain;   // frosting speckle
   float liquid;  // how strongly the liquid skin shows
+  float shine;   // 1 = polished glass, 0 = matte
 };
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -92,7 +95,7 @@ void main() {
   }
 
   vec2 uv = p / uSize + 0.5;
-  Look look = Look(vec2(0.0), 40.0, 0.0, 0.0, vec3(1.0), 0.0, 0.0, 0.35);
+  Look look = Look(vec2(0.0), 40.0, 0.0, 0.0, vec3(1.0), 0.0, 0.0, 0.35, 1.0);
   glass(p, uv, look);
 
   // The liquid skin: the height map's slope leans the surface.
@@ -111,7 +114,7 @@ void main() {
   vec3 normal = normalize(vec3(-look.slope - uTilt * 900.0, 1.0));
   vec3 lamp = normalize(vec3(-0.45, 0.65, 0.6));
   float glint = pow(max(dot(normal, normalize(lamp + vec3(0.0, 0.0, 1.0))), 0.0), 110.0);
-  colour += glint * 0.55;
+  colour += glint * 0.55 * look.shine;
   float sheen = smoothstep(0.55, 0.0, abs(dot(uv - 0.5, vec2(0.7, 0.7)) + 0.18 + dot(uTilt, vec2(600.0, -600.0))));
   colour += sheen * 0.045;
   float facing = dot(box.yz, normalize(vec2(-0.6, 0.8)));

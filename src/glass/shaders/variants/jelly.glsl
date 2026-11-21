@@ -1,6 +1,6 @@
 // title: Jelly
 // note: A soft gel slab on loose springs. Drag and let go: it stretches along its path, overshoots and wobbles back.
-// order: 9
+// order: 12
 // springs: 2.4
 #define WIDTH 34.0   // width of the rounded edge, px
 
