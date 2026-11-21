@@ -18,13 +18,17 @@ export const config = {
     environmentIntensity: 0.35,
     exposure: 1,
     shadows: false,
+    /** Screen effect over the whole picture: a file name in src/shaders/effects (without .frag), or 'off'. */
+    effect: 'off',
+    /** Show the small effect switcher at the bottom of the screen. */
+    effectPicker: true,
     /** Cap for high-density screens. 2 is a good quality / speed balance. */
     maxPixelRatio: 2,
   },
 
   scroll: {
     /** Page length in screen heights. Longer = slower camera move. */
-    pages: 9,
+    pages: 20,
     /** Seconds the animation takes to catch up with the scrollbar. true = no lag. */
     scrub: 1 as number | boolean,
     /** Smooth wheel scrolling (Lenis). Auto-disabled for reduced-motion users. */
@@ -65,6 +69,8 @@ export const config = {
     dragTurn: 1.2,
     /** 0–1, lower = smoother, lazier follow. */
     ease: 0.2,
+    /** There is no scroll here, so scroll animations and reveals play back and forth: seconds per round trip. */
+    replay: 8,
   },
 
   hover: {

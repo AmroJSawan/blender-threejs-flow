@@ -1,6 +1,8 @@
 import * as THREE from 'three'
 import { config } from './config'
 import { matches } from './hover'
+import type { Pipeline } from './render'
+import type { Shaders } from './shaders'
 import type { Stage } from './stage'
 
 interface View {
@@ -34,9 +36,9 @@ interface Card {
  * cards that are on screen one after another, and each frame is copied into its preview.
  * Only the full-screen viewer shows the 3D canvas itself.
  */
-export function createCards(stage: Stage, shaders: { setResolution(width: number, height: number): void }) {
+export function createCards(stage: Stage, shaders: Shaders, pipeline: Pipeline) {
   const opts = config.cards
-  const { renderer, scene } = stage
+  const { renderer } = stage
   const canvas = renderer.domElement
   const list = document.querySelector<HTMLElement>('#scroll')!
   const camera = new THREE.PerspectiveCamera(opts.fov, 1, 0.05, 500)
@@ -282,13 +284,17 @@ export function createCards(stage: Stage, shaders: { setResolution(width: number
     excite(card, pressed ? 1 : 0)
     frame(card, width / height)
     shaders.setResolution(width, height)
+    // A single finger also counts as the pointer for shaders that react to it (dots, pins).
+    const finger = pointers.size === 1 ? pointers.values().next().value : undefined
+    if (finger) shaders.setPointer(((finger.x - left) / width) * 2 - 1, 1 - ((finger.y - top) / height) * 2)
+    else shaders.setPointer()
     renderer.setScissorTest(false)
     renderer.clear()
     renderer.setScissorTest(true)
     const bottom = size.height - top - height
     renderer.setViewport(left, bottom, width, height)
     renderer.setScissor(left, bottom, width, height)
-    renderer.render(scene, camera)
+    pipeline.render(camera)
 
     if (!opening && grow < 0.01) {
       grow = 0
@@ -303,10 +309,11 @@ export function createCards(stage: Stage, shaders: { setResolution(width: number
     renderer.setScissorTest(false)
     renderer.setViewport(0, 0, size.preview, size.preview)
     shaders.setResolution(size.preview, size.preview)
+    shaders.setPointer()
     for (const card of cards) {
       if (!card.onScreen) continue
       frame(card, 1)
-      renderer.render(scene, camera)
+      pipeline.render(camera)
       card.paint.drawImage(canvas, 0, 0) // must happen right after render, before the browser presents the frame
     }
   }

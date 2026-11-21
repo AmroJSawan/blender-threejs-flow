@@ -47,6 +47,7 @@ export function createHover(stage: Stage) {
   })
 
   const raycaster = new THREE.Raycaster()
+  raycaster.layers.enable(1) // refracting objects live on layer 1 (see render.ts)
   const pointer = new THREE.Vector2(2, 2)
   /** Pointer in -1…1, for parallax and shaders. Stays 0,0 until the pointer moves. */
   const mouse = new THREE.Vector2()
@@ -124,6 +125,8 @@ export function createHover(stage: Stage) {
 
   return {
     mouse,
+    /** Exact pointer position, -1…1. Stays outside the screen (2, 2) until the pointer first moves. */
+    pointer,
     /** Call once per frame, after the camera is in place. */
     update(cameraMoved: boolean) {
       if (!dirty && !cameraMoved) return

@@ -6,6 +6,7 @@ import { createScroll } from './scroll'
 import { createHover } from './hover'
 import { createShaders } from './shaders'
 import { createCards } from './cards'
+import { createPipeline } from './render'
 
 async function start() {
   const canvas = document.querySelector<HTMLCanvasElement>('#stage')!
@@ -19,13 +20,17 @@ async function start() {
   if (config.cards.enabled && small.matches) {
     const loops = createScroll(stage, false)
     const shaders = createShaders(stage)
-    const cards = createCards(stage, shaders)
+    const cards = createCards(stage, shaders, createPipeline(stage, shaders))
     const still = new THREE.Vector2()
+    const smooth = THREE.MathUtils.smoothstep
     let time = 0
     gsap.ticker.add((_time, deltaMs) => {
       time += deltaMs / 1000
-      loops.update(deltaMs / 1000)
-      shaders.update(time, 0, still)
+      // No scroll here: reveals and scroll animations go there and back, resting at both ends.
+      const phase = (time / config.cards.replay) % 1
+      const replay = smooth(phase, 0.08, 0.42) - smooth(phase, 0.58, 0.92)
+      loops.update(deltaMs / 1000, replay)
+      shaders.update(time, 0, still, replay)
       cards.render()
     })
     return
@@ -34,6 +39,7 @@ async function start() {
   const scroll = createScroll(stage)
   const hover = createHover(stage)
   const shaders = createShaders(stage)
+  const pipeline = createPipeline(stage, shaders)
 
   const drift = new THREE.Vector2()
   const lastPosition = new THREE.Vector3()
@@ -59,8 +65,9 @@ async function start() {
     lastPosition.copy(stage.camera.position)
     hover.update(moved)
 
+    shaders.setPointer(hover.pointer.x, hover.pointer.y)
     shaders.update(elapsed, scroll.progress, drift)
-    stage.renderer.render(stage.scene, stage.camera)
+    pipeline.render(stage.camera)
   })
 
 }

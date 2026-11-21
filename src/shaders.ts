@@ -42,15 +42,30 @@ const vertex = /* glsl */ `
  * - Behind everything: set config.look.backgroundShader.
  * - Add <name>.vert next to <name>.frag to also displace the surface.
  * - A shader is solid unless it contains `#pragma transparent`, `nodepth`, `additive` or `underlay`.
- * Uniforms every shader receives: uTime, uScroll, uMouse, uResolution, uHover, uColor, uBoundsMin, uBoundsMax.
+ *   Other pragmas: `points` (draw the vertices as dots), `outline` (ink outline), `refract` (sees the scene behind it).
+ * Uniforms every shader receives: uTime, uScroll, uMouse, uPointer, uResolution, uPixelRatio, uHover, uProgress,
+ * uColor, uBoundsMin, uBoundsMax.
  */
 export function createShaders(stage: Stage) {
   const shared = {
     uTime: { value: 0 },
     uScroll: { value: 0 },
+    /** Eased pointer, -1…1. For slow leaning and light direction. */
     uMouse: { value: new THREE.Vector2() },
+    /** Exact pointer (or finger), -1…1 across the picture; far outside when there is none. */
+    uPointer: { value: new THREE.Vector2(9, 9) },
+    /** Size of the picture in CSS pixels, and device pixels per CSS pixel. */
     uResolution: { value: new THREE.Vector2(1, 1) },
+    uPixelRatio: { value: 1 },
+    /** Filled by render.ts: a copy of what has been drawn so far, and the size of the canvas in device pixels. */
+    uScene: { value: null as THREE.Texture | null },
+    uBuffer: { value: new THREE.Vector2(1, 1) },
   }
+  /** Objects whose shader has `#pragma refract`: drawn last, with the rest of the scene available as uScene. */
+  const refractors: THREE.Mesh[] = []
+  /** uProgress of every object: 0 → 1 while the page scrolls from the object's `from` to its `to`. */
+  const reveals: { uniform: THREE.IUniform<number>; from: number; to: number }[] = []
+  const hidden = new THREE.MeshBasicMaterial({ visible: false })
 
   const make = (name: string, extra: Record<string, THREE.IUniform>, fullscreen = false) => {
     const fragmentShader = fragments.get(name)
@@ -74,6 +89,23 @@ export function createShaders(stage: Stage) {
 
   const anchors: (() => void)[] = []
 
+  /** Material of the ink outline: `width` in screen pixels, the same at any distance. */
+  const outline = (width: number) =>
+    new THREE.ShaderMaterial({
+      side: THREE.BackSide,
+      uniforms: { uResolution: shared.uResolution, uWidth: { value: width } },
+      vertexShader: /* glsl */ `
+        uniform vec2 uResolution;
+        uniform float uWidth;
+        void main() {
+          vec4 clip = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          vec4 outward = projectionMatrix * vec4(normalMatrix * normal, 0.0);
+          clip.xy += normalize(outward.xy * uResolution + 1e-6) * uWidth * 2.0 / uResolution * clip.w;
+          gl_Position = clip;
+        }`,
+      fragmentShader: /* glsl */ `void main() { gl_FragColor = vec4(0.07, 0.06, 0.12, 1.0); }`,
+    })
+
   stage.root.traverse((object) => {
     const name = object.userData.shader
     if (typeof name !== 'string' || !name || !(object instanceof THREE.Mesh)) return
@@ -91,6 +123,15 @@ export function createShaders(stage: Stage) {
       instanced.instanceCount = Math.round(copies)
       object.geometry = instanced
     }
+    if (copies > 1) object.frustumCulled = false // the copies reach beyond the mesh's own box
+    // A shape key made in Blender arrives as  attribute vec3 morph  (how far each vertex travels).
+    const morph = object.geometry.morphAttributes.position?.[0]
+    if (morph) object.geometry.setAttribute('morph', morph)
+    // `from = 0.4`, `to = 0.5` in Blender: uProgress runs 0 → 1 between those scroll positions (0 = top of the page, 1 = bottom).
+    const uProgress = { value: 0 }
+    const from = Number(object.userData.from) || 0
+    const to = Number(object.userData.to) || 1
+    reveals.push({ uniform: uProgress, from, to: Math.max(to, from + 1e-4) })
     // The object's own size, for shaders that draw relative to its box (e.g. lineart).
     object.geometry.computeBoundingBox()
     const box = object.geometry.boundingBox!
@@ -100,7 +141,7 @@ export function createShaders(stage: Stage) {
     for (const [key, value] of Object.entries(object.userData)) {
       if (typeof value === 'number') numbers[`u${key[0].toUpperCase()}${key.slice(1)}`] = { value }
     }
-    const material = make(name, { ...numbers, uColor, uHover, uAnchor, uBoundsMin: { value: box.min }, uBoundsMax: { value: box.max } })
+    const material = make(name, { ...numbers, uColor, uHover, uProgress, uAnchor, uBoundsMin: { value: box.min }, uBoundsMax: { value: box.max } })
     if (!material) return
     // Grouped objects share their parent's position, so flat2d.glsl flattens them as one drawing.
     const group = object.parent && object.parent !== stage.root ? object.parent : object
@@ -128,6 +169,29 @@ export function createShaders(stage: Stage) {
       object.renderOrder = 0.5
       object.userData.underlay = true
     }
+    if (has('refract')) {
+      // Layer 1 is drawn in a second pass, after the scene so far has been copied into uScene.
+      object.layers.set(1)
+      refractors.push(object)
+    }
+    if (has('outline')) {
+      // Ink outline: the same mesh again, pushed outward and showing only its back faces.
+      const hull = new THREE.Mesh(object.geometry, outline(Number(object.userData.outline) || 3))
+      hull.renderOrder = 1
+      object.add(hull)
+    }
+    if (has('points')) {
+      // The vertices are drawn as dots. The mesh itself stays, invisible, to catch the pointer.
+      const dots = new THREE.BufferGeometry()
+      dots.setAttribute('position', object.geometry.attributes.position)
+      if (morph) dots.setAttribute('morph', morph)
+      const points = new THREE.Points(dots, material)
+      points.frustumCulled = false
+      points.renderOrder = 1
+      object.add(points)
+      object.material = hidden
+      return
+    }
     object.material = material
   })
 
@@ -143,16 +207,30 @@ export function createShaders(stage: Stage) {
   }
 
   /** Size in pixels of the picture being drawn (the window, or one card). */
-  const setResolution = (width: number, height: number) => shared.uResolution.value.set(width, height)
+  const setResolution = (width: number, height: number) => {
+    shared.uResolution.value.set(width, height)
+    shared.uPixelRatio.value = stage.renderer.getPixelRatio()
+  }
   stage.onResize(setResolution)
 
   return {
+    uniforms: shared,
+    refractors,
     setResolution,
-    update(time: number, scroll: number, mouse: THREE.Vector2) {
+    /** Where the pointer or finger is, -1…1 across the picture. Call without arguments when there is none. */
+    setPointer: (x = 9, y = 9) => shared.uPointer.value.set(x, y),
+    /**
+     * Call once per frame. `replay` (0–1) replaces the scroll position for every object's uProgress;
+     * the card view uses it to play the reveals back and forth, since there is no scroll there.
+     */
+    update(time: number, scroll: number, mouse: THREE.Vector2, replay?: number) {
       shared.uTime.value = time
       shared.uScroll.value = scroll
       shared.uMouse.value.copy(mouse)
+      for (const { uniform, from, to } of reveals) uniform.value = replay ?? THREE.MathUtils.clamp((scroll - from) / (to - from), 0, 1)
       anchors.forEach((update) => update())
     },
   }
 }
+
+export type Shaders = ReturnType<typeof createShaders>

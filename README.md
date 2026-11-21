@@ -35,6 +35,8 @@ Open http://localhost:5173. The repo ships with a demo scene (`blender/demo.blen
 | Add tag `shader` = `pulse` | The object is drawn with `src/shaders/pulse.frag` |
 | Add a number property (e.g. `floors` = 12) | The object's shader receives it as `uniform float uFloors` |
 | Add the number property `copies` = 140 | The mesh is drawn that many times in one go; its vertex shader tells the copies apart (`gl_InstanceID`) |
+| Add the number properties `from` = 0.4, `to` = 0.5 | The object's shader receives `uProgress`, running 0 → 1 while the page scrolls between those positions (0 = top, 1 = bottom) |
+| Add a shape key to a mesh | Its shader receives `attribute vec3 morph`: how far each vertex travels to reach that shape |
 | Set the scene camera | It becomes the web camera (framing is kept on phones) |
 
 Tags are added with the buttons in the three.js panel (they are ordinary custom properties).
@@ -52,8 +54,10 @@ Tags are added with the buttons in the three.js panel (they are ordinary custom 
 | `src/scroll.ts` | Blender animations ↔ scroll |
 | `src/hover.ts` | Raycasting, hover, click |
 | `src/shaders.ts` | Wires shaders to objects and feeds them uniforms |
+| `src/render.ts` | Draws each picture: the scene, then refracting glass, then the screen effect |
+| `src/shaders/effects/*.frag` | Screen effects over the whole picture. Pick one with `config.look.effect`, the switcher at the bottom of the page, or `?effect=ascii` in the address |
 
-Every shader receives: `uTime`, `uScroll` (0–1), `uMouse` (-1…1), `uResolution`, `uHover` (0–1), `uColor` (the Blender base colour), and varyings `vUv`, `vNormal`, `vWorldPosition`, `vWorldNormal`, `vWave`.
+Every shader receives: `uTime`, `uScroll` (0–1), `uMouse` (-1…1, eased), `uPointer` (-1…1, exact; the finger in the card view), `uResolution`, `uPixelRatio`, `uHover` (0–1), `uProgress` (0–1, see `from` / `to`), `uColor` (the Blender base colour), and varyings `vUv`, `vNormal`, `vWorldPosition`, `vWorldNormal`, `vWave`.
 
 Included shaders:
 
@@ -69,6 +73,15 @@ Included shaders:
 | `grid` | Dark drawing paper with a faint grid under a group | `cell`, `shade` |
 | `echo` | Tumbling ring of light with a fading tail (the ring drawn at its past positions) | `copies` |
 | `shade` | Soft dark ball behind glowing things, so light reads on any background | `shade` |
+| `particles` | The mesh's vertices as dots; they travel to a shape key as `uProgress` rises and dodge the pointer | `size`, `from`, `to` |
+| `field` | One pin drawn in a grid; a wave rolls through and the pointer raises the pins | `copies`, `columns`, `gap` |
+| `ribbon` | Fluttering satin strip with pulses of light running along it (strip mesh with UV along its length) | `phase` |
+| `foil` | Iridescent chrome reflecting a drawn studio of strip lights | |
+| `lens` | Glass that bends and colour-splits the scene behind it | |
+| `toon` | Two flat tones, halftone dots in the shadow, hard highlight, ink outline | `outline` |
+| `clay` | Matte pastel clay in soft wrapped light | `contact` |
+| `scan` | A glowing line climbs the object, turning a wire grid into a solid | `from`, `to` |
+| `contour` | The object cut into level bands that lift apart | `slices`, `from`, `to` |
 | `lamp` | Flat colour | |
 | `backdrop` | Full-screen background | |
 
@@ -82,12 +95,21 @@ Shader objects are solid by default, which is the fastest and lets them hide eac
 | `#pragma nodepth` | Never hides what is behind it (thin lines that should not cut each other) |
 | `#pragma additive` | Blended as light: adds to what is behind it |
 | `#pragma underlay` | Ground sheet: painted over the floor but under every other shader object (used by `grid`) |
+| `#pragma points` | The mesh's vertices are drawn as dots (set `gl_PointSize` in the `.vert`); the mesh itself stays invisible and still catches the pointer |
+| `#pragma outline` | Adds an ink outline of constant pixel width (number property `outline`) |
+| `#pragma refract` | Drawn last, with a picture of everything behind it in `uniform sampler2D uScene` (sample at `gl_FragCoord.xy / uBuffer`) |
+
+The Assembly element in the demo uses no shader at all: its parts are moved apart with ordinary Blender keyframes, which follow the scrollbar like any other animation.
+
+### Screen effects
+
+A screen effect redraws the finished picture through one fragment shader in `src/shaders/effects/`. Included: `ascii`, `bloom`, `dither`, `grain`, `pixels`. An effect reads the picture from `uScene` (size `uBuffer`, in device pixels) and also gets `uTime`, `uResolution` and `uPixelRatio`. Add `#pragma mipmap` to also get smaller, blurred versions of the picture through `textureLod` (used by `bloom`). Set `config.look.effectPicker = false` to hide the switcher.
 
 ## Phones: card view
 
 On screens up to `config.cards.maxWidth` (768 px) the scroll scene is replaced by a vertical list of cards.
 Every top-level object with a `label` tag gets a card (or list names in `config.cards.names`); the label is the caption and a `link` tag becomes a button.
-In the list the cards are previews only, so the page scrolls freely. Tapping a card opens it full screen with a Back button (the phone's own Back works too); there, drag rotates, pinch zooms (wheel on a laptop) and double-tap resets. Looping animations keep playing; scroll animations and the Blender camera are not used there.
+In the list the cards are previews only, so the page scrolls freely. Tapping a card opens it full screen with a Back button (the phone's own Back works too); there, drag rotates, pinch zooms (wheel on a laptop) and double-tap resets. Looping animations keep playing and the Blender camera is not used there. Since there is no scroll, scroll animations of objects and `uProgress` play back and forth by themselves (`config.cards.replay` seconds per round trip). A finger pressed on the full-screen view also acts as the pointer for shaders that use `uPointer`.
 Each preview is its own small canvas that scrolls with the page; one hidden 3D canvas renders only the cards on screen and copies each frame into its preview, so nothing lags behind the scroll.
 Set `config.cards.enabled = false` to show the scroll scene on every screen.
 
