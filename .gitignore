@@ -4,3 +4,4 @@ dist
 *.blend1
 *.log
 __pycache__
+recordings

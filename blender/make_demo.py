@@ -344,10 +344,11 @@ for frame, lift in ((1, 0.0), (61, -device_lift), (121, 0.0)):
     device_top.keyframe_insert("location", frame=frame)
 device_top.animation_data.action.name = "Loop_Lift"
 
-# The module and the blocks sway a little around their isometric pose.
-for obj, action, swing in ((device, "Loop_Drift", 14), (district, "Loop_Survey", 10)):
-    for frame, turn in ((1, -swing), (145, swing), (289, -swing)):
-        obj.rotation_euler = (0, 0, math.radians(45 + turn))
+# The module and the blocks turn slowly, starting from their isometric pose.
+prefs.keyframe_new_interpolation_type = "LINEAR"
+for obj, action in ((device, "Loop_Orbit"), (district, "Loop_Survey")):
+    for frame, turn in ((1, 0.0), (385, math.tau)):
+        obj.rotation_euler = (0, 0, math.radians(45) + turn)
         obj.keyframe_insert("rotation_euler", frame=frame)
     obj.animation_data.action.name = action
 

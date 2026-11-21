@@ -1,3 +1,4 @@
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { defineConfig, type Plugin } from 'vite'
 
 // Reload the page whenever Blender writes a new .glb into public/.
@@ -14,7 +15,26 @@ function reloadOnExport(): Plugin {
   }
 }
 
+// Dev only: the page can POST a canvas recording here; it is saved under recordings/.
+function saveRecordings(): Plugin {
+  return {
+    name: 'save-recordings',
+    configureServer(server) {
+      server.middlewares.use('/__recording', (req, res) => {
+        const name = (new URL(req.url ?? '', 'http://x').searchParams.get('name') ?? 'recording').replace(/[^\w-]/g, '')
+        const chunks: Buffer[] = []
+        req.on('data', (chunk: Buffer) => chunks.push(chunk))
+        req.on('end', () => {
+          mkdirSync('recordings', { recursive: true })
+          writeFileSync(`recordings/${name}.webm`, Buffer.concat(chunks))
+          res.end('saved')
+        })
+      })
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [reloadOnExport()],
+  plugins: [reloadOnExport(), saveRecordings()],
   server: { port: 5173 },
 })
