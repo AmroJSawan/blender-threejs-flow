@@ -7,7 +7,7 @@ import type { Object3D } from 'three'
  */
 export const config = {
   /** File exported from Blender, relative to public/. */
-  model: '/scene.glb',
+  model: `${import.meta.env.BASE_URL}scene.glb`, // relative, so the site also works under a sub-path (GitHub Pages)
 
   look: {
     background: '#0d0f14',

@@ -3,6 +3,8 @@
 Design the scene in Blender, press Export (or just save), and the browser refreshes with the new scene.
 Scroll, mouse, hover and fragment shaders are handled by a small vanilla three.js app.
 
+**Live demo:** https://amrojsawan.github.io/blender-threejs-flow/ (republished automatically on every push to `main`)
+
 **Stack:** three.js (WebGL 2) · GSAP ScrollTrigger · Lenis · Vite · TypeScript
 
 ## Start

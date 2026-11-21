@@ -35,6 +35,7 @@ function saveRecordings(): Plugin {
 }
 
 export default defineConfig({
+  base: './', // relative asset paths: the built site works at any URL
   plugins: [reloadOnExport(), saveRecordings()],
   server: { port: 5173 },
 })
