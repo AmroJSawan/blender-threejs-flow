@@ -196,7 +196,7 @@ def box(name, size, location, mat):
     return obj
 
 
-def slab(name, half, height, radius, mat, segments=12):
+def slab(name, half, height, radius, mat, segments=24):
     """A flat rounded square with exact normals, for the "slab" shader."""
     outline = []  # (x, y, outward x, outward y), counter-clockwise seen from above
     inner = half - radius
@@ -253,7 +253,7 @@ def module(name, location):
         part.parent = parent
         part.location = (0, 0, z)
         if index != 1:
-            part["ghost"] = 1.0
+            part["shader"] = "wire"  # the levels above and below are see-through
         parts.append(part)
 
     # Dashed guides between the three levels.

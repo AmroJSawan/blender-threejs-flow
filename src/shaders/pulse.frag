@@ -1,6 +1,7 @@
 // Living orb, colour side. In Blender: add custom property  shader = "pulse"  to a mesh.
 // pulse.vert (same name) moves the surface; this paints it: deep colour in the body,
 // pale light on top of the ridges, a pink tint in the grooves and a soft glowing edge.
+#pragma transparent // soft, see-through edge
 precision highp float;
 varying vec3 vNormal;
 varying float vWave;   // -1…1: grooves to ridges

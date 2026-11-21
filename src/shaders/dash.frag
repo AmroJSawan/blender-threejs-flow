@@ -1,5 +1,7 @@
 // Dashed guide line for thin vertical posts. In Blender: custom property  shader = "dash".
 // Optional number property  dash = 0.07  (length of one dash plus one gap).
+#pragma transparent
+#pragma nodepth
 precision highp float;
 varying vec3 vLocalPosition;
 uniform vec3 uColor;

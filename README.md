@@ -62,19 +62,30 @@ Included shaders:
 | `mirror`, `glass` | Mirror face and glass rim reflecting a fake studio | |
 | `lineart` | Flat 2D single-stroke boxes, coloured top | |
 | `blueprint` | Architectural line drawing on boxes; the base colour is the ink | `floors`, `level` |
-| `slab` | Technical drawing of rounded slabs: holographic body or see-through wireframe | `radius`, `ghost` |
+| `slab` | Technical drawing of a rounded slab: black top with fine linework, holographic sides | `radius` |
+| `wire` | See-through wireframe version of the same slab | `radius` |
 | `dash` | Dashed guide line on a thin post | `dash` |
 | `grid` | Dark drawing paper with a faint grid under a group | `cell`, `shade` |
 | `lamp` | Flat colour | |
 | `backdrop` | Full-screen background | |
 
-Shaders also get `uBoundsMin` / `uBoundsMax` (the object's own box) and varyings `vLocalPosition`, `vLocalNormal`. `flat2d.glsl` is a shared vertex shader that removes perspective, so grouped 3D objects read as one flat 2D drawing (used by `lineart` and `lamp`). `boxedge.glsl` is the shared single-stroke outline for boxes (used by `lineart` and `blueprint`). A shader containing `#pragma additive` is blended as light (adds to what is behind it); `#pragma underlay` draws it underneath all other shader objects (used by `grid`).
+Shaders also get `uBoundsMin` / `uBoundsMax` (the object's own box) and varyings `vLocalPosition`, `vLocalNormal`. `flat2d.glsl` is a shared vertex shader that removes perspective, so grouped 3D objects read as one flat 2D drawing (used by `lineart` and `lamp`). `boxedge.glsl` is the shared single-stroke outline for boxes (used by `lineart` and `blueprint`). `slab.glsl` is the shared body of `slab` and `wire`.
+
+Shader objects are solid by default, which is the fastest and lets them hide each other correctly. A shader opts into something else with a `#pragma` line:
+
+| Line in the shader | Effect |
+|---|---|
+| `#pragma transparent` | Uses the alpha it outputs (glass, soft edges) |
+| `#pragma nodepth` | Never hides what is behind it (thin lines that should not cut each other) |
+| `#pragma additive` | Blended as light: adds to what is behind it |
+| `#pragma underlay` | Ground sheet: painted over the floor but under every other shader object (used by `grid`) |
 
 ## Phones: card view
 
 On screens up to `config.cards.maxWidth` (768 px) the scroll scene is replaced by a vertical list of cards.
 Every top-level object with a `label` tag gets a card (or list names in `config.cards.names`); the label is the caption and a `link` tag becomes a button.
 In the list the cards are previews only, so the page scrolls freely. Tapping a card opens it full screen with a Back button (the phone's own Back works too); there, drag rotates, pinch zooms (wheel on a laptop) and double-tap resets. Looping animations keep playing; scroll animations and the Blender camera are not used there.
+Each preview is its own small canvas that scrolls with the page; one hidden 3D canvas renders only the cards on screen and copies each frame into its preview, so nothing lags behind the scroll.
 Set `config.cards.enabled = false` to show the scroll scene on every screen.
 
 ## Commands

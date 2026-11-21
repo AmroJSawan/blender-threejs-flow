@@ -41,6 +41,7 @@ const vertex = /* glsl */ `
  * - On an object: add the custom property `shader` in Blender with the file name (e.g. "pulse").
  * - Behind everything: set config.look.backgroundShader.
  * - Add <name>.vert next to <name>.frag to also displace the surface.
+ * - A shader is solid unless it contains `#pragma transparent`, `nodepth`, `additive` or `underlay`.
  * Uniforms every shader receives: uTime, uScroll, uMouse, uResolution, uHover, uColor, uBoundsMin, uBoundsMax.
  */
 export function createShaders(stage: Stage) {
@@ -66,7 +67,6 @@ export function createShaders(stage: Stage) {
       vertexShader,
       fragmentShader,
       uniforms: { ...defaults, ...shared, uFullscreen: { value: fullscreen ? 1 : 0 }, uHover: { value: 0 }, uColor: { value: new THREE.Color('#ffffff') }, ...extra },
-      transparent: !fullscreen,
       depthTest: !fullscreen,
       depthWrite: !fullscreen,
     })
@@ -98,15 +98,26 @@ export function createShaders(stage: Stage) {
     const group = object.parent && object.parent !== stage.root ? object.parent : object
     anchors.push(() => group.getWorldPosition(uAnchor.value))
     material.side = old.side // keeps Blender's backface-culling choice
-    if (material.fragmentShader.includes('#pragma additive')) {
-      // Light-like shaders: add to what is behind them and never hide anything.
+    // Shaders are solid by default (fastest, and they hide each other correctly).
+    // A shader opts into other behaviour with a  #pragma  line:
+    const has = (pragma: string) => material.fragmentShader.includes(`#pragma ${pragma}`)
+    if (has('transparent')) material.transparent = true // uses the alpha it outputs
+    if (has('nodepth')) material.depthWrite = false // never hides what is behind it (thin lines, glows)
+    if (has('additive')) {
+      // Light-like: adds to what is behind it.
+      material.transparent = true
       material.blending = THREE.AdditiveBlending
       material.depthWrite = false
     }
-    if (material.fragmentShader.includes('#pragma underlay')) {
-      // Ground sheets: drawn before the other shader objects, so they never cut into them.
+    // Draw order: ordinary Blender materials, then ground sheets, then every other shader object.
+    object.renderOrder = 1
+    if (has('underlay')) {
+      // Ground sheets blend over the ordinary scene (the floor) and are painted before the other
+      // shader objects, so they can never cut into the drawing that stands on them.
+      material.blending = THREE.CustomBlending // blends while staying in the solid pass
       material.depthTest = material.depthWrite = false
-      object.renderOrder = -1
+      object.renderOrder = 0.5
+      object.userData.underlay = true
     }
     object.material = material
   })

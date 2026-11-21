@@ -14,6 +14,8 @@ export interface Stage {
   /** Copy the (possibly animated) Blender camera into the render camera. */
   syncCamera(): void
   onResize(fn: (width: number, height: number) => void): void
+  /** false = the caller sizes the canvas itself (card view). Default: follows the window. */
+  followWindow(on: boolean): void
 }
 
 export async function createStage(canvas: HTMLCanvasElement): Promise<Stage> {
@@ -79,11 +81,12 @@ export async function createStage(canvas: HTMLCanvasElement): Promise<Stage> {
   }
 
   const resizeListeners: ((w: number, h: number) => void)[] = []
+  let followsWindow = true
   const resize = () => {
     const w = window.innerWidth
     const h = window.innerHeight
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, look.maxPixelRatio))
-    renderer.setSize(w, h)
+    if (followsWindow) renderer.setSize(w, h)
     camera.aspect = w / h
     camera.updateProjectionMatrix()
     resizeListeners.forEach((fn) => fn(w, h))
@@ -99,6 +102,10 @@ export async function createStage(canvas: HTMLCanvasElement): Promise<Stage> {
     root,
     clips: gltf.animations,
     syncCamera,
+    followWindow: (on) => {
+      followsWindow = on
+      if (on) resize()
+    },
     onResize: (fn) => {
       resizeListeners.push(fn)
       fn(window.innerWidth, window.innerHeight)

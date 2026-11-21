@@ -16,27 +16,26 @@ html, body { margin: 0; background: #0d0f14; color: #e9ecf3; font-family: system
 #progress { position: fixed; left: 0; right: 0; bottom: 0; height: 3px; z-index: 2; background: rgba(255, 255, 255, 0.08); }
 #progress span { display: block; height: 100%; background: #8fb4ff; transform: scaleX(0); transform-origin: left; }
 
-/* Card view (small screens, see config.cards). The canvas sits behind the cards and
-   draws each object into the transparent .card-view window of its card. */
-body.cards #stage { position: absolute; inset: auto; top: 0; left: 0; z-index: 0; pointer-events: none; }
+/* Card view (small screens, see config.cards). */
+/* The 3D canvas only renders the previews off screen; it is shown in the full-screen viewer. */
+body.cards #stage { position: fixed; inset: auto; top: 0; left: 0; visibility: hidden; pointer-events: none; }
 body.cards #progress { display: none; }
 body.cards #scroll { z-index: 1; display: grid; gap: 28px; padding: 20px 16px 48px; max-width: 520px; margin: 0 auto; pointer-events: auto; }
 .cards-hint { margin: 0; text-align: center; font-size: 13px; color: rgba(233, 236, 243, 0.6); }
 .card {
   border-radius: 22px; overflow: hidden; cursor: pointer; -webkit-tap-highlight-color: transparent;
-  /* The outline hides the square corners of the drawing behind the rounded card. */
-  outline: 10px solid #0d0f14; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.14);
 }
-.card-view { aspect-ratio: 1; }
+.card-view { display: block; width: 100%; aspect-ratio: 1; background: #0d0f14; }
 .card-text { padding: 14px 18px 18px; background: #151821; border-top: 1px solid rgba(255, 255, 255, 0.1); }
 .card-text h2 { margin: 0 0 4px; font-size: 17px; font-weight: 600; }
 .card-text p { margin: 0; font-size: 14px; line-height: 1.45; color: rgba(233, 236, 243, 0.7); }
 .card-text a { display: inline-block; margin-top: 8px; font-size: 14px; color: #8fb4ff; }
-.card:focus-visible { outline-color: #8fb4ff; }
+.card:focus-visible { outline: 2px solid #8fb4ff; outline-offset: 3px; }
 
 /* Full-screen viewer: opened by tapping a card. Only here do drag and pinch control the object. */
 body.viewing { overflow: hidden; }
-body.viewing #stage { position: fixed; z-index: 5; }
+body.viewing #stage { visibility: visible; z-index: 5; }
 .viewer {
   position: fixed; inset: 0; z-index: 6; touch-action: none; cursor: grab;
   user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;

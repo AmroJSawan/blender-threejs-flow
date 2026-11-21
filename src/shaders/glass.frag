@@ -1,5 +1,6 @@
 // Tinted glass. In Blender: custom property  shader = "glass".
 // See-through in the middle, bright and reflective toward the edges.
+#pragma transparent
 precision highp float;
 #include "studio.glsl"
 varying vec3 vWorldNormal;
