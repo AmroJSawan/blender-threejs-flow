@@ -52,7 +52,7 @@ cube["label"] = "Cube: hover tag set in Blender"
 orb = add(bpy.ops.mesh.primitive_uv_sphere_add, "Orb", material("Blue", (0.25, 0.5, 1.0)), radius=0.8, location=(0, 0, 0.8), segments=128, ring_count=64)
 orb["hover"] = True
 orb["shader"] = "pulse"
-orb["label"] = "Orb: noise displacement + fragment shader"
+orb["label"] = "Orb: wave displacement + fragment shader"
 
 ring = add(bpy.ops.mesh.primitive_torus_add, "Ring", material("Gold", (1.0, 0.75, 0.3), metallic=1.0, roughness=0.25), major_radius=0.75, minor_radius=0.22, location=(2.4, 0, 1.1))
 ring["hover"] = True
