@@ -65,6 +65,20 @@ vec3 rim(vec2 p, float width) {
   return vec3(clamp(1.0 + box.x / width, 0.0, 1.0), box.yz);
 }
 
+// ---- Light for solid materials (the materials page) ----
+#define LAMP_HEIGHT 260.0   // how high the lamp hangs over the card, px
+
+/** The way the surface faces for a given slope, including the card's lean. */
+vec3 normalOf(vec2 slope) { return normalize(vec3(-slope - uTilt * 900.0, 1.0)); }
+/** Direction from the point `p` on the card to the lamp. The lamp hangs over the upper left and follows the pointer. */
+vec3 toLamp(vec2 p) { return normalize(vec3(uSize * vec2(-0.22, 0.26) + uFollow * 0.9 - p, LAMP_HEIGHT)); }
+/** Soft light: 1 where the surface faces the lamp. `wrap` above 0 lets light creep round to the shaded side. */
+float diffuse(vec3 normal, vec2 p, float wrap) { return clamp((dot(normal, toLamp(p)) + wrap) / (1.0 + wrap), 0.0, 1.0); }
+/** Highlight of the lamp. `sharp` 8 = a broad sheen, 300 = a small hard glint. */
+float gleam(vec3 normal, vec2 p, float sharp) {
+  return pow(max(dot(normal, normalize(toLamp(p) + vec3(0.0, 0.0, 1.0))), 0.0), sharp);
+}
+
 #include "variant"
 
 vec3 pick(vec2 uv, vec2 split, float level) {

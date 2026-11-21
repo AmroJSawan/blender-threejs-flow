@@ -22,26 +22,30 @@ const settings = {
   /** Words behind the glass. */
   words: 'REFRACTION · BLUR · DISTORTION · FLUID · GLASS · ',
   /**
-   * The two pages share this code. Per page: the word printed on the card, the kind shown first
-   * (unless the address says ?glass=name or ?glow=name), and how bright the background is.
+   * The three pages share this code. Per page: the word printed on the card, the kind shown first
+   * (unless the address says ?glass=name, ?glow=name or ?material=name), and how bright the background is.
    */
   series: {
     glass: { print: 'GLASS', start: 'clear', dim: 1 },
     glow: { print: 'GLOW', start: 'neon', dim: 0.3 },
+    material: { print: 'MATERIAL', start: 'glass', dim: 0.7 },
   },
   maxPixelRatio: 2,
 }
 
-// Every .glsl file in shaders/variants (glass page) or shaders/glow (glow page) is one kind of card. Its first lines describe it:
+// Every .glsl file in shaders/variants (glass page), shaders/glow (glow page) or shaders/materials (materials page) is one kind of card. Its first lines describe it:
 //   // title: Frost      // note: one sentence      // order: 2
 //   // springs: 1.5 (looser, bouncier body)      // stretch: 1 (soft body that squashes)
 // Each kind only runs the physics its shader mentions: uLiquid (water), uSand, uFog, uRibs, uHeat, uFlies.
-const seriesName = document.body.dataset.series === 'glow' ? 'glow' : 'glass'
+const kinds = {
+  glass: import.meta.glob<string>('./shaders/variants/*.glsl', { query: '?raw', import: 'default', eager: true }),
+  glow: import.meta.glob<string>('./shaders/glow/*.glsl', { query: '?raw', import: 'default', eager: true }),
+  material: import.meta.glob<string>('./shaders/materials/*.glsl', { query: '?raw', import: 'default', eager: true }),
+}
+const asked = document.body.dataset.series
+const seriesName = asked === 'glow' || asked === 'material' ? asked : 'glass'
 const series = settings.series[seriesName]
-const sources =
-  seriesName === 'glow'
-    ? import.meta.glob<string>('./shaders/glow/*.glsl', { query: '?raw', import: 'default', eager: true })
-    : import.meta.glob<string>('./shaders/variants/*.glsl', { query: '?raw', import: 'default', eager: true })
+const sources = kinds[seriesName]
 const variants = Object.entries(sources)
   .map(([path, source]) => {
     const name = path.replace(/^.*\/|\.glsl$/g, '')

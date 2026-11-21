@@ -6,6 +6,7 @@ Scroll, mouse, hover and fragment shaders are handled by a small vanilla three.j
 **Live demo:** https://amrojsawan.github.io/blender-threejs-flow/ (republished automatically on every push to `main`)
 **Glass cards:** https://amrojsawan.github.io/blender-threejs-flow/glass.html
 **Glow cards:** https://amrojsawan.github.io/blender-threejs-flow/glow.html
+**Material cards:** https://amrojsawan.github.io/blender-threejs-flow/materials.html
 
 **Stack:** three.js (WebGL 2) · GSAP ScrollTrigger · Lenis · Vite · TypeScript
 
@@ -170,6 +171,23 @@ Every card hangs on springs (drag it and let go), but each kind of glass has the
 | `flies` | Two dozen blinking points | A swarm that gathers round the pointer and scatters | `uFlies` (`flies.ts`, tuning in `swarm`) |
 | `lamp` | Warm lamp behind frost | Swings after the pointer on a spring | `uFollow` |
 | `button` | Button with an inner glow: strong under the top edge and round the upper corners, slight round every edge | Bright spot slides after the pointer; a tap presses it and it flares | `uFollow`, `uAge` |
+
+## Material cards page
+
+`materials.html` is the surface-finish series: the same card and code again, with kinds that are materials (`src/glass/shaders/materials/*.glsl`, also `materials.html?material=satin`). The physics here is light: one lamp hangs over the upper left of the card and follows the pointer, and each finish answers it in its own way.
+
+| Kind | Finish | How it takes the light |
+|---|---|---|
+| `glass` | Modern glass: lightly frosted pane, rounded rim | Blurs and bends what is behind it; faint soft highlight |
+| `matte` | Soft-touch matte | Scatters evenly: no glint, a slow fall from lit to shaded, fine grain |
+| `plastic` | Regular moulded plastic | One clear medium-sized highlight |
+| `satin` | Smooth satin | A wide gentle sheen with no hard spot |
+| `lacquer` | High-gloss black lacquer | Tiny hard glint plus a sliding reflection of a window |
+| `metal` | Brushed aluminium | Scratches pull the highlight into a tall streak |
+| `ceramic` | Glazed ceramic | Reflection wobbles on the uneven glaze; glaze runs pale at the edges |
+| `pearl` | Pearl | Colour shifts with the angle of the light |
+
+A solid material sets `look.milk = 1` (nothing shows through), `look.shine = 0` (it does its own highlights), its colour in `look.tint` and its highlights in `look.light`. `card.frag` gives every kind four helpers for this: `normalOf(slope)`, `toLamp(p)`, `diffuse(normal, p, wrap)` and `gleam(normal, p, sharp)`; `LAMP_HEIGHT` there sets how high the lamp hangs. Each file names its colour and finish numbers at the top.
 
 ## Phones: card view
 
