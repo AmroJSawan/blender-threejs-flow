@@ -5,14 +5,19 @@ import type { Stage } from './stage'
 // Every .frag file in src/shaders is available by its file name.
 const sources = import.meta.glob<string>('./shaders/*.frag', { query: '?raw', import: 'default', eager: true })
 const fragments = new Map(Object.entries(sources).map(([path, src]) => [path.replace(/^.*\/|\.frag$/g, ''), src]))
+// Optional: a .vert file with the same name moves the vertices too (e.g. noise displacement).
+const vertexSources = import.meta.glob<string>('./shaders/*.vert', { query: '?raw', import: 'default', eager: true })
+const vertices = new Map(Object.entries(vertexSources).map(([path, src]) => [path.replace(/^.*\/|\.vert$/g, ''), src]))
 
 const vertex = /* glsl */ `
   varying vec2 vUv;
   varying vec3 vNormal;
   varying vec3 vWorldPosition;
+  varying float vNoise;
   uniform float uFullscreen;
   void main() {
     vUv = uv;
+    vNoise = 0.0;
     vNormal = normalize(normalMatrix * normal);
     vec4 world = modelMatrix * vec4(position, 1.0);
     vWorldPosition = world.xyz;
@@ -24,6 +29,7 @@ const vertex = /* glsl */ `
  * Fragment shaders.
  * - On an object: add the custom property `shader` in Blender with the file name (e.g. "pulse").
  * - Behind everything: set config.look.backgroundShader.
+ * - Add <name>.vert next to <name>.frag to also displace the surface.
  * Uniforms every shader receives: uTime, uScroll, uMouse, uResolution, uHover, uColor.
  */
 export function createShaders(stage: Stage) {
@@ -41,7 +47,7 @@ export function createShaders(stage: Stage) {
       return null
     }
     return new THREE.ShaderMaterial({
-      vertexShader: vertex,
+      vertexShader: (!fullscreen && vertices.get(name)) || vertex,
       fragmentShader,
       uniforms: { ...shared, uFullscreen: { value: fullscreen ? 1 : 0 }, uHover: { value: 0 }, uColor: { value: new THREE.Color('#ffffff') }, ...extra },
       transparent: !fullscreen,
