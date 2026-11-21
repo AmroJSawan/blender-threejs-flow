@@ -24,7 +24,7 @@ export const config = {
 
   scroll: {
     /** Page length in screen heights. Longer = slower camera move. */
-    pages: 6,
+    pages: 8,
     /** Seconds the animation takes to catch up with the scrollbar. true = no lag. */
     scrub: 1 as number | boolean,
     /** Smooth wheel scrolling (Lenis). Auto-disabled for reduced-motion users. */

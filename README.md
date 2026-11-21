@@ -31,6 +31,7 @@ Open http://localhost:5173. The repo ships with a demo scene (`blender/demo.blen
 | Add tag `label` | Tooltip text on hover |
 | Add tag `link` | URL opened on click |
 | Add tag `shader` = `pulse` | The object is drawn with `src/shaders/pulse.frag` |
+| Add a number property (e.g. `floors` = 12) | The object's shader receives it as `uniform float uFloors` |
 | Set the scene camera | It becomes the web camera (framing is kept on phones) |
 
 Tags are added with the buttons in the three.js panel (they are ordinary custom properties).
@@ -50,9 +51,21 @@ Tags are added with the buttons in the three.js panel (they are ordinary custom 
 
 Every shader receives: `uTime`, `uScroll` (0–1), `uMouse` (-1…1), `uResolution`, `uHover` (0–1), `uColor` (the Blender base colour), and varyings `vUv`, `vNormal`, `vWorldPosition`, `vWorldNormal`, `vWave`.
 
-Included shaders: `pulse` (physical wave), `mirror`, `glass`, `lineart` (flat 2D single-stroke look on boxes), `lamp` (flat colour), `backdrop` (full-screen background).
+Included shaders:
 
-Shaders also get `uBoundsMin` / `uBoundsMax` (the object's own box) and varyings `vLocalPosition`, `vLocalNormal`. `flat2d.glsl` is a shared vertex shader that removes perspective, so grouped 3D objects read as one flat 2D drawing (used by `lineart` and `lamp`). A shader containing `#pragma additive` is blended as light (adds to what is behind it).
+| Shader | Look | Number properties |
+|---|---|---|
+| `pulse` | Physical wave on a surface | |
+| `mirror`, `glass` | Mirror face and glass rim reflecting a fake studio | |
+| `lineart` | Flat 2D single-stroke boxes, coloured top | |
+| `blueprint` | Architectural line drawing on boxes; the base colour is the ink | `floors`, `level` |
+| `slab` | Technical drawing of rounded slabs: holographic body or see-through wireframe | `radius`, `ghost` |
+| `dash` | Dashed guide line on a thin post | `dash` |
+| `grid` | Dark drawing paper with a faint grid under a group | `cell`, `shade` |
+| `lamp` | Flat colour | |
+| `backdrop` | Full-screen background | |
+
+Shaders also get `uBoundsMin` / `uBoundsMax` (the object's own box) and varyings `vLocalPosition`, `vLocalNormal`. `flat2d.glsl` is a shared vertex shader that removes perspective, so grouped 3D objects read as one flat 2D drawing (used by `lineart` and `lamp`). `boxedge.glsl` is the shared single-stroke outline for boxes (used by `lineart` and `blueprint`). A shader containing `#pragma additive` is blended as light (adds to what is behind it); `#pragma underlay` draws it underneath all other shader objects (used by `grid`).
 
 ## Commands
 

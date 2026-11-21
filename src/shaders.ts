@@ -57,10 +57,15 @@ export function createShaders(stage: Stage) {
       console.warn(`Shader "${name}" not found. Available: ${[...fragments.keys()].join(', ')}`)
       return null
     }
+    const vertexShader = (!fullscreen && vertices.get(name)) || vertex
+    // Every declared float starts at 0, so an object without that Blender property never
+    // inherits the value of another object drawn with the same shader.
+    const defaults: Record<string, THREE.IUniform> = {}
+    for (const [, uniform] of (vertexShader + fragmentShader).matchAll(/uniform\s+float\s+(\w+)\s*;/g)) defaults[uniform] = { value: 0 }
     return new THREE.ShaderMaterial({
-      vertexShader: (!fullscreen && vertices.get(name)) || vertex,
+      vertexShader,
       fragmentShader,
-      uniforms: { ...shared, uFullscreen: { value: fullscreen ? 1 : 0 }, uHover: { value: 0 }, uColor: { value: new THREE.Color('#ffffff') }, ...extra },
+      uniforms: { ...defaults, ...shared, uFullscreen: { value: fullscreen ? 1 : 0 }, uHover: { value: 0 }, uColor: { value: new THREE.Color('#ffffff') }, ...extra },
       transparent: !fullscreen,
       depthTest: !fullscreen,
       depthWrite: !fullscreen,
@@ -82,7 +87,12 @@ export function createShaders(stage: Stage) {
     object.geometry.computeBoundingBox()
     const box = object.geometry.boundingBox!
     const uAnchor = { value: new THREE.Vector3() }
-    const material = make(name, { uColor, uHover, uAnchor, uBoundsMin: { value: box.min }, uBoundsMax: { value: box.max } })
+    // Number properties set in Blender become uniforms: `floors = 12` → `uniform float uFloors`.
+    const numbers: Record<string, THREE.IUniform> = {}
+    for (const [key, value] of Object.entries(object.userData)) {
+      if (typeof value === 'number') numbers[`u${key[0].toUpperCase()}${key.slice(1)}`] = { value }
+    }
+    const material = make(name, { ...numbers, uColor, uHover, uAnchor, uBoundsMin: { value: box.min }, uBoundsMax: { value: box.max } })
     if (!material) return
     // Grouped objects share their parent's position, so flat2d.glsl flattens them as one drawing.
     const group = object.parent && object.parent !== stage.root ? object.parent : object
@@ -92,6 +102,11 @@ export function createShaders(stage: Stage) {
       // Light-like shaders: add to what is behind them and never hide anything.
       material.blending = THREE.AdditiveBlending
       material.depthWrite = false
+    }
+    if (material.fragmentShader.includes('#pragma underlay')) {
+      // Ground sheets: drawn before the other shader objects, so they never cut into them.
+      material.depthTest = material.depthWrite = false
+      object.renderOrder = -1
     }
     object.material = material
   })
