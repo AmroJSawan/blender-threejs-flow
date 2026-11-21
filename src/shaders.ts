@@ -19,6 +19,8 @@ const vertex = /* glsl */ `
   varying vec3 vNormal;
   varying vec3 vWorldPosition;
   varying vec3 vWorldNormal;
+  varying vec3 vLocalPosition;
+  varying vec3 vLocalNormal;
   varying float vWave;
   uniform float uFullscreen;
   void main() {
@@ -26,6 +28,8 @@ const vertex = /* glsl */ `
     vWave = 0.0;
     vNormal = normalize(normalMatrix * normal);
     vWorldNormal = normalize(mat3(modelMatrix) * normal);
+    vLocalPosition = position;
+    vLocalNormal = normal;
     vec4 world = modelMatrix * vec4(position, 1.0);
     vWorldPosition = world.xyz;
     gl_Position = uFullscreen > 0.5 ? vec4(position.xy, 1.0, 1.0) : projectionMatrix * viewMatrix * world;
@@ -37,7 +41,7 @@ const vertex = /* glsl */ `
  * - On an object: add the custom property `shader` in Blender with the file name (e.g. "pulse").
  * - Behind everything: set config.look.backgroundShader.
  * - Add <name>.vert next to <name>.frag to also displace the surface.
- * Uniforms every shader receives: uTime, uScroll, uMouse, uResolution, uHover, uColor.
+ * Uniforms every shader receives: uTime, uScroll, uMouse, uResolution, uHover, uColor, uBoundsMin, uBoundsMax.
  */
 export function createShaders(stage: Stage) {
   const shared = {
@@ -72,9 +76,17 @@ export function createShaders(stage: Stage) {
     let owner: THREE.Object3D = object
     while (!owner.userData.hoverAmount && owner.parent) owner = owner.parent
     const uHover = (owner.userData.hoverAmount ?? (object.userData.hoverAmount = { value: 0 })) as THREE.IUniform<number>
-    const material = make(name, { uColor, uHover })
+    // The object's own size, for shaders that draw relative to its box (e.g. lineart).
+    object.geometry.computeBoundingBox()
+    const box = object.geometry.boundingBox!
+    const material = make(name, { uColor, uHover, uBoundsMin: { value: box.min }, uBoundsMax: { value: box.max } })
     if (!material) return
     material.side = old.side // keeps Blender's backface-culling choice
+    if (material.fragmentShader.includes('#pragma additive')) {
+      // Light-like shaders: add to what is behind them and never hide anything.
+      material.blending = THREE.AdditiveBlending
+      material.depthWrite = false
+    }
     object.material = material
   })
 

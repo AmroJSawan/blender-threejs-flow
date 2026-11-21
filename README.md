@@ -50,7 +50,9 @@ Tags are added with the buttons in the three.js panel (they are ordinary custom 
 
 Every shader receives: `uTime`, `uScroll` (0–1), `uMouse` (-1…1), `uResolution`, `uHover` (0–1), `uColor` (the Blender base colour), and varyings `vUv`, `vNormal`, `vWorldPosition`, `vWorldNormal`, `vWave`.
 
-Included shaders: `pulse` (physical wave), `mirror`, `glass`, `backdrop` (full-screen background).
+Included shaders: `pulse` (physical wave), `mirror`, `glass`, `lineart` (2D outlines on boxes), `lamp`, `halo`, `backdrop` (full-screen background).
+
+Shaders also get `uBoundsMin` / `uBoundsMax` (the object's own box) and varyings `vLocalPosition`, `vLocalNormal`. A shader containing `#pragma additive` is blended as light (adds to what is behind it).
 
 ## Commands
 

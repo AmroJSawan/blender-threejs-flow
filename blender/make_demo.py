@@ -19,7 +19,7 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
 scene.render.resolution_x, scene.render.resolution_y = 1920, 1080
 scene.render.fps = 24
-scene.frame_start, scene.frame_end = 1, 160
+scene.frame_start, scene.frame_end = 1, 200
 
 
 def material(name, color, metallic=0.0, roughness=0.5):
@@ -43,7 +43,7 @@ def add(op, name, mat, **kwargs):
     return obj
 
 
-floor = add(bpy.ops.mesh.primitive_plane_add, "Floor", material("Floor", (0.08, 0.09, 0.12), roughness=0.8), size=20, location=(1.2, 0, 0))
+floor = add(bpy.ops.mesh.primitive_plane_add, "Floor", material("Floor", (0.08, 0.09, 0.12), roughness=0.8), size=28, location=(3.6, 0, 0))
 
 cube = add(bpy.ops.mesh.primitive_cube_add, "Cube", material("Coral", (0.95, 0.35, 0.3), roughness=0.4), size=1.2, location=(-2.4, 0, 0.6))
 cube["hover"] = True
@@ -119,6 +119,70 @@ pill = capsule("Capsule", (4.8, 0, 1.55))
 pill["hover"] = True
 pill["label"] = "Capsule: mirror + glass shaders"
 
+
+def stack(name, location):
+    """Line-art style: stepped boxes drawn as glowing outlines, with a floating lamp on top."""
+    parent = bpy.data.objects.new(name, None)
+    scene.collection.objects.link(parent)
+    parent.location = location
+
+    def child(obj, shader):
+        obj.parent = parent
+        obj["shader"] = shader
+        return obj
+
+    ink = material(f"{name}_Ink", (0.02, 0.015, 0.05))
+    z = 0.0
+    for index, (width, depth, height) in enumerate(((2.6, 1.5, 0.55), (1.8, 1.15, 0.42), (1.2, 0.85, 0.34), (0.8, 0.6, 0.28))):
+        bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, z + height / 2))
+        box = bpy.context.active_object
+        box.name = f"{name}_Step{index + 1}"
+        box.scale = (width, depth, height)
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)  # real sizes for the outline shader
+        box.data.materials.append(ink)
+        child(box, "lineart")
+        z += height
+
+    # Lamp: a small pill made by revolving a profile.
+    radius, half, around, rows = 0.16, 0.13, 32, 8
+    verts, faces = [(0, 0, -half - radius)], []
+    for sign in (-1, 1):
+        for r in range(rows + 1):
+            a = (math.pi / 2) * (r / rows) * 0.98 + 0.01
+            a = a - math.pi / 2 if sign < 0 else a
+            ring_r, ring_z = radius * math.cos(a), sign * half + radius * math.sin(a)
+            verts += [(ring_r * math.cos(math.tau * i / around), ring_r * math.sin(math.tau * i / around), ring_z) for i in range(around)]
+    verts.append((0, 0, half + radius))
+    ring_count = 2 * (rows + 1)
+    faces += [(0, 1 + (i + 1) % around, 1 + i) for i in range(around)]
+    for r in range(ring_count - 1):
+        a, b = 1 + r * around, 1 + (r + 1) * around
+        faces += [(a + i, a + (i + 1) % around, b + (i + 1) % around, b + i) for i in range(around)]
+    last, top = 1 + (ring_count - 1) * around, len(verts) - 1
+    faces += [(last + i, last + (i + 1) % around, top) for i in range(around)]
+    mesh = bpy.data.meshes.new(f"{name}_Lamp")
+    mesh.from_pydata(verts, [], faces)
+    for poly in mesh.polygons:
+        poly.use_smooth = True
+    mesh.materials.append(material(f"{name}_Lamp", (1.0, 1.0, 1.0)))
+    lamp = bpy.data.objects.new(f"{name}_Lamp", mesh)
+    scene.collection.objects.link(lamp)
+    child(lamp, "lamp")
+    lamp.location = (0, 0, z + 0.42)
+
+    # Soft halo behind everything, standing upright and facing the camera.
+    bpy.ops.mesh.primitive_plane_add(size=5.5, location=(0, 1.0, z + 0.2), rotation=(math.radians(90), 0, 0))
+    halo = bpy.context.active_object
+    halo.name = f"{name}_Halo"
+    halo.data.materials.append(material(f"{name}_Halo", (0.8, 0.8, 1.0)))
+    child(halo, "halo")
+    return parent, lamp
+
+
+tower, lamp = stack("Stack", (7.6, 0, 0))
+tower["hover"] = True
+tower["label"] = "Stack: 2D line-art shader on 3D boxes"
+
 bpy.ops.object.light_add(type="SUN", location=(3, -3, 6), rotation=(math.radians(40), 0, math.radians(35)))
 bpy.context.active_object.name = "Sun"
 bpy.context.active_object.data.energy = 3.0
@@ -140,6 +204,13 @@ for frame, turn in ((1, -22), (61, 22), (121, -22)):
     pill.keyframe_insert("rotation_euler", frame=frame)
 pill.animation_data.action.name = "Loop_Sway"
 
+# The lamp floats up and down.
+rest = lamp.location.z
+for frame, lift in ((1, 0.0), (49, 0.12), (97, 0.0)):
+    lamp.location.z = rest + lift
+    lamp.keyframe_insert("location", frame=frame)
+lamp.animation_data.action.name = "Loop_Float"
+
 # --- Scroll action: the camera path. Any action not named "Loop…" follows the scrollbar.
 bpy.ops.object.camera_add()
 camera = bpy.context.active_object
@@ -147,11 +218,12 @@ camera.name = "Camera"
 camera.data.lens = 35
 scene.camera = camera
 shots = [  # frame, camera position, point it looks at
-    (1, (1.2, -11.5, 3.4), (1.2, 0, 0.9)),
+    (1, (2.6, -15.5, 4.2), (2.6, 0, 0.9)),
     (40, (-4.2, -3.2, 1.6), (-2.4, 0, 0.6)),
     (80, (0.6, -3.4, 1.4), (0, 0, 0.8)),
     (120, (3.6, -3.0, 2.2), (2.4, 0, 1.1)),
     (160, (5.3, -3.3, 1.65), (4.8, 0, 1.55)),
+    (200, (7.6, -6.2, 2.9), (7.6, 0, 1.05)),
 ]
 for frame, position, look_at in shots:
     camera.location = position
