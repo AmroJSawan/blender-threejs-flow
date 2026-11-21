@@ -2,6 +2,7 @@
 // note: A soft gel slab on loose springs. Drag and let go: it stretches along its path, overshoots and wobbles back.
 // order: 12
 // springs: 2.4
+// stretch: 1
 #define WIDTH 34.0   // width of the rounded edge, px
 
 void glass(vec2 p, vec2 uv, inout Look look) {
@@ -12,5 +13,5 @@ void glass(vec2 p, vec2 uv, inout Look look) {
   look.split = 0.1;
   look.tint = vec3(1.0, 0.5, 0.68);
   look.milk = 0.3;
-  look.liquid = 1.0;
+  look.liquid = 0.6; // the gel quivers inside
 }

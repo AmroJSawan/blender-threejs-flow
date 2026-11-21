@@ -115,13 +115,10 @@ A screen effect redraws the finished picture through one fragment shader in `src
 | `src/glass/shaders/variants/*.glsl` | **One file per kind of glass.** Drop a file in and it appears in the switcher |
 | `src/glass/shaders/card.frag` | The shared part: card shape, shadow, blur, colour split, light, print |
 | `src/glass/shaders/background.frag` | What lies behind the glass (colour lights, grid, rows of type) |
-| `src/glass/shaders/liquid.frag` | The liquid skin: a height map that behaves like the surface of water |
 | `src/glass/body.ts` | The card as a body on springs; all tuning is in `feel` at the top |
-| `src/glass/liquid.ts` | Runs the liquid; tuning in `flow` at the top |
-| `src/glass/shaders/sand.frag`, `src/glass/sand.ts` | Dry sand: a height map that only moves where a slope is steeper than its angle of rest; tuning in `grit` |
 | `src/glass/main.ts` | Page set-up; card size and the words behind it are in `settings` at the top |
 
-A variant starts with comment lines that describe it (`// title:`, `// note:`, `// order:`, optional `// springs:` where higher = looser, wobblier) and defines one function that fills in the look of the glass at each point:
+A variant starts with comment lines that describe it (`// title:`, `// note:`, `// order:`, optional `// springs:` where higher = looser and bouncier, optional `// stretch: 1` for a soft body that squashes along its path) and defines one function that fills in the look of the glass at each point:
 
 ```glsl
 void glass(vec2 p, vec2 uv, inout Look look) {  // p: px from the card centre, uv: 0–1
@@ -130,17 +127,32 @@ void glass(vec2 p, vec2 uv, inout Look look) {  // p: px from the card centre, u
   look.blur = 18.0;   // blur radius, px
   look.split = 0.16;  // colour fringe, as a share of the bend
   look.tint, look.milk, look.grain  // body colour, how solid it is, speckle
-  look.liquid = 2.6;  // how strongly the liquid skin shows (default 0.35)
+  look.shine = 0.0;   // matte (default 1 = polished)
+  look.liquid = 2.6;  // show the water surface this strongly (default 0 = none)
 }
 ```
 
 `rim(p, width)` gives the band along the edge (1 at the rim → 0 at `width` px inside, plus the outward direction); `noise`, `hash`, `uTime` and `uSize` are available too.
 
-Included: `clear` (progressive refraction toward the rim), `frost`, `fade` (progressive blur), `fluted`, `prism`, `dome`, `hammered`, `waves` (stacked sheets with swaying wave edges), `silk` (slow wide folds), `sand` (rake it, shake it), `liquid`, `jelly`.
+### Physics per kind
 
-A variant can read the simulations directly: `uLiquid` / `uLiquidTexel` (water height) and `uSand` / `uSandTexel` (sand height). The sand only runs while a variant that mentions `uSand` is shown. `look.shine = 0.0` makes a surface matte.
+Every card hangs on springs (drag it and let go), but each kind of glass has the physics that suits it, and only runs what its shader mentions:
 
-Physical movement, on every variant: the card hangs on springs (drag it and let go; it lags, leans, stretches along its path and settles), leans under the pointer, and carries a liquid skin that the pointer stirs, the card's own movement sloshes, and small drops keep alive.
+| Kind | Physics | What the shader reads |
+|---|---|---|
+| `clear`, `hammered` | Rigid thick glass: leaning it shifts the picture inside | `uTilt` |
+| `prism` | Rigid wedge: leaning it swings the spectrum | `uTilt` |
+| `frost` | Frost that the pointer wipes clear and that creeps back | `uFog` (`fog.ts`, `shaders/fog.frag`) |
+| `fade` (progressive blur) | The line of focus trails the pointer | `uFollow` |
+| `fluted` | Ribs ring like harp strings when the pointer crosses them | `uRibs`, `uRib` (`strings.ts`, tuning in `harp`) |
+| `dome` | A magnifying bubble that slides after the pointer | `uFollow` |
+| `waves` | Sheets floating on water | `uLiquid` |
+| `silk` | Cloth folds dragged by the pointer; soft body | `uFollow` |
+| `sand` | Grains that slump to their angle of rest; rake and shake | `uSand` (`sand.ts`, `shaders/sand.frag`, tuning in `grit`) |
+| `liquid` | Water: waves travel, bounce off the rim and settle | `look.liquid` (`liquid.ts`, `shaders/liquid.frag`, tuning in `flow`) |
+| `jelly` | Soft body on loose springs, quivering inside | `// stretch: 1`, `look.liquid` |
+
+`uFollow` is the pointer on the card (px from its centre) trailing behind on a spring; `uTilt` is how the card leans. `src/glass/field.ts` is the shared base of the three simulated maps (water, sand, frost).
 
 ## Phones: card view
 

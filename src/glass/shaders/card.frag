@@ -5,6 +5,7 @@ precision highp float;
 uniform sampler2D uScene;   // the background, with smaller blurred versions (mip levels)
 uniform sampler2D uLiquid;  // liquid height map (see liquid.frag)
 uniform sampler2D uSand;    // sand height map (see sand.frag)
+uniform sampler2D uFog;     // how far the frost has been wiped (see fog.frag)
 uniform sampler2D uFace;    // the print on the card
 uniform vec2 uBuffer;       // canvas size, device pixels
 uniform vec2 uLiquidTexel;
@@ -17,6 +18,9 @@ uniform float uRadius;      // corner radius
 uniform vec4 uToCard;       // screen → card: undoes the card's turn and stretch
 uniform vec4 uToScreen;     // card → screen
 uniform vec2 uTilt;         // how the card leans toward the viewer
+uniform vec2 uFollow;       // the pointer on the card, px from its centre, trailing behind on a spring
+uniform float uRib;         // width of one rib of fluted glass, px
+uniform float uRibs[32];    // how far each rib has swung from rest, px
 
 #define TAPS 12             // samples per blurred pixel
 #define SHADOW 0.42
@@ -29,7 +33,7 @@ struct Look {
   vec3 tint;     // colour of the glass body
   float milk;    // 0 = clear, 1 = solid tint
   float grain;   // frosting speckle
-  float liquid;  // how strongly the liquid skin shows
+  float liquid;  // how strongly the water surface shows (0 = not at all)
   float shine;   // 1 = polished glass, 0 = matte
 };
 
@@ -95,10 +99,10 @@ void main() {
   }
 
   vec2 uv = p / uSize + 0.5;
-  Look look = Look(vec2(0.0), 40.0, 0.0, 0.0, vec3(1.0), 0.0, 0.0, 0.35, 1.0);
+  Look look = Look(vec2(0.0), 40.0, 0.0, 0.0, vec3(1.0), 0.0, 0.0, 0.0, 1.0);
   glass(p, uv, look);
 
-  // The liquid skin: the height map's slope leans the surface.
+  // Water surface, for the kinds that ask for it: the height map's slope leans the surface.
   vec2 e = uLiquidTexel;
   vec2 ripple = vec2(
     texture2D(uLiquid, uv + vec2(e.x, 0.0)).r - texture2D(uLiquid, uv - vec2(e.x, 0.0)).r,

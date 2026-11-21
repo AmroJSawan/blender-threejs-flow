@@ -2,8 +2,10 @@ import * as THREE from 'three'
 import '../style.css'
 import './glass.css'
 import { createBody } from './body'
+import { createFog } from './fog'
 import { createLiquid } from './liquid'
 import { createSand } from './sand'
+import { createStrings, harp } from './strings'
 import backgroundShader from './shaders/background.frag?raw'
 import cardShader from './shaders/card.frag?raw'
 import screenShader from './shaders/screen.vert?raw'
@@ -23,13 +25,27 @@ const settings = {
 }
 
 // Every .glsl file in shaders/variants is one kind of glass. Its first lines describe it:
-//   // title: Frost      // note: one sentence      // order: 2      // springs: 1.5
+//   // title: Frost      // note: one sentence      // order: 2
+//   // springs: 1.5 (looser, bouncier body)      // stretch: 1 (soft body that squashes)
+// Each kind only runs the physics its shader mentions: uLiquid (water), uSand, uFog, uRibs.
 const sources = import.meta.glob<string>('./shaders/variants/*.glsl', { query: '?raw', import: 'default', eager: true })
 const variants = Object.entries(sources)
   .map(([path, source]) => {
     const name = path.replace(/^.*\/|\.glsl$/g, '')
     const tag = (key: string) => source.match(new RegExp(`^// ${key}:\\s*(.+)$`, 'm'))?.[1].trim()
-    return { name, source, sandy: source.includes('uSand'), title: tag('title') ?? name, note: tag('note') ?? '', order: Number(tag('order') ?? 99), springs: Number(tag('springs') ?? 1) }
+    return {
+      name,
+      source,
+      title: tag('title') ?? name,
+      note: tag('note') ?? '',
+      order: Number(tag('order') ?? 99),
+      springs: Number(tag('springs') ?? 1),
+      stretch: Number(tag('stretch') ?? 0),
+      water: /uLiquid|look\.liquid/.test(source),
+      sand: source.includes('uSand'),
+      fog: source.includes('uFog'),
+      strings: source.includes('uRibs'),
+    }
   })
   .sort((a, b) => a.order - b.order)
 
@@ -114,12 +130,20 @@ const background = new THREE.ShaderMaterial({
 const body = createBody()
 const liquid = createLiquid(draw, settings.aspect)
 const sand = createSand(draw, settings.aspect)
+const fog = createFog(draw, settings.aspect)
+const strings = createStrings(32)
+/** The pointer on the card, trailing behind on a spring (px from the card's centre; 0 when it is away). */
+const follow = { x: 0, y: 0, vx: 0, vy: 0, stiffness: 60, damping: 9 }
 const uniforms = {
   uScene: { value: scene.texture },
   uLiquid: { value: liquid.texture },
   uLiquidTexel: { value: liquid.texel },
   uSand: { value: sand.texture },
   uSandTexel: { value: sand.texel },
+  uFog: { value: fog.texture },
+  uFollow: { value: new THREE.Vector2() },
+  uRib: { value: harp.rib },
+  uRibs: { value: strings.values },
   uFace: { value: faceTexture },
   uBuffer: { value: new THREE.Vector2(1, 1) },
   uPixelRatio: { value: 1 },
@@ -148,7 +172,8 @@ function show(name: string) {
   }
   card = material
   body.loose = current.springs
-  if (current.sandy) sand.reset() // fresh raked sand every time it is chosen
+  body.soft = current.stretch
+  if (current.sand) sand.reset() // fresh raked sand every time it is chosen
   printFace(current.title, variants.indexOf(current))
   note.textContent = current.note
   for (const [key, button] of buttons) button.setAttribute('aria-pressed', String(key === current.name))
@@ -215,7 +240,11 @@ canvas.addEventListener('pointermove', (event) => {
   const before = onCard()
   pointer = place(event)
   const after = onCard()
-  if (before && after) moved += Math.hypot(after[0] - before[0], after[1] - before[1])
+  if (before && after) {
+    moved += Math.hypot(after[0] - before[0], after[1] - before[1])
+    // Crossing a rib of the fluted glass plucks it.
+    if (current.strings && isOver()) strings.pluck(Math.floor((after[0] + half[0]) / harp.rib), after[0] - before[0])
+  }
   canvas.classList.toggle('over', isOver())
 })
 canvas.addEventListener('pointerdown', (event) => {
@@ -248,13 +277,23 @@ function frame(now: number) {
   body.update(dt, time, pointer, over, half)
   const spot = onCard()
   const touch: [number, number] | null = spot && over ? [spot[0] / (half[0] * 2) + 0.5, spot[1] / (half[1] * 2) + 0.5] : null
-  liquid.update(dt, touch, dt > 0 ? moved / dt : 0, body.push)
-  if (current.sandy) sand.update(touch, moved, body.push)
+  // Only the physics this kind of glass asks for.
+  if (current.water) liquid.update(dt, touch, dt > 0 ? moved / dt : 0, body.push)
+  if (current.sand) sand.update(touch, moved, body.push)
+  if (current.fog) fog.update(touch)
+  if (current.strings) strings.update(dt)
   moved = 0
+  const goal = spot && over && !body.held ? spot : [0, 0]
+  follow.vx += ((goal[0] - follow.x) * follow.stiffness - follow.vx * follow.damping) * dt
+  follow.vy += ((goal[1] - follow.y) * follow.stiffness - follow.vy * follow.damping) * dt
+  follow.x += follow.vx * dt
+  follow.y += follow.vy * dt
 
   uniforms.uTime.value = time
   uniforms.uLiquid.value = liquid.texture
   uniforms.uSand.value = sand.texture
+  uniforms.uFog.value = fog.texture
+  uniforms.uFollow.value.set(follow.x, follow.y)
   uniforms.uCenter.value.set(rest.x + body.x, rest.y + body.y)
   uniforms.uToCard.value.set(...body.toCard)
   uniforms.uToScreen.value.set(...body.toScreen)

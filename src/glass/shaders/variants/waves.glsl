@@ -1,5 +1,5 @@
 // title: Waves
-// note: Five sheets of glass with swaying wave-shaped edges, stacked down the card. Each sheet adds blur and tint, and its edge bends the picture like a lens. Stirring the card lifts the waves.
+// note: Five sheets of glass with swaying wave-shaped edges, stacked down the card. Each sheet adds blur and tint, and its edge bends the picture like a lens. The sheets float on water: stir it or shake the card and the edges rise and fall with the swell.
 // order: 8
 #define LAYERS 5
 #define EDGE 28.0    // width of each sheet's rounded edge, px

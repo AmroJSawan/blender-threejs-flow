@@ -43,6 +43,8 @@ export function createBody() {
   const body = {
     /** 1 = normal. Higher = looser springs: more overshoot, more stretch (set per variant with `// springs:`). */
     loose: 1,
+    /** 0 = rigid, 1 = squashes and stretches along its path (set per variant with `// stretch:`). */
+    soft: 0,
     /** Offset of the card from its resting place. */
     x: 0,
     y: 0,
@@ -90,7 +92,7 @@ export function createBody() {
         const lean = Math.max(-swing.max, Math.min(swing.max, -x.speed * swing.amount))
         turn.step(lean + Math.sin(time * 0.5) * idle.turn * drift, swing.stiffness, swing.damping / body.loose, h)
 
-        const gain = stretch.amount * Math.sqrt(body.loose)
+        const gain = stretch.amount * Math.sqrt(body.loose) * body.soft
         stretchX.step(x.speed * gain, stretch.stiffness, stretch.damping / body.loose, h)
         stretchY.step(y.speed * gain, stretch.stiffness, stretch.damping / body.loose, h)
 
