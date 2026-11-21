@@ -42,12 +42,15 @@ Tags are added with the buttons in the three.js panel (they are ordinary custom 
 | `src/config.ts` | **The control panel**: background, lighting, scroll length and smoothing, mouse parallax, hover effect, plus `events` hooks (`onEnter`, `onLeave`, `onClick`, `onScroll`) for custom behaviour |
 | `src/shaders/*.frag` | Fragment shaders. Drop a file in, reference it by name from Blender or from `config.look.backgroundShader` |
 | `src/shaders/*.vert` | Optional. A `.vert` with the same name as a `.frag` also moves the surface (see `pulse.vert`: wave displacement) |
+| `src/shaders/*.glsl` | Shared snippets pulled in with `#include "file.glsl"` (see `studio.glsl`, the fake studio the mirror and glass reflect) |
 | `src/stage.ts` | Renderer, GLB loading, camera |
 | `src/scroll.ts` | Blender animations ↔ scroll |
 | `src/hover.ts` | Raycasting, hover, click |
 | `src/shaders.ts` | Wires shaders to objects and feeds them uniforms |
 
-Every shader receives: `uTime`, `uScroll` (0–1), `uMouse` (-1…1), `uResolution`, `uHover` (0–1), `uColor` (the Blender base colour), and varyings `vUv`, `vNormal`, `vWorldPosition`, `vWave`.
+Every shader receives: `uTime`, `uScroll` (0–1), `uMouse` (-1…1), `uResolution`, `uHover` (0–1), `uColor` (the Blender base colour), and varyings `vUv`, `vNormal`, `vWorldPosition`, `vWorldNormal`, `vWave`.
+
+Included shaders: `pulse` (physical wave), `mirror`, `glass`, `backdrop` (full-screen background).
 
 ## Commands
 
