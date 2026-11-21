@@ -169,6 +169,7 @@ Every card hangs on springs (drag it and let go), but each kind of glass has the
 | `plasma` | Arcs from an electrode | Arcs snap to the pointer and follow it | `uFollow` |
 | `flies` | Two dozen blinking points | A swarm that gathers round the pointer and scatters | `uFlies` (`flies.ts`, tuning in `swarm`) |
 | `lamp` | Warm lamp behind frost | Swings after the pointer on a spring | `uFollow` |
+| `button` | Button with an inner glow: strong under the top edge and round the upper corners, slight round every edge | Bright spot slides after the pointer; a tap presses it and it flares | `uFollow`, `uAge` |
 
 ## Phones: card view
 
