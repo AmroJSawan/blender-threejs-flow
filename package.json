@@ -1,0 +1,25 @@
+{
+  "name": "blender-threejs-flow",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "demo": "/Applications/Blender.app/Contents/MacOS/Blender --background --python blender/make_demo.py",
+    "export": "/Applications/Blender.app/Contents/MacOS/Blender --background blender/demo.blend --python blender/threejs_bridge.py -- --export public/scene.glb",
+    "optimize": "npx -y @gltf-transform/cli optimize public/scene.glb public/scene.glb --compress meshopt --texture-compress webp"
+  },
+  "dependencies": {
+    "gsap": "^3.15.1",
+    "lenis": "^1.3.27",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.187.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}

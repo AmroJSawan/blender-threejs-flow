@@ -1,0 +1,17 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #0d0f14; color: #e9ecf3; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
+#stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#scroll { position: relative; pointer-events: none; }
+#scroll > * { pointer-events: auto; }
+#label {
+  position: fixed; top: 0; left: 0; z-index: 3; pointer-events: none;
+  padding: 6px 10px; border-radius: 6px; font-size: 13px;
+  background: rgba(13, 15, 20, 0.85); border: 1px solid rgba(255, 255, 255, 0.14);
+}
+#message {
+  position: fixed; inset: 0; z-index: 4; display: grid; place-items: center;
+  padding: 24px; text-align: center; font-size: 15px; line-height: 1.5;
+}
+#message[hidden], #label[hidden] { display: none; }
+#progress { position: fixed; left: 0; right: 0; bottom: 0; height: 3px; z-index: 2; background: rgba(255, 255, 255, 0.08); }
+#progress span { display: block; height: 100%; background: #8fb4ff; transform: scaleX(0); transform-origin: left; }
