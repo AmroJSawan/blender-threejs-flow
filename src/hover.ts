@@ -12,7 +12,7 @@ interface Target {
 }
 
 /** "Card_*" style wildcard match. */
-function matches(name: string, pattern: string): boolean {
+export function matches(name: string, pattern: string): boolean {
   const escaped = pattern.split('*').map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
   return new RegExp(`^${escaped.join('.*')}$`).test(name)
 }

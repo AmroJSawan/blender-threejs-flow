@@ -42,6 +42,29 @@ export const config = {
     ease: 0.08,
   },
 
+  /** Small screens: one card per object, stacked vertically, each with drag-to-rotate and pinch-to-zoom. */
+  cards: {
+    enabled: true,
+    /** Screens up to this width (px) get the card view; wider ones get the scroll scene. */
+    maxWidth: 768,
+    /** Objects shown as cards ("Card_*" wildcards allowed). Empty = every object with a `label` in Blender. */
+    names: [] as string[],
+    /** Text above the cards, or '' for none. */
+    hint: 'Drag to rotate · pinch to zoom · double-tap to reset',
+    /** Camera angle of view in degrees. Lower = flatter, more like a drawing. */
+    fov: 28,
+    /** Starting tilt of the camera above the object, in degrees. */
+    pitch: 24,
+    /** Smallest and largest zoom. */
+    zoom: [0.6, 3] as [number, number],
+    /** Empty space around the object. 1 = touching the card edges. */
+    margin: 1.15,
+    /** Half turns per full-width drag. */
+    dragTurn: 1.2,
+    /** 0–1, lower = smoother, lazier follow. */
+    ease: 0.2,
+  },
+
   hover: {
     /** Extra hoverable objects by name ("Card_*" wildcards allowed). Objects tagged in Blender need no entry. */
     names: [] as string[],

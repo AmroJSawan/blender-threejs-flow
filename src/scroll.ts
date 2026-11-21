@@ -11,11 +11,12 @@ gsap.registerPlugin(ScrollTrigger)
  * Blender animations → scroll.
  * Every exported action follows the scrollbar, except actions whose name starts
  * with config.scroll.loopPrefix, which simply play in a loop.
+ * With follow = false (card view) only the loops run; the page scrolls normally.
  */
-export function createScroll(stage: Stage) {
+export function createScroll(stage: Stage, follow = true) {
   const { pages, scrub, smooth, loopPrefix } = config.scroll
   const track = document.querySelector<HTMLElement>('#scroll')!
-  track.style.minHeight = `${pages * 100}vh`
+  if (follow) track.style.minHeight = `${pages * 100}vh`
 
   const scrubMixer = new THREE.AnimationMixer(stage.root)
   const loopMixer = new THREE.AnimationMixer(stage.root)
@@ -32,14 +33,16 @@ export function createScroll(stage: Stage) {
   }
 
   const state = { progress: 0 }
-  gsap.to(state, {
-    progress: 1,
-    ease: 'none',
-    scrollTrigger: { trigger: track, start: 'top top', end: 'bottom bottom', scrub },
-  })
+  if (follow) {
+    gsap.to(state, {
+      progress: 1,
+      ease: 'none',
+      scrollTrigger: { trigger: track, start: 'top top', end: 'bottom bottom', scrub },
+    })
+  }
 
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  if (smooth && !reduced) {
+  if (follow && smooth && !reduced) {
     const lenis = new Lenis()
     lenis.on('scroll', ScrollTrigger.update)
     gsap.ticker.add((time) => lenis.raf(time * 1000))

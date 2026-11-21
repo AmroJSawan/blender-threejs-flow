@@ -5,10 +5,32 @@ import { createStage } from './stage'
 import { createScroll } from './scroll'
 import { createHover } from './hover'
 import { createShaders } from './shaders'
+import { createCards } from './cards'
 
 async function start() {
   const canvas = document.querySelector<HTMLCanvasElement>('#stage')!
   const stage = await createStage(canvas)
+  // Handy in the browser console: __stage.scene, __stage.camera …
+  ;(window as unknown as { __stage: unknown }).__stage = stage
+
+  // Small screens get the card view; switching size reloads into the other view.
+  const small = window.matchMedia(`(max-width: ${config.cards.maxWidth}px)`)
+  small.addEventListener('change', () => location.reload())
+  if (config.cards.enabled && small.matches) {
+    const loops = createScroll(stage, false)
+    const shaders = createShaders(stage)
+    const cards = createCards(stage)
+    const still = new THREE.Vector2()
+    let time = 0
+    gsap.ticker.add((_time, deltaMs) => {
+      time += deltaMs / 1000
+      loops.update(deltaMs / 1000)
+      shaders.update(time, 0, still)
+      cards.render()
+    })
+    return
+  }
+
   const scroll = createScroll(stage)
   const hover = createHover(stage)
   const shaders = createShaders(stage)
@@ -41,8 +63,6 @@ async function start() {
     stage.renderer.render(stage.scene, stage.camera)
   })
 
-  // Handy in the browser console: __stage.scene, __stage.camera …
-  ;(window as unknown as { __stage: unknown }).__stage = stage
 }
 
 start().catch((error) => {
