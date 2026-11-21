@@ -67,6 +67,8 @@ export function createShaders(stage: Stage) {
     })
   }
 
+  const anchors: (() => void)[] = []
+
   stage.root.traverse((object) => {
     const name = object.userData.shader
     if (typeof name !== 'string' || !name || !(object instanceof THREE.Mesh)) return
@@ -79,8 +81,12 @@ export function createShaders(stage: Stage) {
     // The object's own size, for shaders that draw relative to its box (e.g. lineart).
     object.geometry.computeBoundingBox()
     const box = object.geometry.boundingBox!
-    const material = make(name, { uColor, uHover, uBoundsMin: { value: box.min }, uBoundsMax: { value: box.max } })
+    const uAnchor = { value: new THREE.Vector3() }
+    const material = make(name, { uColor, uHover, uAnchor, uBoundsMin: { value: box.min }, uBoundsMax: { value: box.max } })
     if (!material) return
+    // Grouped objects share their parent's position, so flat2d.glsl flattens them as one drawing.
+    const group = object.parent && object.parent !== stage.root ? object.parent : object
+    anchors.push(() => group.getWorldPosition(uAnchor.value))
     material.side = old.side // keeps Blender's backface-culling choice
     if (material.fragmentShader.includes('#pragma additive')) {
       // Light-like shaders: add to what is behind them and never hide anything.
@@ -108,6 +114,7 @@ export function createShaders(stage: Stage) {
       shared.uTime.value = time
       shared.uScroll.value = scroll
       shared.uMouse.value.copy(mouse)
+      anchors.forEach((update) => update())
     },
   }
 }

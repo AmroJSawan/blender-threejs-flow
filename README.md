@@ -50,9 +50,9 @@ Tags are added with the buttons in the three.js panel (they are ordinary custom 
 
 Every shader receives: `uTime`, `uScroll` (0–1), `uMouse` (-1…1), `uResolution`, `uHover` (0–1), `uColor` (the Blender base colour), and varyings `vUv`, `vNormal`, `vWorldPosition`, `vWorldNormal`, `vWave`.
 
-Included shaders: `pulse` (physical wave), `mirror`, `glass`, `lineart` (2D outlines on boxes), `lamp`, `halo`, `backdrop` (full-screen background).
+Included shaders: `pulse` (physical wave), `mirror`, `glass`, `lineart` (flat 2D single-stroke look on boxes), `lamp` (flat colour), `backdrop` (full-screen background).
 
-Shaders also get `uBoundsMin` / `uBoundsMax` (the object's own box) and varyings `vLocalPosition`, `vLocalNormal`. A shader containing `#pragma additive` is blended as light (adds to what is behind it).
+Shaders also get `uBoundsMin` / `uBoundsMax` (the object's own box) and varyings `vLocalPosition`, `vLocalNormal`. `flat2d.glsl` is a shared vertex shader that removes perspective, so grouped 3D objects read as one flat 2D drawing (used by `lineart` and `lamp`). A shader containing `#pragma additive` is blended as light (adds to what is behind it).
 
 ## Commands
 

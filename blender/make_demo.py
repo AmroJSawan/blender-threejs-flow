@@ -121,7 +121,7 @@ pill["label"] = "Capsule: mirror + glass shaders"
 
 
 def stack(name, location):
-    """Line-art style: stepped boxes drawn as glowing outlines, with a floating lamp on top."""
+    """Flat 2D line-art style: stepped boxes as single strokes, with a floating lamp on top."""
     parent = bpy.data.objects.new(name, None)
     scene.collection.objects.link(parent)
     parent.location = location
@@ -131,7 +131,7 @@ def stack(name, location):
         obj["shader"] = shader
         return obj
 
-    ink = material(f"{name}_Ink", (0.02, 0.015, 0.05))
+    tops = [material(f"{name}_Pink", (1.0, 0.16, 0.42)), material(f"{name}_Blue", (0.36, 0.46, 1.0))]
     z = 0.0
     for index, (width, depth, height) in enumerate(((2.6, 1.5, 0.55), (1.8, 1.15, 0.42), (1.2, 0.85, 0.34), (0.8, 0.6, 0.28))):
         bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, z + height / 2))
@@ -139,7 +139,7 @@ def stack(name, location):
         box.name = f"{name}_Step{index + 1}"
         box.scale = (width, depth, height)
         bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)  # real sizes for the outline shader
-        box.data.materials.append(ink)
+        box.data.materials.append(tops[index % 2])  # the colour of the step's top face
         child(box, "lineart")
         z += height
 
@@ -170,12 +170,6 @@ def stack(name, location):
     child(lamp, "lamp")
     lamp.location = (0, 0, z + 0.42)
 
-    # Soft halo behind everything, standing upright and facing the camera.
-    bpy.ops.mesh.primitive_plane_add(size=5.5, location=(0, 1.0, z + 0.2), rotation=(math.radians(90), 0, 0))
-    halo = bpy.context.active_object
-    halo.name = f"{name}_Halo"
-    halo.data.materials.append(material(f"{name}_Halo", (0.8, 0.8, 1.0)))
-    child(halo, "halo")
     return parent, lamp
 
 
