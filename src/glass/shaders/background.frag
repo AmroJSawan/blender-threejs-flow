@@ -6,6 +6,7 @@ uniform float uTime;
 uniform vec2 uResolution;   // picture size, CSS pixels
 uniform sampler2D uType;    // one line of words, tiling sideways
 uniform float uTypeAspect;  // its width / height
+uniform float uDim;         // 1 = full brightness; lower for pages where the card itself gives the light
 
 #define ROW 150.0   // height of a row of type, px
 #define GRID 50.0   // grid spacing, px
@@ -39,5 +40,5 @@ void main() {
   float ink = texture2D(uType, vec2(along, within)).a * step(0.0, within) * step(within, 1.0);
   colour = mix(colour, vec3(0.94, 0.96, 1.0), ink * (side > 0.0 ? 0.92 : 0.3));
 
-  gl_FragColor = vec4(colour, 1.0);
+  gl_FragColor = vec4(colour * uDim, 1.0);
 }

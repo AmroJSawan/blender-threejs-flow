@@ -5,6 +5,7 @@ Scroll, mouse, hover and fragment shaders are handled by a small vanilla three.j
 
 **Live demo:** https://amrojsawan.github.io/blender-threejs-flow/ (republished automatically on every push to `main`)
 **Glass cards:** https://amrojsawan.github.io/blender-threejs-flow/glass.html
+**Glow cards:** https://amrojsawan.github.io/blender-threejs-flow/glow.html
 
 **Stack:** three.js (WebGL 2) · GSAP ScrollTrigger · Lenis · Vite · TypeScript
 
@@ -152,7 +153,22 @@ Every card hangs on springs (drag it and let go), but each kind of glass has the
 | `liquid` | Water: waves travel, bounce off the rim and settle | `look.liquid` (`liquid.ts`, `shaders/liquid.frag`, tuning in `flow`) |
 | `jelly` | Soft body on loose springs, quivering inside | `// stretch: 1`, `look.liquid` |
 
-`uFollow` is the pointer on the card (px from its centre) trailing behind on a spring; `uTilt` is how the card leans. `src/glass/field.ts` is the shared base of the three simulated maps (water, sand, frost).
+`uFollow` is the pointer on the card (px from its centre) trailing behind on a spring; `uTilt` is how the card leans. `src/glass/field.ts` is the shared base of the simulated maps (water, sand, frost, heat).
+
+## Glow cards page
+
+`glow.html` is the light series: the same card and code as the glass page, over a dimmed background, with kinds that give off light (`src/glass/shaders/glow/*.glsl`, also `glow.html?glow=ember`). A glow kind sets `look.light` (light added on top of the card) and, with `#define HALO`, a function `vec3 halo(vec2 p, float away)` that lights the background `away` px outside the rim.
+
+| Kind | Light | Physics | What the shader reads |
+|---|---|---|---|
+| `neon` | Gas tube around the card | Stutters as it strikes, then hums; tap to strike again | `uAge` |
+| `ember` | Plate glowing with heat | Rubbing heats it; heat spreads, rises and cools | `uHeat` (`heat.ts`, `shaders/heat.frag`) |
+| `aurora` | Curtains of light | The pointer is a wind that bends them | `uFollow` |
+| `backlight` | Lamps behind a dark panel | Leaning it lets more light out of one side | `uTilt` |
+| `led` (Pixels) | Matrix of tiny lamps | Afterglow: lamps the pointer passes flash and fade | `uFog` |
+| `plasma` | Arcs from an electrode | Arcs snap to the pointer and follow it | `uFollow` |
+| `flies` | Two dozen blinking points | A swarm that gathers round the pointer and scatters | `uFlies` (`flies.ts`, tuning in `swarm`) |
+| `lamp` | Warm lamp behind frost | Swings after the pointer on a spring | `uFollow` |
 
 ## Phones: card view
 

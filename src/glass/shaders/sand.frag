@@ -14,7 +14,7 @@ uniform float uReset;     // 1 = lay fresh raked sand
 
 #define REPOSE 0.011   // steepest step between two cells that sand can hold
 #define RATE 0.22      // how fast a slope that is too steep collapses (keep below 0.25)
-#define FINGER 0.04    // width of the groove a finger leaves, in card heights
+#define FINGER 0.06    // width of the groove a finger leaves, in card heights
 #define FILL 0.55      // how much sand there is
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -38,10 +38,10 @@ float moved(float from, float to, float throw_) {
 void main() {
   vec2 shape = vec2(uAspect, 1.0);
   if (uReset > 0.5) {
-    // Fresh sand: soft dunes, raked in fine wavy lines.
+    // Fresh sand: a few broad, soft dunes.
     vec2 q = vUv * shape;
-    float rake = sin(q.y * 110.0 + sin(q.x * 6.0) * 2.5);
-    gl_FragColor = vec4(FILL + 0.012 * rake + 0.09 * noise(q * 2.5), 0.0, 0.0, 1.0);
+    float rake = sin(q.y * 24.0 + sin(q.x * 5.0) * 1.6);
+    gl_FragColor = vec4(FILL + 0.05 * rake + 0.08 * noise(q * 2.5), 0.0, 0.0, 1.0);
     return;
   }
 

@@ -2,7 +2,9 @@ import * as THREE from 'three'
 import '../style.css'
 import './glass.css'
 import { createBody } from './body'
+import { createFlies } from './flies'
 import { createFog } from './fog'
+import { createHeat } from './heat'
 import { createLiquid } from './liquid'
 import { createSand } from './sand'
 import { createStrings, harp } from './strings'
@@ -19,16 +21,27 @@ const settings = {
   radius: 30,
   /** Words behind the glass. */
   words: 'REFRACTION · BLUR · DISTORTION · FLUID · GLASS · ',
-  /** Variant shown first (a file name in shaders/variants), unless the address says ?glass=name. */
-  start: 'clear',
+  /**
+   * The two pages share this code. Per page: the word printed on the card, the kind shown first
+   * (unless the address says ?glass=name or ?glow=name), and how bright the background is.
+   */
+  series: {
+    glass: { print: 'GLASS', start: 'clear', dim: 1 },
+    glow: { print: 'GLOW', start: 'neon', dim: 0.3 },
+  },
   maxPixelRatio: 2,
 }
 
-// Every .glsl file in shaders/variants is one kind of glass. Its first lines describe it:
+// Every .glsl file in shaders/variants (glass page) or shaders/glow (glow page) is one kind of card. Its first lines describe it:
 //   // title: Frost      // note: one sentence      // order: 2
 //   // springs: 1.5 (looser, bouncier body)      // stretch: 1 (soft body that squashes)
-// Each kind only runs the physics its shader mentions: uLiquid (water), uSand, uFog, uRibs.
-const sources = import.meta.glob<string>('./shaders/variants/*.glsl', { query: '?raw', import: 'default', eager: true })
+// Each kind only runs the physics its shader mentions: uLiquid (water), uSand, uFog, uRibs, uHeat, uFlies.
+const seriesName = document.body.dataset.series === 'glow' ? 'glow' : 'glass'
+const series = settings.series[seriesName]
+const sources =
+  seriesName === 'glow'
+    ? import.meta.glob<string>('./shaders/glow/*.glsl', { query: '?raw', import: 'default', eager: true })
+    : import.meta.glob<string>('./shaders/variants/*.glsl', { query: '?raw', import: 'default', eager: true })
 const variants = Object.entries(sources)
   .map(([path, source]) => {
     const name = path.replace(/^.*\/|\.glsl$/g, '')
@@ -45,6 +58,8 @@ const variants = Object.entries(sources)
       sand: source.includes('uSand'),
       fog: source.includes('uFog'),
       strings: source.includes('uRibs'),
+      heat: source.includes('uHeat'),
+      flies: source.includes('uFlies'),
     }
   })
   .sort((a, b) => a.order - b.order)
@@ -94,7 +109,7 @@ function printFace(title: string, index: number) {
   pen.textBaseline = 'alphabetic'
   pen.font = font(30, 600)
   pen.letterSpacing = '6px'
-  pen.fillText('GLASS', 64, 104)
+  pen.fillText(series.print, 64, 104)
   pen.textAlign = 'right'
   pen.fillText(`${String(index + 1).padStart(2, '0')} / ${String(variants.length).padStart(2, '0')}`, face.width - 64, 104)
   pen.textAlign = 'left'
@@ -120,6 +135,7 @@ const background = new THREE.ShaderMaterial({
     uResolution: { value: new THREE.Vector2(1, 1) },
     uType: { value: type },
     uTypeAspect: { value: type.image.width / type.image.height },
+    uDim: { value: series.dim },
   },
   vertexShader: screenShader,
   fragmentShader: backgroundShader,
@@ -131,6 +147,8 @@ const body = createBody()
 const liquid = createLiquid(draw, settings.aspect)
 const sand = createSand(draw, settings.aspect)
 const fog = createFog(draw, settings.aspect)
+const heat = createHeat(draw, settings.aspect)
+const flies = createFlies()
 const strings = createStrings(32)
 /** The pointer on the card, trailing behind on a spring (px from the card's centre; 0 when it is away). */
 const follow = { x: 0, y: 0, vx: 0, vy: 0, stiffness: 60, damping: 9 }
@@ -141,6 +159,9 @@ const uniforms = {
   uSand: { value: sand.texture },
   uSandTexel: { value: sand.texel },
   uFog: { value: fog.texture },
+  uHeat: { value: heat.texture },
+  uFlies: { value: flies.values },
+  uAge: { value: 0 },
   uFollow: { value: new THREE.Vector2() },
   uRib: { value: harp.rib },
   uRibs: { value: strings.values },
@@ -160,10 +181,12 @@ const uniforms = {
 const materials = new Map<string, THREE.ShaderMaterial>()
 let card: THREE.ShaderMaterial
 let current = variants[0]
+/** When the current kind was chosen, or the screen last tapped (lets a light strike up again). */
+let born = 0
 const buttons = new Map<string, HTMLButtonElement>()
 
 function show(name: string) {
-  current = variants.find((variant) => variant.name === name) ?? variants.find((variant) => variant.name === settings.start) ?? variants[0]
+  current = variants.find((variant) => variant.name === name) ?? variants.find((variant) => variant.name === series.start) ?? variants[0]
   let material = materials.get(current.name)
   if (!material) {
     const fragmentShader = cardShader.replace('#include "variant"', current.source)
@@ -173,6 +196,7 @@ function show(name: string) {
   card = material
   body.loose = current.springs
   body.soft = current.stretch
+  born = performance.now()
   if (current.sand) sand.reset() // fresh raked sand every time it is chosen
   printFace(current.title, variants.indexOf(current))
   note.textContent = current.note
@@ -180,14 +204,14 @@ function show(name: string) {
   buttons.get(current.name)?.scrollIntoView({ block: 'nearest', inline: 'center' })
   // The address keeps the choice, so a look can be shared as a link.
   const address = new URL(location.href)
-  address.searchParams.set('glass', current.name)
+  address.searchParams.set(seriesName, current.name)
   history.replaceState(null, '', address)
 }
 
 const bar = document.createElement('div')
 bar.className = 'effects'
 bar.setAttribute('role', 'group')
-bar.setAttribute('aria-label', 'Kind of glass')
+bar.setAttribute('aria-label', 'Kind of card')
 for (const variant of variants) {
   const button = document.createElement('button')
   button.type = 'button'
@@ -201,7 +225,7 @@ addEventListener('keydown', (event) => {
   const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
   if (step) show(variants[(variants.indexOf(current) + step + variants.length) % variants.length].name)
 })
-show(new URLSearchParams(location.search).get('glass') ?? settings.start)
+show(new URLSearchParams(location.search).get(seriesName) ?? series.start)
 
 // ---- Size -------------------------------------------------------------------
 const rest = { x: 0, y: 0 }
@@ -249,6 +273,7 @@ canvas.addEventListener('pointermove', (event) => {
 })
 canvas.addEventListener('pointerdown', (event) => {
   pointer = place(event)
+  born = performance.now()
   if (!isOver()) return
   canvas.setPointerCapture(event.pointerId)
   body.grab(pointer[0], pointer[1])
@@ -282,6 +307,8 @@ function frame(now: number) {
   if (current.sand) sand.update(touch, moved, body.push)
   if (current.fog) fog.update(touch)
   if (current.strings) strings.update(dt)
+  if (current.heat) heat.update(touch, moved)
+  if (current.flies) flies.update(dt, time, spot && over ? spot : null, half)
   moved = 0
   const goal = spot && over && !body.held ? spot : [0, 0]
   follow.vx += ((goal[0] - follow.x) * follow.stiffness - follow.vx * follow.damping) * dt
@@ -293,6 +320,8 @@ function frame(now: number) {
   uniforms.uLiquid.value = liquid.texture
   uniforms.uSand.value = sand.texture
   uniforms.uFog.value = fog.texture
+  uniforms.uHeat.value = heat.texture
+  uniforms.uAge.value = (now - born) / 1000
   uniforms.uFollow.value.set(follow.x, follow.y)
   uniforms.uCenter.value.set(rest.x + body.x, rest.y + body.y)
   uniforms.uToCard.value.set(...body.toCard)

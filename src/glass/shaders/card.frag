@@ -6,6 +6,7 @@ uniform sampler2D uScene;   // the background, with smaller blurred versions (mi
 uniform sampler2D uLiquid;  // liquid height map (see liquid.frag)
 uniform sampler2D uSand;    // sand height map (see sand.frag)
 uniform sampler2D uFog;     // how far the frost has been wiped (see fog.frag)
+uniform sampler2D uHeat;    // how hot the card is at each point (see heat.frag)
 uniform sampler2D uFace;    // the print on the card
 uniform vec2 uBuffer;       // canvas size, device pixels
 uniform vec2 uLiquidTexel;
@@ -21,6 +22,8 @@ uniform vec2 uTilt;         // how the card leans toward the viewer
 uniform vec2 uFollow;       // the pointer on the card, px from its centre, trailing behind on a spring
 uniform float uRib;         // width of one rib of fluted glass, px
 uniform float uRibs[32];    // how far each rib has swung from rest, px
+uniform vec3 uFlies[24];    // points of light: xy = px from the card centre, z = brightness
+uniform float uAge;         // seconds since this kind was chosen or the screen was last tapped
 
 #define TAPS 12             // samples per blurred pixel
 #define SHADOW 0.42
@@ -35,6 +38,7 @@ struct Look {
   float grain;   // frosting speckle
   float liquid;  // how strongly the water surface shows (0 = not at all)
   float shine;   // 1 = polished glass, 0 = matte
+  vec3 light;    // light the card gives off here, added on top of everything
 };
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -93,13 +97,17 @@ void main() {
   vec3 back = textureLod(uScene, screenUv, 0.0).rgb;
   float shade = roundedBox(p + vec2(0.0, 22.0), uSize * 0.5, uRadius).x;
   back *= 1.0 - SHADOW * smoothstep(50.0, -24.0, shade);
+  // A kind that writes  #define HALO  also lights the background around the card.
+  #ifdef HALO
+  back += halo(p, max(box.x, 0.0));
+  #endif
   if (box.x > 1.0) {
     gl_FragColor = vec4(back, 1.0);
     return;
   }
 
   vec2 uv = p / uSize + 0.5;
-  Look look = Look(vec2(0.0), 40.0, 0.0, 0.0, vec3(1.0), 0.0, 0.0, 0.0, 1.0);
+  Look look = Look(vec2(0.0), 40.0, 0.0, 0.0, vec3(1.0), 0.0, 0.0, 0.0, 1.0, vec3(0.0));
   glass(p, uv, look);
 
   // Water surface, for the kinds that ask for it: the height map's slope leans the surface.
@@ -113,6 +121,7 @@ void main() {
   vec3 colour = behind(screenUv + bend, look.blur, bend * look.split);
   colour = mix(colour, look.tint, look.milk);
   colour += (hash(gl_FragCoord.xy) - 0.5) * look.grain;
+  colour += look.light;
 
   // Light from the upper left: glints where the surface leans toward it, a bright line on the rim.
   vec3 normal = normalize(vec3(-look.slope - uTilt * 900.0, 1.0));
