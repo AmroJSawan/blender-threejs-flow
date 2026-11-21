@@ -58,7 +58,7 @@ Included shaders:
 
 | Shader | Look | Number properties |
 |---|---|---|
-| `pulse` | Physical wave on a surface | |
+| `pulse` | Living orb: calm lumps that wake into ripple bands every few seconds; hover (or press in the card view) keeps it awake, the pointer tilts the bands | |
 | `mirror`, `glass` | Mirror face and glass rim reflecting a fake studio | |
 | `lineart` | Flat 2D single-stroke boxes, coloured top | |
 | `blueprint` | Architectural line drawing on boxes; the base colour is the ink | `floors`, `level` |

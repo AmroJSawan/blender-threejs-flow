@@ -123,6 +123,7 @@ export function createCards(stage: Stage) {
   function close() {
     if (!active || !opening) return
     opening = false
+    pressed = 0
     viewer.hidden = true
     Object.assign(active.target, start)
   }
@@ -138,8 +139,16 @@ export function createCards(stage: Stage) {
   const setZoom = (zoom: number) => {
     if (active) active.target.zoom = THREE.MathUtils.clamp(zoom, minZoom, maxZoom)
   }
+  // While a finger is down the object counts as "hovered", so shaders can react (uHover).
+  let pressed = 0
+  const excite = (card: Card, amount: number) =>
+    card.object.traverse((o) => {
+      const hover = o.userData.hoverAmount as { value: number } | undefined
+      if (hover) hover.value += (amount - hover.value) * opts.ease
+    })
   viewer.addEventListener('pointerdown', (e) => {
     if (e.target === back) return
+    pressed = 1
     viewer.setPointerCapture(e.pointerId)
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
     spread = 0
@@ -163,6 +172,7 @@ export function createCards(stage: Stage) {
   })
   const release = (e: PointerEvent) => {
     pointers.delete(e.pointerId)
+    if (pointers.size === 0) pressed = 0
     spread = 0
   }
   viewer.addEventListener('pointerup', release)
@@ -221,6 +231,7 @@ export function createCards(stage: Stage) {
         // Grow from the card's own rectangle to the whole screen (and back when closing).
         grow = lerp(grow, opening ? 1 : 0, opts.ease)
         canvas.style.transform = ''
+        excite(active, opening ? pressed : 0)
         const rect = active.view.getBoundingClientRect()
         draw(active, lerp(rect.left, 0, grow), lerp(rect.top, 0, grow), lerp(rect.width, screenWidth, grow), lerp(rect.height, screenHeight, grow))
         if (!opening && grow < 0.01) {
