@@ -4,41 +4,47 @@
     "title": "Knurled",
     "note": "A knurled knob in an enamelled track. Two marks are pressed into the floor, which turns orange when on.",
     "ink": "dark",
-    "sheet": "#ebebec"
+    "sheet": "#ebebec",
+    "version": "5ae1f9c6"
   },
   {
     "name": "soft",
     "title": "Soft",
     "note": "One material throughout: the track is pressed into the sheet and the knob swells out of it, told apart by light alone. A small lamp shows when it is on.",
     "ink": "dark",
-    "sheet": "#e7e9ed"
+    "sheet": "#e7e9ed",
+    "version": "2bc92f83"
   },
   {
     "name": "rocker",
     "title": "Rocker",
     "note": "A rocker plate in a dark panel. It pivots on its middle: the pressed side sinks into the panel, the other side lifts, and the bar on the pressed side lights.",
     "ink": "light",
-    "sheet": "#3c3d41"
+    "sheet": "#3c3d41",
+    "version": "19b565fe"
   },
   {
     "name": "slider",
     "title": "Slider",
     "note": "A block with three finger ridges sliding in a dark slot. Pushed across, it uncovers a green lamp at the far end.",
     "ink": "dark",
-    "sheet": "#eae7e3"
+    "sheet": "#eae7e3",
+    "version": "7bc96ce2"
   },
   {
     "name": "ball",
     "title": "Ball",
     "note": "A glazed white ball rolling in a rounded groove. The groove fills with blue as the ball crosses to the on side.",
     "ink": "dark",
-    "sheet": "#e2e8f1"
+    "sheet": "#e2e8f1",
+    "version": "ca2570a0"
   },
   {
     "name": "dish",
     "title": "Dish",
     "note": "The reverse of the others: the bar stands up from the sheet and the thumb rest is a shallow dish sliding in a channel in its top. One clay; the dish turns cream when on.",
     "ink": "dark",
-    "sheet": "#cb997e"
+    "sheet": "#cb997e",
+    "version": "18dec275"
   }
 ]

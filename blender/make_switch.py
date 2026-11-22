@@ -18,6 +18,8 @@ import math
 import os
 import sys
 
+import hashlib
+
 import bmesh
 import bpy
 import numpy as np
@@ -610,6 +612,15 @@ if os.path.exists(LIST):
         listed = {entry["name"]: entry for entry in json.load(file)}
 for name in asked or STYLES:
     listed[name] = build(name)
+for entry in listed.values():
+    # A short fingerprint of the style's files. The page adds it to their addresses, so after a rebake
+    # a browser fetches the model and its pictures afresh instead of mixing stored old ones with new.
+    mark = hashlib.md5()
+    folder = os.path.join(OUT, entry["name"])
+    for name in sorted(os.listdir(folder)):
+        with open(os.path.join(folder, name), "rb") as file:
+            mark.update(file.read())
+    entry["version"] = mark.hexdigest()[:8]
 with open(LIST, "w") as file:  # the styles the page offers, in the order above
     json.dump([listed[name] for name in STYLES if name in listed], file, indent=2)
     file.write("\n")

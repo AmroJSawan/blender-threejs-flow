@@ -130,6 +130,7 @@ function load(style: Style): Promise<Loaded> {
   if (promise) return promise
   promise = new Promise((resolve) => {
     const folder = `${settings.folder}${style.name}/`
+    const fresh = `?v=${style.version}` // changes with every rebake, so a browser never mixes stored old files with new ones
     let loaded: Loaded
     const arriving = new THREE.LoadingManager(() => resolve(loaded))
     const loader = new THREE.TextureLoader(arriving)
@@ -137,7 +138,7 @@ function load(style: Style): Promise<Loaded> {
     const picture = (name: string, modelLayout = true) => {
       let texture = pictures.get(name)
       if (!texture) {
-        texture = loader.load(`${folder}${name}.webp`)
+        texture = loader.load(`${folder}${name}.webp${fresh}`)
         texture.flipY = !modelLayout
         texture.colorSpace = THREE.SRGBColorSpace
         texture.anisotropy = 8
@@ -145,7 +146,7 @@ function load(style: Style): Promise<Loaded> {
       }
       return texture
     }
-    new GLTFLoader(arriving).load(`${folder}switch.glb`, (gltf) => {
+    new GLTFLoader(arriving).load(`${folder}switch.glb${fresh}`, (gltf) => {
       const base = gltf.scene.getObjectByName('Base')!
       const knob = gltf.scene.getObjectByName('Knob')!
       const about = base.userData
