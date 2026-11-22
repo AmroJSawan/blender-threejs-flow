@@ -229,10 +229,10 @@ A style file starts with `// title:`, `// note:`, `// order:` and `// ink: light
 
 How it works:
 
-1. `blender/make_switch.py` (run with `npm run switch`, about a minute, in a background Blender) models the switch from the numbers at its top: sheet, sloping wall, track floor with two marks, and a knob with a knurled face.
-2. It lights the model with one wide, soft, far-away light plus even room light, and bakes the light that falls on each part into pictures. A baked shadow cannot follow a moving knob, so it bakes twice: with the knob on and with it off.
-3. It saves `blender/switch.blend` and exports `public/switch3d/`: `switch.glb` and four light pictures (`base-on`, `base-off`, `knob-on`, `knob-off`).
-4. `src/switch3d/main.ts` draws the model unlit: each part shows its own colour times the baked light, blending the "on" and "off" pictures as the knob travels. The floor colour blends between its two colours the same way. Camera and spring are in `settings` at the top.
+1. `blender/make_switch.py` (run with `npm run switch`, about a minute, in a background Blender) models the switch from the numbers at its top: sheet, sloping wall, track floor with two marks pressed into it, and a knob with a finely knurled face.
+2. It lights the model with one wide, soft, far-away light plus even room light, and bakes the light that falls on each part into pictures. A baked shadow cannot follow a moving knob, so it bakes three times: with the knob on, halfway and off.
+3. It saves `blender/switch.blend` and exports `public/switch3d/`: `switch.glb` and six light pictures (`base-` and `knob-`, each `on`, `mid` and `off`).
+4. `src/switch3d/main.ts` draws the model unlit: each part shows its own colour times the baked light, blending from the "off" picture through "mid" to "on" as the knob travels. The floor colour blends between its two colours the same way. Camera and spring are in `settings` at the top. `switch3d.html?hold=0.5` freezes the knob partway (0 off, 1 on) to inspect the blend.
 
 To change the look, edit the numbers at the top of `make_switch.py` (shape, colours, `LIGHT_SOFT` for shadow softness, `ROOM` for how filled the shadows are) and run `npm run switch` again. You can also open `blender/switch.blend`, but the baked pictures only update when the script runs.
 

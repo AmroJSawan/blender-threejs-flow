@@ -1,10 +1,10 @@
 """Builds the 3D switch: models it, bakes its soft studio light, saves blender/switch.blend and
-exports public/switch3d/ (switch.glb plus four baked light pictures).
+exports public/switch3d/ (switch.glb plus six baked light pictures).
 
 Run:  npm run switch
 The page (switch3d.html) shows the model unlit and multiplies each part's colour by the baked light.
-Because a baked shadow cannot follow a moving knob, the light is baked twice, with the knob on and
-off, and the page blends between the two as the knob travels.
+Because a baked shadow cannot follow a moving knob, the light is baked three times, with the knob
+on, halfway and off, and the page blends between them as the knob travels.
 
 Sizes are in Blender units; 1 unit = 100 of the design pixels used by the drawn switches.
 """
@@ -23,13 +23,14 @@ os.makedirs(OUT, exist_ok=True)
 # ---- The control panel -------------------------------------------------------------------------
 STRAIGHT = 0.72   # half length of the straight part of the track (also how far the knob travels)
 TRACK = 0.78      # half height of the track floor
-LIP = 0.11        # width of the sloping wall between sheet and floor
+LIP = 0.12        # width of the sloping wall between sheet and floor
 DEPTH = 0.22      # how deep the track is cut
 KNOB = 0.72       # knob radius
 FACE = 0.57       # radius of the knurled face
 RISE = 0.05       # how far the knob's top stands above the sheet
-CELL = 0.07       # size of one knurl pyramid
-TIP = 0.015       # its height
+CELL = 0.046      # size of one knurl pyramid
+TIP = 0.011       # its height
+PRESS = 0.045     # how deep the two marks are pressed into the floor
 SHEET = 0.4       # how far the modelled sheet reaches beyond the track (the page continues it in the same colour)
 COLOURS = {       # what each part is made of (the page reads these from the exported model)
     "Sheet": (0.83, 0.83, 0.84),
@@ -40,9 +41,9 @@ COLOURS = {       # what each part is made of (the page reads these from the exp
     "Grip": (0.78, 0.77, 0.76),
 }
 LIGHT_FROM = (-0.26, 0.72, 0.64)  # direction to the light: above, slightly left (the same as the drawn switches)
-LIGHT_SOFT = 38.0     # how wide the light is, degrees: wider = softer shadows
+LIGHT_SOFT = 30.0     # how wide the light is, degrees: wider = softer shadows
 LIGHT_POWER = 3.2
-ROOM = 0.26           # even light from the whole room, which fills the shadows
+ROOM = 0.2            # even light from the whole room, which fills the shadows
 MAP = 1024            # size of each baked light picture, px
 SAMPLES = 192
 OPEN = 0.6            # brightness the open, unshaded sheet is stored at (leaves headroom for brighter parts)
@@ -97,7 +98,7 @@ def loft(bm, rows, slot_of, offset=(0.0, 0.0), smooth=True):
     return rings
 
 
-def finish(name, bm, materials):
+def finish(name, bm, materials, cutters=()):
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     mesh = bpy.data.meshes.new(name)
@@ -107,9 +108,25 @@ def finish(name, bm, materials):
         mesh.materials.append(mat)
     obj = bpy.data.objects.new(name, mesh)
     scene.collection.objects.link(obj)
-    # Its own layout for the baked light picture.
     bpy.context.view_layer.objects.active = obj
     obj.select_set(True)
+    # Shapes to press into it.
+    for cutter in cutters:
+        cut = obj.modifiers.new("Press", "BOOLEAN")
+        cut.operation = "DIFFERENCE"
+        cut.object = cutter
+        bpy.ops.object.modifier_apply(modifier=cut.name)
+        bpy.data.objects.remove(cutter)
+    if cutters:  # the underside was only there to make the shape solid for pressing
+        under = bmesh.new()
+        under.from_mesh(mesh)
+        bmesh.ops.delete(under, geom=[f for f in under.faces if f.calc_center_median().z < -DEPTH - 0.1], context="FACES")
+        for f in under.faces:  # the floor and the marks' walls are flat: shade each face on its own, with crisp edges
+            if f.material_index == SLOT["Floor"]:
+                f.smooth = False
+        under.to_mesh(mesh)
+        under.free()
+    # Its own layout for the baked light picture.
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
     bpy.ops.uv.smart_project(angle_limit=math.radians(50), island_margin=0.02)
@@ -118,41 +135,60 @@ def finish(name, bm, materials):
     return obj
 
 
-# ---- Base: the sheet, the sloping wall, the track floor and the two marks on it ---------------
+# ---- Base: the sheet, the sloping wall, the track floor and the two marks pressed into it -------
+def solid(name, rows, offset):
+    """A closed shape (used to press a mark into the floor), painted like the floor."""
+    shape = bmesh.new()
+    loft(shape, rows, lambda i: SLOT["Floor"], offset=offset, smooth=False)
+    bmesh.ops.remove_doubles(shape, verts=shape.verts, dist=1e-5)
+    bmesh.ops.recalc_face_normals(shape, faces=shape.faces)
+    mesh = bpy.data.meshes.new(name)
+    shape.to_mesh(mesh)
+    shape.free()
+    for mat in (MATS["Sheet"], MATS["Wall"], MATS["Floor"]):
+        mesh.materials.append(mat)
+    obj = bpy.data.objects.new(name, mesh)
+    scene.collection.objects.link(obj)
+    return obj
+
+
+circle = lambda radius, z: stadium(radius, z, 0.0, 32)
+low, high = -DEPTH - PRESS, -DEPTH + 0.06
+# A slot on the on side and a ring on the off side.
+slot = solid("Slot", [stadium(0.0, low, 0.13, 12, True), stadium(0.034, low, 0.13, 12, True), stadium(0.034, high, 0.13, 12, True), stadium(0.0, high, 0.13, 12, True)], (-1.0, 0.0))
+ring = solid("Ring", [circle(0.135, low), circle(0.2, low), circle(0.2, high), circle(0.135, high), circle(0.135, low)], (1.0, 0.0))
+
 bm = bmesh.new()
-rows = [stadium(TRACK + LIP + SHEET, 0.0), stadium(TRACK + LIP + 0.15, 0.0), stadium(TRACK + LIP + 0.02, 0.0)]
+outer = TRACK + LIP + SHEET
+rows = [stadium(0.0, -1.0), stadium(outer, -1.0), stadium(outer, 0.0), stadium(TRACK + LIP + 0.15, 0.0), stadium(TRACK + LIP + 0.02, 0.0)]
+sheet_from = 2
 wall_from = len(rows) - 1
-WALL_STEPS = 10
+WALL_STEPS = 12
 for step in range(WALL_STEPS + 1):
     t = step / WALL_STEPS
     rows.append(stadium(TRACK + LIP * (1.0 - t), -DEPTH * (t * t * (3.0 - 2.0 * t))))
 floor_from = len(rows) - 1
 rows += [stadium(TRACK * 0.6, -DEPTH), stadium(TRACK * 0.25, -DEPTH), stadium(0.0, -DEPTH)]
 loft(bm, rows, lambda i: SLOT["Sheet"] if i < wall_from else SLOT["Wall"] if i < floor_from else SLOT["Floor"])
-# A slot mark on the on side and a ring mark on the off side, standing a little proud of the floor.
-proud = -DEPTH + 0.014
-slot = [stadium(0.05, -DEPTH, 0.13, 10, True), stadium(0.03, proud, 0.13, 10, True), stadium(0.0, proud, 0.13, 10, True)]
-loft(bm, slot, lambda i: SLOT["Floor"], offset=(-1.0, 0.0))
-circle = lambda radius, z: stadium(radius, z, 0.0, 24)
-ring = [circle(0.215, -DEPTH), circle(0.198, proud), circle(0.147, proud), circle(0.13, -DEPTH)]
-loft(bm, ring, lambda i: SLOT["Floor"], offset=(1.0, 0.0))
-base = finish("Base", bm, [MATS["Sheet"], MATS["Wall"], MATS["Floor"]])
+base = finish("Base", bm, [MATS["Sheet"], MATS["Wall"], MATS["Floor"]], cutters=(slot, ring))
 
 # ---- Knob: a gently domed puck with a knurled face set slightly in ------------------------------
 bm = bmesh.new()
-face_z = RISE - 0.016
+face_z = RISE - 0.014
+circle = lambda radius, z: stadium(radius, z, 0.0, 48)
 profile = [
-    (KNOB, -DEPTH), (KNOB, -0.03), (KNOB - 0.006, 0.006), (KNOB - 0.022, 0.026), (KNOB - 0.05, 0.039),
-    (KNOB - 0.09, 0.046), (FACE + 0.02, RISE), (FACE + 0.004, RISE - 0.002), (FACE, face_z), (0.0, face_z),
+    (KNOB, -DEPTH), (KNOB, 0.0), (KNOB - 0.004, 0.016), (KNOB - 0.014, 0.03), (KNOB - 0.032, 0.04),  # side and rounded shoulder
+    (KNOB - 0.07, 0.046), (FACE + 0.03, RISE), (FACE + 0.006, RISE - 0.001),                         # the wide, nearly flat ring
+    (FACE, face_z), (FACE - 0.02, face_z - 0.004), (0.0, face_z - 0.004),                          # the face, set in (its middle sits just under the knurl)
 ]
-face_from = len(profile) - 2
+face_from = len(profile) - 3
 loft(bm, [circle(r, z) for r, z in profile], lambda i: 1 if i >= face_from else 0)
 # The knurl: rows of small pyramids on a lattice turned 45°, kept inside the face.
 reach = int(FACE / CELL) + 2
 for i in range(-reach, reach + 1):
     for j in range(-reach, reach + 1):
         cx, cy = (i - j) * CELL * 0.7071, (i + j) * CELL * 0.7071
-        if math.hypot(cx, cy) + CELL * 0.72 > FACE:
+        if math.hypot(cx, cy) + CELL * 0.72 > FACE - 0.012:
             continue
         half = CELL * 0.5
         corners = [(-half, -half), (half, -half), (half, half), (-half, half)]
@@ -160,6 +196,7 @@ for i in range(-reach, reach + 1):
         tip = bm.verts.new((cx, cy, face_z + TIP))
         for k in range(4):
             bm.faces.new((turned[k], turned[(k + 1) % 4], tip)).material_index = 1
+
 knob = finish("Knob", bm, [MATS["Knob"], MATS["Grip"]])
 
 # ---- Light: one wide, soft light from far away, and an evenly lit room -------------------------
@@ -184,7 +221,7 @@ background.inputs["Strength"].default_value = ROOM
 scene.world = world
 
 
-# ---- Bake: the light that falls on each part, with the knob on and with it off ------------------
+# ---- Bake: the light that falls on each part, with the knob on, halfway and off ------------------
 def bake(obj, label, size=MAP):
     image = bpy.data.images.new(f"{obj.name}-{label}", size, size, float_buffer=True)
     for mat in obj.data.materials:
@@ -205,9 +242,10 @@ def set_colour(mat, colour):
 
 
 images = {}
-for label, x, floor in (("on", STRAIGHT, "FloorOn"), ("off", -STRAIGHT, "FloorOff")):
+for label, x, floor in (("on", STRAIGHT, "FloorOn"), ("mid", 0.0, None), ("off", -STRAIGHT, "FloorOff")):
     knob.location.x = x
-    set_colour(MATS["Floor"], COLOURS[floor])  # so the light bouncing off the floor carries its colour
+    # The light bouncing off the floor carries its colour.
+    set_colour(MATS["Floor"], COLOURS[floor] if floor else [(a + b) / 2 for a, b in zip(COLOURS["FloorOn"], COLOURS["FloorOff"])])
     bpy.context.view_layer.update()
     for obj in (base, knob):
         images[(obj.name, label)] = bake(obj, label)

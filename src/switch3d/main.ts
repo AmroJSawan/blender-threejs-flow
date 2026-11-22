@@ -4,14 +4,16 @@ import '../switch/switch.css'
 
 /**
  * The 3D switch. Blender (blender/make_switch.py) made the model and four pictures of the light
- * falling on it: base and knob, each with the knob on and off. Here the model is drawn unlit:
- * every part shows its own colour times the baked light, blending the "on" and "off" pictures as
- * the knob travels, so the soft shadows follow it.
+ * falling on it: base and knob, each with the knob on, halfway and off. Here the model is drawn
+ * unlit: every part shows its own colour times the baked light, blending from the "off" picture
+ * through "halfway" to "on" as the knob travels, so the soft shadows follow it.
  */
 const settings = {
   /** Where the model and its baked light pictures are. */
   folder: 'switch3d/',
   on: true,
+  /** For checking the blend: switch3d.html?hold=0.5 freezes the knob that far along (0 off … 1 on). */
+  hold: new URLSearchParams(location.search).get('hold'),
   /** Knob spring: higher stiffness = snappier, lower damping = more overshoot. */
   stiffness: 260,
   damping: 21,
@@ -42,7 +44,7 @@ const uMix = { value: Number(settings.on) }
 const uOpen = { value: 0.6 }
 function lit(part: 'base' | 'knob', colour: THREE.Color, fades = false) {
   return new THREE.ShaderMaterial({
-    uniforms: { uOn: { value: picture(`${part}-on`) }, uOff: { value: picture(`${part}-off`) }, uMix, uOpen, uColour: { value: colour }, uFades: { value: fades ? 1 : 0 } },
+    uniforms: { uOn: { value: picture(`${part}-on`) }, uMid: { value: picture(`${part}-mid`) }, uOff: { value: picture(`${part}-off`) }, uMix, uOpen, uColour: { value: colour }, uFades: { value: fades ? 1 : 0 } },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
       varying vec3 vPlace;
@@ -56,12 +58,14 @@ function lit(part: 'base' | 'knob', colour: THREE.Color, fades = false) {
       varying vec3 vPlace;
       uniform float uFades;    // 1 on the sheet: its baked light eases to plain toward the model's edge, where the page takes over
       uniform sampler2D uOn;   // baked light with the knob on
+      uniform sampler2D uMid;  // … halfway
       uniform sampler2D uOff;  // … and off
       uniform float uMix;
       uniform float uOpen;     // the value open, unshaded sheet was stored at
       uniform vec3 uColour;
       void main() {
-        vec3 light = mix(texture2D(uOff, vUv).rgb, texture2D(uOn, vUv).rgb, clamp(uMix, 0.0, 1.0)) / uOpen;
+        float at = clamp(uMix, 0.0, 1.0) * 2.0; // 0 off … 1 halfway … 2 on
+        vec3 light = mix(mix(texture2D(uOff, vUv).rgb, texture2D(uMid, vUv).rgb, min(at, 1.0)), texture2D(uOn, vUv).rgb, max(at - 1.0, 0.0)) / uOpen;
         float beyond = length(vec2(max(abs(vPlace.x) - 0.72, 0.0), vPlace.z)) - 0.89; // distance outside the track's rim
         light = mix(light, vec3(1.0), uFades * smoothstep(0.08, 0.36, beyond));
         gl_FragColor = vec4(uColour * light, 1.0);
@@ -145,6 +149,7 @@ function frame(now: number) {
   before = now
   state.speed += ((Number(state.on) - state.at) * settings.stiffness - state.speed * settings.damping) * dt
   state.at += state.speed * dt
+  if (settings.hold !== null) state.at = Number(settings.hold)
   uMix.value = state.at
   if (knob) knob.position.x = (state.at * 2 - 1) * travel
   floor.colour.lerpColors(floor.off, floor.on, THREE.MathUtils.smoothstep(state.at, 0.1, 0.9))
