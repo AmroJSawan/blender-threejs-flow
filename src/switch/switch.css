@@ -1,0 +1,49 @@
+/* The switch study page: a light studio sheet with small, quiet labels. */
+.switch-page {
+  margin: 0;
+  overflow: hidden;
+  background: #dcdcdc;
+  color: #4a4a4d;
+  font: 500 15px/1.3 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  letter-spacing: -0.01em;
+}
+.switch-page canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.switch-page header,
+.switch-page footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 26px 30px;
+  pointer-events: none;
+}
+.switch-page header { top: 0; }
+.switch-page footer { bottom: 0; }
+.switch-page a {
+  color: inherit;
+  text-decoration: none;
+  pointer-events: auto;
+}
+.switch-page a:hover { color: #111; }
+/* The real controls: invisible buttons laid over the drawn switches, so keyboards and screen readers work. */
+.switch-page button {
+  position: fixed;
+  border: 0;
+  padding: 0;
+  background: none;
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.switch-page button:focus-visible {
+  outline: 2px solid #2b6cff;
+  outline-offset: 6px;
+}

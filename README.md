@@ -7,6 +7,7 @@ Scroll, mouse, hover and fragment shaders are handled by a small vanilla three.j
 **Glass cards:** https://amrojsawan.github.io/blender-threejs-flow/glass.html
 **Glow cards:** https://amrojsawan.github.io/blender-threejs-flow/glow.html
 **Material cards:** https://amrojsawan.github.io/blender-threejs-flow/materials.html
+**Switch study:** https://amrojsawan.github.io/blender-threejs-flow/switch.html
 
 **Stack:** three.js (WebGL 2) · GSAP ScrollTrigger · Lenis · Vite · TypeScript
 
@@ -194,6 +195,12 @@ How a material file works:
 - `#define SIDE_COLOUR vec3(...)` gives the card visible thickness under its lower edge.
 - Header lines: `// stage: #1b1c20` (backdrop colour), `// lights: 0.3` (strength of the colour lights behind), `// ink: dark` (dark print for light materials).
 - Page-wide staging for each of the three pages is in `settings.series` in `src/glass/main.ts`: `stage` and `lights` (backdrop colour and colour lights), `words` (rows of type behind the card, used by the glass page), `lift` (shadow), `lean` (resting angle), `tilt` (how far it leans toward the pointer). The header lines above work on any page.
+
+## Switch study page
+
+`switch.html` is a finish study: two tactile switches (recessed track, bezel ring, knurled knob) drawn entirely in one fragment shader, `src/switch/switch.frag`, with no images and no 3D model. It shows how a polished 2D look is built from stacked simple shapes: backdrop, bezel, track with the shadow of its upper lip, embossed marks, the knob's shadow, its bevel ring and its knurled face. Sizes and the two track colours are named at the top of the shader.
+
+`src/switch/main.ts` holds the knob spring and layout (`settings`), and lays an invisible real button with `role="switch"` over each drawn switch, so keyboard and screen readers work.
 
 ## Phones: card view
 
