@@ -39,5 +39,5 @@ export default defineConfig({
   plugins: [reloadOnExport(), saveRecordings()],
   server: { port: 5173 },
   // Five pages: the 3D scene (index.html), the card series (glass.html, glow.html, materials.html) and the switch study (switch.html).
-  build: { rollupOptions: { input: ['index.html', 'glass.html', 'glow.html', 'materials.html', 'switch.html', 'switch3d.html'] } },
+  build: { rollupOptions: { input: ['index.html', 'glass.html', 'glow.html', 'materials.html', 'switch.html', 'switch3d.html', 'switch-css.html'] } },
 })

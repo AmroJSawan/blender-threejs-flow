@@ -602,26 +602,31 @@ def build(name):
     return dict(name=name, title=made["title"], note=made["note"], ink=made.get("ink", "dark"), sheet=to_hex(SPECS["Sheet"][0]))
 
 
-asked = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-unknown = [name for name in asked if name not in STYLES]
-if unknown:
-    sys.exit(f"No such style: {', '.join(unknown)}. Styles: {', '.join(STYLES)}")
-listed = {}
-if os.path.exists(LIST):
-    with open(LIST) as file:
-        listed = {entry["name"]: entry for entry in json.load(file)}
-for name in asked or STYLES:
-    listed[name] = build(name)
-for entry in listed.values():
-    # A short fingerprint of the style's files. The page adds it to their addresses, so after a rebake
-    # a browser fetches the model and its pictures afresh instead of mixing stored old ones with new.
-    mark = hashlib.md5()
-    folder = os.path.join(OUT, entry["name"])
-    for name in sorted(os.listdir(folder)):
-        with open(os.path.join(folder, name), "rb") as file:
-            mark.update(file.read())
-    entry["version"] = mark.hexdigest()[:8]
-with open(LIST, "w") as file:  # the styles the page offers, in the order above
-    json.dump([listed[name] for name in STYLES if name in listed], file, indent=2)
-    file.write("\n")
-print("switches built")
+def main():
+    asked = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    unknown = [name for name in asked if name not in STYLES]
+    if unknown:
+        sys.exit(f"No such style: {', '.join(unknown)}. Styles: {', '.join(STYLES)}")
+    listed = {}
+    if os.path.exists(LIST):
+        with open(LIST) as file:
+            listed = {entry["name"]: entry for entry in json.load(file)}
+    for name in asked or STYLES:
+        listed[name] = build(name)
+    for entry in listed.values():
+        # A short fingerprint of the style's files. The page adds it to their addresses, so after a rebake
+        # a browser fetches the model and its pictures afresh instead of mixing stored old ones with new.
+        mark = hashlib.md5()
+        folder = os.path.join(OUT, entry["name"])
+        for name in sorted(os.listdir(folder)):
+            with open(os.path.join(folder, name), "rb") as file:
+                mark.update(file.read())
+        entry["version"] = mark.hexdigest()[:8]
+    with open(LIST, "w") as file:  # the styles the page offers, in the order above
+        json.dump([listed[name] for name in STYLES if name in listed], file, indent=2)
+        file.write("\n")
+    print("switches built")
+
+
+if __name__ == "__main__":  # (blender/render_switch_css.py borrows the models above without running this)
+    main()

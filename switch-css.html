@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Switch in CSS · Blender → pictures</title>
+    <link rel="stylesheet" href="/src/switch/switch.css" />
+    <link rel="stylesheet" href="/src/switch-css/knurled.css" />
+    <link rel="stylesheet" href="/src/switch-css/switch.css" />
+  </head>
+  <body class="switch-page graded css-poc">
+    <header><a href="./">← 3D styles</a><a href="switch3d.html">The same switch in 3D →</a></header>
+    <main>
+      <figure>
+        <label class="switch-css knurled"><input type="checkbox" role="switch" aria-label="Wi-Fi" checked /><span class="art"></span></label>
+        <figcaption>Wi-Fi</figcaption>
+      </figure>
+      <figure>
+        <label class="switch-css knurled"><input type="checkbox" role="switch" aria-label="Bluetooth" /><span class="art"></span></label>
+        <figcaption>Bluetooth</figcaption>
+      </figure>
+      <figure>
+        <label class="switch-css knurled"><input type="checkbox" role="switch" aria-label="Do not disturb" checked /><span class="art"></span></label>
+        <figcaption>Do not disturb</figcaption>
+      </figure>
+    </main>
+    <p id="note">The knurled switch as pictures: Blender renders its journey from off to on as 18 frames, at the exact pixel size of each screen density, and plain CSS steps through them. No JavaScript and no 3D on this page.</p>
+  </body>
+</html>

@@ -9,6 +9,7 @@ Scroll, mouse, hover and fragment shaders are handled by a small vanilla three.j
 **Material cards:** https://amrojsawan.github.io/blender-threejs-flow/materials.html
 **Switch study:** https://amrojsawan.github.io/blender-threejs-flow/switch.html
 **Switches in 3D:** https://amrojsawan.github.io/blender-threejs-flow/switch3d.html
+**Switch in CSS:** https://amrojsawan.github.io/blender-threejs-flow/switch-css.html
 
 **Stack:** three.js (WebGL 2) · GSAP ScrollTrigger · Lenis · Vite · TypeScript
 
@@ -239,6 +240,16 @@ What a part does on the page is set on its material in the script: `off=` (a dif
 
 To change a look, edit the numbers at the top of its function in `make_switch.py` (or `LIGHT_SOFT` for shadow softness, `ROOM` for how filled the shadows are) and run `npm run switch` again. To add a style, copy one of the functions and add it to `STYLES`. You can also open the `.blend` files, but the baked pictures only update when the script runs.
 
+## Switch in CSS page (proof of concept)
+
+`switch-css.html` is the knurled switch with no 3D on the page at all: pictures rendered in Blender, moved by plain CSS, with no JavaScript. It costs and behaves like any other CSS component, and every pixel on screen is one Blender rendered.
+
+1. `blender/render_switch_css.py` (run with `npm run switch-css`, about three minutes) takes the model and light from `make_switch.py`, looks straight down at it without perspective, and renders the knob's journey from off to on as `FRAMES` (18) pictures joined side by side into one strip.
+2. It renders the strip once per screen density (1x, 2x, 3x), each at its exact pixel size, so the browser never scales a picture. It writes `public/switch-css/knurled-1x/2x/3x.webp` (about 60, 160 and 270 kB; a browser loads only the one for its screen) and `src/switch-css/knurled.css` (sizes, frame count, addresses).
+3. `src/switch-css/switch.css` is the component: a real checkbox with `role="switch"` lies invisibly over the picture; `:checked` moves the strip from its first frame to its last, and a `steps()` transition shows every frame on the way. The frames are spaced evenly in time, not distance, so the knob eases in and out.
+
+The size on the page is fixed by `UNIT` in the script (CSS pixels per Blender unit); another size is another render. What this version cannot do is lean with the pointer: that needs the 3D page.
+
 ## Phones: card view
 
 On screens up to `config.cards.maxWidth` (768 px) the scroll scene is replaced by a vertical list of cards.
@@ -256,6 +267,7 @@ Set `config.cards.enabled = false` to show the scroll scene on every screen.
 | `npm run export` | Export `blender/demo.blend` without opening Blender |
 | `npm run demo` | Rebuild the demo scene from `blender/make_demo.py` |
 | `npm run switch` | Rebuild the 3D switches and bake their light (`blender/make_switch.py`) |
+| `npm run switch-css` | Render the knurled switch as pictures for the CSS-only page (`blender/render_switch_css.py`) |
 | `npm run optimize` | Compress `public/scene.glb` (Meshopt + WebP) before shipping |
 
 `export` and `demo` assume Blender at `/Applications/Blender.app`; edit `package.json` if yours is elsewhere.

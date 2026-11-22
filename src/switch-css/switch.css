@@ -1,0 +1,71 @@
+/* A switch made of pictures rendered in Blender, moved by CSS alone: no JavaScript, no 3D on the page.
+   The picture is a strip of frames side by side (off … on); one frame shows at a time, and a
+   transition steps through them. Sizes, frame count and the strip's address come from the
+   generated file for the style (knurled.css), written by blender/render_switch_css.py.
+
+   Markup:
+     <label class="switch-css knurled"><input type="checkbox" role="switch" aria-label="…" /><span class="art"></span></label> */
+.switch-css {
+  --time: 0.3s; /* how long the knob takes to cross */
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: var(--w);
+  height: var(--h);
+  pointer-events: none; /* only the switch itself is clickable, not the sheet round it */
+  -webkit-tap-highlight-color: transparent;
+}
+/* The real control: an invisible checkbox exactly over the switch. */
+.switch-css input {
+  position: absolute;
+  inset: var(--inset);
+  width: auto;
+  height: auto;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  pointer-events: auto;
+  border-radius: var(--round);
+}
+.switch-css .art {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-size: calc(var(--frames) * 100%) 100%;
+  background-position: 0 0; /* first frame: off */
+  transition: background-position var(--time) var(--stepping);
+}
+.switch-css input:checked + .art { background-position: 100% 0; } /* last frame: on */
+.switch-css input:focus-visible + .art::after {
+  content: '';
+  position: absolute;
+  inset: calc(var(--inset) - 6px);
+  border: 2px solid #2b6cff;
+  border-radius: calc(var(--round) + 6px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .switch-css .art { transition: none; }
+}
+
+/* The demo page. */
+.switch-page.css-poc { background: var(--knurled-sheet); }
+.css-poc main {
+  position: fixed;
+  inset: 70px 0 120px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: 4px 28px;
+}
+.css-poc figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.css-poc figcaption {
+  position: relative; /* above the picture's empty margin */
+  margin-top: -14px;
+  font-size: 14px;
+}

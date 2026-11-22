@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "demo": "/Applications/Blender.app/Contents/MacOS/Blender --background --python blender/make_demo.py",
     "switch": "/Applications/Blender.app/Contents/MacOS/Blender --background --python blender/make_switch.py",
+    "switch-css": "/Applications/Blender.app/Contents/MacOS/Blender --background --python blender/render_switch_css.py",
     "export": "/Applications/Blender.app/Contents/MacOS/Blender --background blender/demo.blend --python blender/threejs_bridge.py -- --export public/scene.glb",
     "optimize": "npx -y @gltf-transform/cli optimize public/scene.glb public/scene.glb --compress meshopt --texture-compress webp"
   },

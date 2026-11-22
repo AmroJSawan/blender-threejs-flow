@@ -1,0 +1,14 @@
+/* Written by blender/render_switch_css.py: do not edit by hand. */
+:root { --knurled-sheet: #ecebed; }
+.switch-css.knurled {
+  --w: 198px;
+  --h: 126px;
+  --inset: 18px; /* sheet round the switch inside the picture */
+  --round: 45px;
+  --frames: 18;
+  --stepping: steps(17);
+}
+.switch-css.knurled .art {
+  background-image: url('/switch-css/knurled-1x.webp?v=b57d30f4');
+  background-image: image-set(url('/switch-css/knurled-1x.webp?v=b57d30f4') 1x, url('/switch-css/knurled-2x.webp?v=3f26de23') 2x, url('/switch-css/knurled-3x.webp?v=e3cdbbf4') 3x);
+}
