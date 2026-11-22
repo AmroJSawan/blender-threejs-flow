@@ -263,19 +263,22 @@ The size on the page is fixed by `UNIT` in the script (CSS pixels per Blender un
 
 ## Expressions page
 
-`expressions.html` is a collection of thirteen small animated 3D scenes, each one "expression" picked out of a set of motion-design references. Choose one from the bar at the bottom (also `expressions.html?expression=rods`, or the arrow keys); the view leans a little toward the pointer. They are built directly in three.js from simple shapes, not exported from Blender.
+`expressions.html` is a collection of fourteen small animated 3D scenes, each one "expression" picked out of a set of motion-design references. Choose one from the bar at the bottom (also `expressions.html?expression=rods`, or the arrow keys); the view leans a little toward the pointer. They are built directly in three.js from simple shapes, not exported from Blender.
 
 | Stage | Expressions | Look |
 |---|---|---|
 | `light` | `iris`, `crest`, `vortex`, `halo` | Concentric rings of light with a lit zone sweeping round them, and a glowing ring, on black |
 | `clay` | `ribbons`, `petals`, `coil`, `blades`, `blocks` | Matt grey shapes in a soft studio, with real-time soft shadows |
 | `ember` | `orbit`, `rods`, `monolith`, `zigzag` | Dark shapes that glow orange and red at one end and cool to black |
+| `steel` | `dial` | Dark grained metal under one close lamp, on black |
 
 | File | For |
 |---|---|
 | `src/expressions/scenes/*.ts` | **One file per expression.** Drop a file in and it appears in the bar. It gives a `title`, `note`, `order`, its `stage`, and a `build()` that returns the objects and an `update(time)` called every frame. Its numbers (how many arcs, colours, speeds) are at the top |
 | `src/expressions/kit.ts` | The building blocks: `rings()` (one field of rings that all share a centre, with a lit zone that can be turned, sheared and narrowed), `stepped()` (time that moves pose to pose), `keyed()` (a value read off a list of keyframes), `band()` (an arc of light with one crisp bright edge), `clay()` and `shadowed()` (matt material and shadows), `arcSlab()` (a thick slice of a ring), `ember()` (a material hot at one end and dark at the other) |
 | `src/expressions/main.ts` | The page: camera, the three stages' backdrops and light (`settings.stages`), the bar, and the fade between expressions |
+
+`dial` is a mechanical study after "Semantic Restructuring" by Reijo Palmiste: a ring of wedge plates that turns once per loop, a hub that flips every second, and two events (the plates restructuring in place, then the whole dial tumbling apart and re-seating). Its file opens with the mechanism as read from the clip, and each plate's moves are listed as keyframes.
 
 `orbit` and `rods` copy their reference clips' motion frame by frame: the lists of `[seconds, value]` at the top of each file are the reference's own timing (view, turn, heat, each moon and rod), and `PACE` slows or speeds the whole thing. Like the clips, each plays through and then starts again.
 

@@ -4,12 +4,12 @@ import * as THREE from 'three'
  * What every expression is made from. An expression is one small animated 3D scene
  * (src/expressions/scenes/*.ts): it says which stage it plays on and builds its objects.
  */
-export type Stage = 'light' | 'clay' | 'ember'
+export type Stage = 'light' | 'clay' | 'ember' | 'steel'
 export type Expression = {
   title: string
   note: string
   order: number
-  /** light = glowing shapes on black; clay = matt grey shapes in a soft studio; ember = shapes glowing orange and red in the dark. */
+  /** light = glowing shapes on black; clay = matt grey shapes in a soft studio; ember = shapes glowing orange and red in the dark; steel = dark grained metal lit by one lamp, on black. */
   stage: Stage
   /** Builds the scene. `update` is called every frame with the time in seconds. */
   build(): { object: THREE.Object3D; update(time: number): void }
@@ -232,4 +232,60 @@ export function ember({ hot, warm = hot, axis = 'y', from, to, body = 0.016 }: E
         #include <colorspace_fragment>
       }`,
   })
+}
+
+// ---- Steel: dark, grained metal under a single lamp ---------------------------------------------
+type Steel = {
+  /** How bright the metal is where the lamp hits it square on, and how tight and strong its glint is. */
+  body?: number
+  glint?: number
+  tight?: number
+  /** How much fine grain shows (0 = polished). */
+  grain?: number
+}
+/** Flat faces take one even tone that changes as they tilt toward or away from the lamp; edges catch a bright line. */
+export function steel({ body = 0.36, glint = 0.22, tight = 70, grain = 0.45 }: Steel = {}): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: { uBody: { value: body }, uGlint: { value: glint }, uTight: { value: tight }, uGrain: { value: grain } },
+    vertexShader: /* glsl */ `
+      varying vec3 vPlace;
+      varying vec3 vNormal;
+      varying vec3 vSeen;
+      void main() {
+        vPlace = position;
+        vec4 seen = modelViewMatrix * vec4(position, 1.0);
+        vNormal = normalMatrix * normal;
+        vSeen = seen.xyz;
+        gl_Position = projectionMatrix * seen;
+      }`,
+    fragmentShader: /* glsl */ `
+      varying vec3 vPlace;
+      varying vec3 vNormal;
+      varying vec3 vSeen;
+      uniform float uBody, uGlint, uTight, uGrain;
+      float hash(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+      void main() {
+        vec3 n = normalize(vNormal);
+        vec3 toEye = normalize(-vSeen);
+        vec3 lamp = vec3(3.2, 3.4, -13.6) - vSeen;            // the lamp: close in, up and to the right, so its light falls away across the subject
+        vec3 toLamp = normalize(lamp);
+        float lit = max(dot(n, toLamp), 0.0) / (1.0 + 0.045 * dot(lamp, lamp));
+        float shine = pow(max(dot(n, normalize(toLamp + toEye)), 0.0), uTight);
+        float rim = pow(1.0 - max(dot(n, toEye), 0.0), 3.0);
+        float speck = 1.0 + uGrain * (hash(floor(vPlace * 110.0)) - 0.5);
+        vec3 colour = vec3(0.006 + uBody * lit) * speck + vec3(uGlint * shine) + vec3(0.035 * rim);
+        gl_FragColor = vec4(colour, 1.0);
+        #include <colorspace_fragment>
+      }`,
+  })
+}
+/** A flat slice of a ring lying in the xy plane, centred on the +x direction: `wide` radians round, `thick` deep, with softened edges. */
+export function plate(inner: number, outer: number, wide: number, thick: number): THREE.ExtrudeGeometry {
+  const shape = new THREE.Shape()
+  shape.absarc(0, 0, outer, -wide / 2, wide / 2, false)
+  shape.absarc(0, 0, inner, wide / 2, -wide / 2, true)
+  const edge = Math.min(0.018, thick * 0.3)
+  const geometry = new THREE.ExtrudeGeometry(shape, { depth: thick - edge * 2, bevelEnabled: true, bevelSize: edge, bevelThickness: edge, bevelSegments: 2, curveSegments: Math.max(8, Math.ceil(wide * 28)) })
+  geometry.translate(0, 0, -(thick - edge * 2) / 2)
+  return geometry
 }

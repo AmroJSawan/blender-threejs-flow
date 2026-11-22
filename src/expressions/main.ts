@@ -21,6 +21,7 @@ const settings = {
     light: { centre: '#000000', corners: '#000000', spot: [0.5, 0.5], ink: 'light' },
     clay: { centre: '#9a9a9a', corners: '#2c2c2c', spot: [0.72, 0.68], ink: 'light' },
     ember: { centre: '#2a2a2a', corners: '#0e0e0e', spot: [0.5, 0.62], ink: 'light' },
+    steel: { centre: '#000000', corners: '#000000', spot: [0.5, 0.5], ink: 'light' },
   } satisfies Record<Stage, { centre: string; corners: string; spot: [number, number]; ink: 'light' | 'dark' }>,
   /** Milliseconds one expression takes to fade out before the next fades in (matches the CSS). */
   swap: 300,
