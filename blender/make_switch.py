@@ -47,6 +47,7 @@ ROOM = 0.2            # even light from the whole room, which fills the shadows
 MAP = 1024            # size of each baked light picture, px
 SAMPLES = 192
 SHADOW_SPAN = (3.4, 2.2)  # size of the patch of floor the knob's shadow picture covers
+QUALITY = 90          # how closely the saved pictures keep the bake (WebP, 0-100): lower = smaller files
 OPEN = 0.6            # brightness the open, unshaded sheet is stored at (leaves headroom for brighter parts)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -274,9 +275,10 @@ shadow = bpy.data.images.new("knob-shadow", 512, 512, float_buffer=True)
 ratio = np.ones_like(with_knob)
 ratio[:, :3] = np.clip(with_knob[:, :3].mean(axis=1, keepdims=True) / np.maximum(without[:, :3].mean(axis=1, keepdims=True), 1e-4), 0.0, 1.0)
 shadow.pixels.foreach_set(ratio.ravel())
-scene.render.image_settings.file_format = "PNG"
+scene.render.image_settings.file_format = "WEBP"
+scene.render.image_settings.quality = QUALITY
 scene.render.image_settings.color_mode = "RGB"
-shadow.save_render(os.path.join(OUT, "knob-shadow.png"), scene=scene)
+shadow.save_render(os.path.join(OUT, "knob-shadow.webp"), scene=scene)
 bpy.data.objects.remove(ground)
 knob.hide_render = False
 base.hide_render = False
@@ -297,9 +299,10 @@ for key, image in images.items():
     data[:, 3] = 1.0
     image.pixels.foreach_set(data.ravel())
     image.update()
-    scene.render.image_settings.file_format = "PNG"
+    scene.render.image_settings.file_format = "WEBP"
+    scene.render.image_settings.quality = QUALITY
     scene.render.image_settings.color_mode = "RGB"
-    image.save_render(os.path.join(OUT, f"{key[0].lower()}-{key[1]}.png"), scene=scene)
+    image.save_render(os.path.join(OUT, f"{key[0].lower()}-{key[1]}.webp"), scene=scene)
 print(f"open sheet light before scaling: {sheet_light:.3f}")
 
 # ---- Save and export ---------------------------------------------------------------------------

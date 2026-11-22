@@ -31,9 +31,13 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
 const scene = new THREE.Scene()
 const camera = new THREE.PerspectiveCamera(settings.lens, 1, 0.1, 200)
 
-const pictures = new THREE.TextureLoader()
+// Nothing is shown until the model and every baked picture have arrived; then the switch fades in.
+// Until then the page is the plain sheet (the same colour, set in CSS), never a black or half-lit view.
+const arriving = new THREE.LoadingManager(() => canvas.classList.add('ready'))
+scene.background = new THREE.Color().setRGB(0.83, 0.83, 0.84) // the sheet; replaced by the model's own value once loaded
+const pictures = new THREE.TextureLoader(arriving)
 const picture = (name: string) => {
-  const texture = pictures.load(`${settings.folder}${name}.png`)
+  const texture = pictures.load(`${settings.folder}${name}.webp`)
   texture.flipY = false // glTF layout
   texture.colorSpace = THREE.SRGBColorSpace
   texture.anisotropy = 8
@@ -45,7 +49,7 @@ const uOpen = { value: 0.6 }
 /** Where the knob is along the track (model units), and the size of floor its shadow picture covers. */
 const uKnobX = { value: 0 }
 const uShadowSpan = { value: new THREE.Vector2(3.4, 2.2) }
-const shadow = pictures.load(`${settings.folder}knob-shadow.png`)
+const shadow = pictures.load(`${settings.folder}knob-shadow.webp`)
 shadow.colorSpace = THREE.SRGBColorSpace
 function lit(part: 'base' | 'knob', colour: THREE.Color, fades = false) {
   return new THREE.ShaderMaterial({
@@ -106,7 +110,7 @@ function lit(part: 'base' | 'knob', colour: THREE.Color, fades = false) {
 let knob: THREE.Object3D | undefined
 let travel = 0.72
 const floor = { colour: new THREE.Color(), on: new THREE.Color(), off: new THREE.Color() }
-new GLTFLoader().load(`${settings.folder}switch.glb`, (gltf) => {
+new GLTFLoader(arriving).load(`${settings.folder}switch.glb`, (gltf) => {
   const base = gltf.scene.getObjectByName('Base')!
   knob = gltf.scene.getObjectByName('Knob')!
   // Numbers the Blender script attached to the model.

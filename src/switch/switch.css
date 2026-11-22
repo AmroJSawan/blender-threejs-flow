@@ -113,3 +113,10 @@
 .switch-page header,
 .switch-page #note,
 .switch-page .control { z-index: 1; }
+/* The 3D page starts as the plain sheet and fades the switch in once everything has loaded. */
+.switch-page.graded { background: #eaeaec; }
+.switch-page.graded canvas {
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.switch-page.graded canvas.ready { opacity: 1; }
