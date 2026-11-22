@@ -3,7 +3,7 @@
 Design the scene in Blender, press Export (or just save), and the browser refreshes with the new scene.
 Scroll, mouse, hover and fragment shaders are handled by a small vanilla three.js app.
 
-**Lab index:** https://amrojsawan.github.io/blender-threejs-flow/ (republished automatically on every push to `main`)
+**Lab canvas:** https://amrojsawan.github.io/blender-threejs-flow/ (republished automatically on every push to `main`)
 **3D styles:** https://amrojsawan.github.io/blender-threejs-flow/styles.html
 **Glass cards:** https://amrojsawan.github.io/blender-threejs-flow/glass.html
 **Glow cards:** https://amrojsawan.github.io/blender-threejs-flow/glow.html
@@ -281,15 +281,22 @@ The size on the page is fixed by `UNIT` in the script (CSS pixels per Blender un
 
 With the system's reduced-motion setting on, the expressions play at `settings.calm` of full speed. `expressions.html?expression=orbit&at=2.2` freezes an expression at that many seconds, for checking a pose; choosing another expression lets go of it.
 
-## Lab index (the entry page)
+## Lab canvas (the entry page)
 
-`index.html` is the way in: a design R&D index listing the eight studies, each with what it asks, how it is made, how many specimens it holds and its state. On a wide screen with a mouse, pointing at a study (or tabbing to it) loads that study live in the viewer on the right; one runs at a time. On phones and touch screens it is a plain list of links. It works without JavaScript.
+`index.html` is the way in: one open canvas, like a design tool's board, with the eight studies laid out on it as frames in three groups (Scenes, Cards, Switches) beside a short brief.
+
+- **Moving about:** drag to move, scroll to pan, pinch or Ctrl/Cmd-scroll to zoom. Keys: `+` `−` zoom, `0` fit everything, `1` 100%, arrows pan, `[` `]` previous and next study.
+- **Floating navigator** (top left): the list of studies. Choosing one flies to its frame. It folds away, and starts folded on phones.
+- **Floating toolbar** (bottom): previous/next study, zoom out, zoom level (click for 100%), zoom in, fit everything, and a button that opens the chosen study.
+- **Frames:** each shows a picture of its study. Choosing a study (click it, or pick it in the navigator) flies to it and, on a wide screen with a mouse, runs it live inside its frame; one runs at a time. Clicking the chosen study opens it. The address keeps the choice (`#glow`).
+- Without JavaScript the same page is a plain grid of links.
 
 | File | For |
 |---|---|
-| `index.html` | The studies themselves: add an `<li>` to list a new one |
+| `index.html` | The board's contents. Each study is one `<a class="frame">`; `--x` and `--y` in its `style` are where it sits, in pixels. Add its name to the navigator's list too |
+| `public/lab/*.webp` | The pictures in the frames (16:10 captures of each study) |
 | `src/lab/lab.css` | The look: colours and the one accent (`--signal`) are at the top |
-| `src/lab/main.ts` | The viewer: `settings.rest` is how long the pointer must rest on a study before it loads |
+| `src/lab/main.ts` | Pan, zoom, flying and choosing; `settings` at the top holds the zoom range, flight time and margins |
 
 The Blender scroll scene that used to be the entry page is now `styles.html`.
 

@@ -3,138 +3,107 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Design R&amp;D · Lab index</title>
-    <meta name="description" content="A working lab for interface finishes, light and motion: eight studies, each a set of live specimens." />
+    <title>Design R&amp;D · Lab canvas</title>
+    <meta name="description" content="A working lab for interface finishes, light and motion: eight studies laid out on one open canvas." />
     <link rel="stylesheet" href="/src/lab/lab.css" />
   </head>
   <body class="lab">
-    <header class="bar">
-      <span class="mark">Design R&amp;D</span>
-      <span class="meta"><span>Lab index</span><span>8 studies</span><span>60+ specimens</span><span class="live">Live</span></span>
-    </header>
-
-    <main>
-      <section class="intro">
-        <p class="label">00 — Brief</p>
-        <h1>Finishes, light and motion,<br />worked out one study at a time.</h1>
-        <p class="lede">Each study takes a question — how should glass bend light, can a switch feel machined, what makes a shape feel alive — and answers it with a set of live specimens you can handle. Nothing here is a mock-up: every specimen runs in the browser.</p>
-        <dl class="method">
-          <div><dt>01</dt><dd>Reference</dd></div>
-          <div><dt>02</dt><dd>Study</dd></div>
-          <div><dt>03</dt><dd>Build</dd></div>
-          <div><dt>04</dt><dd>Review</dd></div>
-        </dl>
-      </section>
-
-      <div class="bench">
-        <section class="index" aria-labelledby="studies">
-          <p class="label" id="studies">01 — Studies</p>
-          <ol>
-            <li>
-              <a href="styles.html" data-study>
-                <span class="no">01</span>
-                <span class="body">
-                  <span class="name">3D styles</span>
-                  <span class="what">One Blender scene shown many ways: looks, materials and screen effects, driven by scroll.</span>
-                  <span class="tags"><span>Blender → three.js</span><span>Scroll scene</span><span class="state">Stable</span></span>
-                </span>
-                <span class="go" aria-hidden="true">→</span>
-              </a>
-            </li>
-            <li>
-              <a href="glass.html" data-study>
-                <span class="no">02</span>
-                <span class="body">
-                  <span class="name">Glass cards</span>
-                  <span class="what">How a pane bends, blurs and splits what is behind it. Frost, flutes, water, sand.</span>
-                  <span class="tags"><span>Fragment shader</span><span>12 kinds</span><span class="state">Stable</span></span>
-                </span>
-                <span class="go" aria-hidden="true">→</span>
-              </a>
-            </li>
-            <li>
-              <a href="glow.html" data-study data-first>
-                <span class="no">03</span>
-                <span class="body">
-                  <span class="name">Glow cards</span>
-                  <span class="what">Light from inside a dark card: neon, embers, and colour soaking in from the edges.</span>
-                  <span class="tags"><span>Fragment shader</span><span>14 kinds</span><span class="state">Stable</span></span>
-                </span>
-                <span class="go" aria-hidden="true">→</span>
-              </a>
-            </li>
-            <li>
-              <a href="materials.html" data-study>
-                <span class="no">04</span>
-                <span class="body">
-                  <span class="name">Material cards</span>
-                  <span class="what">Card finishes under studio light: glass, matte, satin, gloss, brushed, foil, ceramic.</span>
-                  <span class="tags"><span>Fragment shader</span><span>8 finishes</span><span class="state">Stable</span></span>
-                </span>
-                <span class="go" aria-hidden="true">→</span>
-              </a>
-            </li>
-            <li>
-              <a href="switch.html" data-study>
-                <span class="no">05</span>
-                <span class="body">
-                  <span class="name">Switch study</span>
-                  <span class="what">Tactile switches drawn from a height map, with soft light and shadows that stay attached.</span>
-                  <span class="tags"><span>Fragment shader</span><span>6 styles</span><span class="state">Stable</span></span>
-                </span>
-                <span class="go" aria-hidden="true">→</span>
-              </a>
-            </li>
-            <li>
-              <a href="switch3d.html" data-study>
-                <span class="no">06</span>
-                <span class="body">
-                  <span class="name">Switches in 3D</span>
-                  <span class="what">The same six switches modelled in Blender, their soft light baked and replayed on the web.</span>
-                  <span class="tags"><span>Blender bake</span><span>6 models</span><span class="state">Stable</span></span>
-                </span>
-                <span class="go" aria-hidden="true">→</span>
-              </a>
-            </li>
-            <li>
-              <a href="switch-css.html" data-study>
-                <span class="no">07</span>
-                <span class="body">
-                  <span class="name">Switch in CSS</span>
-                  <span class="what">A rendered switch with no 3D on the page: Blender frames, stepped by plain CSS.</span>
-                  <span class="tags"><span>Rendered frames + CSS</span><span>1 switch</span><span class="state proof">Proof of concept</span></span>
-                </span>
-                <span class="go" aria-hidden="true">→</span>
-              </a>
-            </li>
-            <li>
-              <a href="expressions.html" data-study>
-                <span class="no">08</span>
-                <span class="body">
-                  <span class="name">Expressions</span>
-                  <span class="what">Small animated scenes studied from motion references: rings of light, clay forms, glowing rods.</span>
-                  <span class="tags"><span>three.js</span><span>13 scenes</span><span class="state work">In refinement</span></span>
-                </span>
-                <span class="go" aria-hidden="true">→</span>
-              </a>
-            </li>
-          </ol>
+    <!-- The canvas: everything in .world can be panned and zoomed. Each study is one frame, placed by --x and --y. -->
+    <main class="stage" id="stage">
+      <div class="world" id="world">
+        <section class="brief" style="--x: 0; --y: 60">
+          <p class="label">00 — Brief</p>
+          <h1>Finishes, light and motion, worked out one study at a time.</h1>
+          <p class="lede">Each study takes a question — how should glass bend light, can a switch feel machined, what makes a shape feel alive — and answers it with live specimens you can handle.</p>
+          <p class="method"><span><b>01</b> Reference</span><span><b>02</b> Study</span><span><b>03</b> Build</span><span><b>04</b> Review</span></p>
         </section>
-
-        <aside class="viewer" aria-label="Live preview of the study under the pointer">
-          <div class="plate">
-            <p class="caption"><span id="viewer-no">03</span><span id="viewer-name">Glow cards</span><span class="live">Live</span></p>
-            <div class="window" id="window"><span class="corner"></span><span class="corner"></span><span class="corner"></span><span class="corner"></span></div>
-            <p class="foot"><span>Point at a study to load it here</span><a id="viewer-open" href="glow.html">Open study →</a></p>
-          </div>
-        </aside>
+        <p class="zone" style="--x: 660; --y: 0">Scenes</p>
+        <p class="zone" style="--x: 0; --y: 540">Cards</p>
+        <p class="zone" style="--x: 0; --y: 1080">Switches</p>
+        <div class="frames">
+          <a class="frame" id="styles" href="styles.html" data-study style="--x: 660; --y: 60" draggable="false">
+            <span class="tab"><span class="no">01</span><span class="name">3D styles</span><span class="count">Scroll scene</span></span>
+            <span class="shot"><img src="/lab/styles.webp" alt="" width="974" height="609" loading="lazy" draggable="false" /></span>
+            <span class="what">One Blender scene shown many ways: looks, materials and screen effects, driven by scroll.</span>
+            <span class="tags"><span>Blender → three.js</span><span class="state ">Stable</span></span>
+          </a>
+          <a class="frame" id="expressions" href="expressions.html" data-study style="--x: 1260; --y: 60" draggable="false">
+            <span class="tab"><span class="no">08</span><span class="name">Expressions</span><span class="count">13 scenes</span></span>
+            <span class="shot"><img src="/lab/expressions.webp" alt="" width="974" height="609" loading="lazy" draggable="false" /></span>
+            <span class="what">Small animated scenes studied from motion references: rings of light, clay forms, glowing rods.</span>
+            <span class="tags"><span>three.js</span><span class="state work">In refinement</span></span>
+          </a>
+          <a class="frame" id="glass" href="glass.html" data-study style="--x: 0; --y: 600" draggable="false">
+            <span class="tab"><span class="no">02</span><span class="name">Glass cards</span><span class="count">12 kinds</span></span>
+            <span class="shot"><img src="/lab/glass.webp" alt="" width="974" height="609" loading="lazy" draggable="false" /></span>
+            <span class="what">How a pane bends, blurs and splits what is behind it. Frost, flutes, water, sand.</span>
+            <span class="tags"><span>Fragment shader</span><span class="state ">Stable</span></span>
+          </a>
+          <a class="frame" id="glow" href="glow.html" data-study style="--x: 600; --y: 600" draggable="false">
+            <span class="tab"><span class="no">03</span><span class="name">Glow cards</span><span class="count">14 kinds</span></span>
+            <span class="shot"><img src="/lab/glow.webp" alt="" width="974" height="609" loading="lazy" draggable="false" /></span>
+            <span class="what">Light from inside a dark card: neon, embers, and colour soaking in from the edges.</span>
+            <span class="tags"><span>Fragment shader</span><span class="state ">Stable</span></span>
+          </a>
+          <a class="frame" id="materials" href="materials.html" data-study style="--x: 1200; --y: 600" draggable="false">
+            <span class="tab"><span class="no">04</span><span class="name">Material cards</span><span class="count">8 finishes</span></span>
+            <span class="shot"><img src="/lab/materials.webp" alt="" width="974" height="609" loading="lazy" draggable="false" /></span>
+            <span class="what">Card finishes under studio light: glass, matte, satin, gloss, brushed, foil, ceramic.</span>
+            <span class="tags"><span>Fragment shader</span><span class="state ">Stable</span></span>
+          </a>
+          <a class="frame" id="switch" href="switch.html" data-study style="--x: 0; --y: 1140" draggable="false">
+            <span class="tab"><span class="no">05</span><span class="name">Switch study</span><span class="count">6 styles</span></span>
+            <span class="shot"><img src="/lab/switch.webp" alt="" width="974" height="609" loading="lazy" draggable="false" /></span>
+            <span class="what">Tactile switches drawn from a height map, with soft light and shadows that stay attached.</span>
+            <span class="tags"><span>Fragment shader</span><span class="state ">Stable</span></span>
+          </a>
+          <a class="frame" id="switch3d" href="switch3d.html" data-study style="--x: 600; --y: 1140" draggable="false">
+            <span class="tab"><span class="no">06</span><span class="name">Switches in 3D</span><span class="count">6 models</span></span>
+            <span class="shot"><img src="/lab/switch3d.webp" alt="" width="974" height="609" loading="lazy" draggable="false" /></span>
+            <span class="what">The same six switches modelled in Blender, their soft light baked and replayed on the web.</span>
+            <span class="tags"><span>Blender bake</span><span class="state ">Stable</span></span>
+          </a>
+          <a class="frame" id="switch-css" href="switch-css.html" data-study style="--x: 1200; --y: 1140" draggable="false">
+            <span class="tab"><span class="no">07</span><span class="name">Switch in CSS</span><span class="count">1 switch</span></span>
+            <span class="shot"><img src="/lab/switch-css.webp" alt="" width="974" height="609" loading="lazy" draggable="false" /></span>
+            <span class="what">A rendered switch with no 3D on the page: Blender frames, stepped by plain CSS.</span>
+            <span class="tags"><span>Rendered frames + CSS</span><span class="state proof">Proof of concept</span></span>
+          </a>
+        </div>
       </div>
     </main>
 
-    <footer class="bar">
-      <span>Built in the open with Blender, three.js and plain CSS</span>
-      <a href="https://github.com/AmroJSawan/blender-threejs-flow">Source →</a>
-    </footer>
+    <!-- Floating navigation: the lab's name and the list of studies. -->
+    <details class="float nav" id="nav" open>
+      <summary><span class="mark">Design R&amp;D</span><span class="sub">Lab canvas</span><span class="fold" aria-hidden="true"></span></summary>
+      <nav aria-label="Studies">
+        <ol>
+          <li><a href="#styles" data-go="styles"><span class="no">01</span>3D styles</a></li>
+          <li><a href="#glass" data-go="glass"><span class="no">02</span>Glass cards</a></li>
+          <li><a href="#glow" data-go="glow"><span class="no">03</span>Glow cards</a></li>
+          <li><a href="#materials" data-go="materials"><span class="no">04</span>Material cards</a></li>
+          <li><a href="#switch" data-go="switch"><span class="no">05</span>Switch study</a></li>
+          <li><a href="#switch3d" data-go="switch3d"><span class="no">06</span>Switches in 3D</a></li>
+          <li><a href="#switch-css" data-go="switch-css"><span class="no">07</span>Switch in CSS</a></li>
+          <li><a href="#expressions" data-go="expressions"><span class="no">08</span>Expressions</a></li>
+        </ol>
+      </nav>
+    </details>
+
+    <p class="float hint" id="hint">Drag to move · Scroll to pan · Pinch or Ctrl-scroll to zoom</p>
+
+    <!-- Floating toolbar: step through studies, zoom, fit, and open the chosen study. -->
+    <div class="float tools" id="tools" role="toolbar" aria-label="Canvas">
+      <button type="button" id="prev" aria-label="Previous study" title="Previous study"><svg viewBox="0 0 16 16"><path d="M10 3 5 8l5 5" /></svg></button>
+      <button type="button" id="next" aria-label="Next study" title="Next study"><svg viewBox="0 0 16 16"><path d="m6 3 5 5-5 5" /></svg></button>
+      <span class="rule"></span>
+      <button type="button" id="out" aria-label="Zoom out" title="Zoom out (−)"><svg viewBox="0 0 16 16"><path d="M3 8h10" /></svg></button>
+      <button type="button" id="level" class="level" aria-label="Zoom to 100%" title="Zoom to 100% (1)">100%</button>
+      <button type="button" id="in" aria-label="Zoom in" title="Zoom in (+)"><svg viewBox="0 0 16 16"><path d="M3 8h10M8 3v10" /></svg></button>
+      <button type="button" id="fit" aria-label="Fit everything" title="Fit everything (0)"><svg viewBox="0 0 16 16"><path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4" /></svg></button>
+      <span class="rule"></span>
+      <a id="open" class="open" href="glow.html"><span id="chosen">Glow cards</span><svg viewBox="0 0 16 16"><path d="M4 8h8M9 5l3 3-3 3" /></svg></a>
+    </div>
     <script type="module" src="/src/lab/main.ts"></script>
   </body>
 </html>
