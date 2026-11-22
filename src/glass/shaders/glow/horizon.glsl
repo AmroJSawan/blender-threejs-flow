@@ -2,7 +2,6 @@
 // note: Blue light soaking in from the edges, turning teal toward the bottom, round a sun half risen over a horizon. The sun rises and sinks a little with the pointer; a tap makes the light swell.
 // order: 11
 // springs: 0.7
-// radius: 58
 #define SKY vec3(0.4, 0.5, 1.0)       // edge light at the top
 #define SEA vec3(0.16, 0.66, 0.7)     // … and at the bottom
 #define BODY vec3(0.012, 0.02, 0.04)

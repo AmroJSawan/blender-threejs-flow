@@ -13,11 +13,12 @@ vec3 wash(vec2 p) {
 }
 
 void glass(vec2 p, vec2 uv, inout Look look) {
-  vec3 edge = rim(p, 3.0);
+  vec3 edge = inset(p, 3.0);
   look.blur = 16.0;
   look.tint = vec3(0.03, 0.035, 0.05);
   look.milk = 0.93;
   look.light = wash(p) * edge.x * 0.7; // a line of light along the rim
+  look.light += wash(p) * 0.3 * soak(p, 0.42); // the same light soaking in round the rim, turning the corners with the card
 }
 
 vec3 halo(vec2 p, float away) {

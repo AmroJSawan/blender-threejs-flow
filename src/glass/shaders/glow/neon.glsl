@@ -24,6 +24,7 @@ void glass(vec2 p, vec2 uv, inout Look look) {
   look.tint = vec3(0.03, 0.03, 0.06);
   look.milk = 0.74;
   look.light = on * (TUBE * (0.9 * exp(-d / 12.0) + 0.3 * exp(-d / 55.0)) + vec3(1.0, 0.86, 0.94) * smoothstep(3.2, 1.2, d));
+  look.light += on * TUBE * 0.22 * soak(p, 0.42); // the same light soaking in round the rim, turning the corners with the card
   look.light += (1.0 - on) * TUBE * 0.06 * smoothstep(3.2, 1.2, d); // the unlit tube is still faintly visible
 }
 

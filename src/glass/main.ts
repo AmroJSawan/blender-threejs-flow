@@ -26,12 +26,13 @@ const settings = {
    * - `print`: the word on the card; `start`: the kind shown first (unless the address says ?glass=name, ?glow=name or ?material=name)
    * - `stage`, `lights`: backdrop colour and strength of the colour lights behind (a kind can name its own)
    * - `words`: strength of the rows of type behind the card; `shadow`: a soft shadow under the print, for cards you see through
+   * - `radius`: corner radius of the series' cards, px (a kind can set its own with // radius:)
    * - `lift`: how high the card floats (its shadow); `lean`: its resting angle; `tilt`: how far it leans toward the pointer
    */
   series: {
-    glass: { print: 'GLASS', start: 'clear', stage: '#0d0e13', lights: 1, words: 0.8, shadow: true, lift: 1.7, lean: [0.00018, -0.00011], tilt: 1.3 },
-    glow: { print: 'GLOW', start: 'neon', stage: '#090a0d', lights: 0.1, words: 0, shadow: false, lift: 1.7, lean: [0.00018, -0.00011], tilt: 1.3 },
-    material: { print: 'MATERIAL', start: 'glass', stage: '#15161a', lights: 0.3, words: 0, shadow: false, lift: 2.1, lean: [0.00026, -0.00016], tilt: 1.7 },
+    glass: { print: 'GLASS', start: 'clear', stage: '#0d0e13', lights: 1, words: 0.8, shadow: true, radius: 30, lift: 1.7, lean: [0.00018, -0.00011], tilt: 1.3 },
+    glow: { print: 'GLOW', start: 'neon', stage: '#090a0d', lights: 0.1, words: 0, shadow: false, radius: 58, lift: 1.7, lean: [0.00018, -0.00011], tilt: 1.3 },
+    material: { print: 'MATERIAL', start: 'glass', stage: '#15161a', lights: 0.3, words: 0, shadow: false, radius: 30, lift: 2.1, lean: [0.00026, -0.00016], tilt: 1.7 },
   },
   maxPixelRatio: 2,
 }
@@ -40,7 +41,7 @@ const settings = {
 //   // title: Frost      // note: one sentence      // order: 2
 //   // springs: 1.5 (looser, bouncier body)      // stretch: 1 (soft body that squashes)
 //   // stage: #15161a (its own backdrop colour)   // lights: 0.3 (colour lights behind)   // ink: dark (dark print)
-//   // radius: 58 (its own corner radius, px)
+//   // radius: 40 (its own corner radius, px, instead of the series')
 // Each kind only runs the physics its shader mentions: uLiquid (water), uSand, uFog, uRibs, uHeat, uFlies.
 const kinds = {
   glass: import.meta.glob<string>('./shaders/variants/*.glsl', { query: '?raw', import: 'default', eager: true }),
@@ -63,7 +64,7 @@ const variants = Object.entries(sources)
       order: Number(tag('order') ?? 99),
       springs: Number(tag('springs') ?? 1),
       stretch: Number(tag('stretch') ?? 0),
-      radius: Number(tag('radius') ?? settings.radius),
+      radius: tag('radius') ? Number(tag('radius')) : undefined,
       stage: tag('stage'),
       lights: tag('lights'),
       darkInk: tag('ink') === 'dark',
@@ -217,7 +218,7 @@ function show(name: string) {
   card = material
   body.loose = current.springs
   body.soft = current.stretch
-  uniforms.uRadius.value = current.radius
+  uniforms.uRadius.value = current.radius ?? series.radius
   born = performance.now()
   if (current.sand) sand.reset() // fresh raked sand every time it is chosen
   printFace(current.title, variants.indexOf(current), current.darkInk)

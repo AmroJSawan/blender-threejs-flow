@@ -2,7 +2,6 @@
 // note: Teal light soaking in from the edges of a dark card. A brighter stretch drifts slowly round the rim, and jumps to wherever the pointer is nearest; a tap makes the light swell.
 // order: 13
 // springs: 0.7
-// radius: 58
 #define GLOW vec3(0.2, 0.82, 0.72)
 #define BODY vec3(0.008, 0.02, 0.03)
 #define REACH 0.46

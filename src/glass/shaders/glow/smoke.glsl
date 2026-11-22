@@ -2,7 +2,6 @@
 // note: A near-black card with pale light soaking in from every edge and fading to nothing toward the middle. The light gathers on the side the pointer is on; a tap makes it swell.
 // order: 10
 // springs: 0.7
-// radius: 58
 #define GLOW vec3(0.74, 0.73, 0.84)  // colour of the light at the edge
 #define BODY vec3(0.012, 0.013, 0.02) // colour of the dark middle
 #define REACH 0.46    // how far in the light reaches, as a share of the card's width (0.5 = to the middle)

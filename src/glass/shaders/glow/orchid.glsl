@@ -2,7 +2,6 @@
 // note: The other way round: the middle is filled with violet and the edges cool to blue, then cyan along the bottom. A cluster of dots pulses at the centre; a tap sends a brighter pulse through it.
 // order: 12
 // springs: 0.7
-// radius: 58
 #define MIDDLE vec3(0.4, 0.22, 0.86)
 #define EDGE_TOP vec3(0.3, 0.4, 0.95)
 #define EDGE_LOW vec3(0.22, 0.78, 0.95)

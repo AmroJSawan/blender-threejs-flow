@@ -2,7 +2,6 @@
 // note: Violet light soaking in from the edges round a deep blue middle, where fine rings breathe round a small moon. The rings lean toward the pointer; a tap sends one bright ring outward.
 // order: 14
 // springs: 0.7
-// radius: 58
 #define GLOW vec3(0.44, 0.28, 1.0)
 #define BODY vec3(0.012, 0.03, 0.085)
 #define RING vec3(0.3, 0.78, 1.0)

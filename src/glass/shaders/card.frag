@@ -86,6 +86,15 @@ vec3 inset(vec2 p, float width) {
   return vec3(clamp(1.0 - deep / width, 0.0, 1.0), sign(p) * outward);
 }
 
+/**
+ * Light soaking in from the rim and fading toward the middle, following the card's corners:
+ * about 1 at the rim, nothing `reach` of the card's width inside. Multiply by a colour and add to look.light.
+ */
+float soak(vec2 p, float reach) {
+  float x = inset(p, min(uSize.x, uSize.y) * reach).x;
+  return pow(x, 1.9) + 0.2 * pow(x, 9.0);
+}
+
 // ---- Studio light for the materials page ----
 // The card is lit like a product photograph: no point lamp, but large soft light panels whose
 // reflections sweep across the surface as the card leans or the pointer moves.

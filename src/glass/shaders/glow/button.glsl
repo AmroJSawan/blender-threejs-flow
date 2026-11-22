@@ -54,5 +54,6 @@ void glass(vec2 p, vec2 uv, inout Look look) {
 
   // The arrow, and a little of the button's light spilling onto the panel above it.
   look.light += on * LINE * smoothstep(1.9, 0.9, arrow(p)) * (0.8 + 0.4 * press);
+  look.light += (1.0 - on) * GLOW * 0.2 * soak(p, 0.42); // the same light soaking in round the rim, turning the corners with the card
   look.light += (1.0 - on) * GLOW * 0.16 * power * top * exp(-max(button.x, 0.0) / 14.0);
 }

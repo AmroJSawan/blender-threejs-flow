@@ -17,4 +17,5 @@ void glass(vec2 p, vec2 uv, inout Look look) {
   look.tint = vec3(0.02, 0.025, 0.04);
   look.milk = 0.86;
   look.light = lamp * level * (smoothstep(LAMP, LAMP - 1.5, d) + 0.35 * exp(-d / 5.0));
+  look.light += vec3(0.1, 0.35, 1.0) * 0.3 * soak(p, 0.42); // the same light soaking in round the rim, turning the corners with the card
 }

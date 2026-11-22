@@ -19,6 +19,7 @@ void glass(vec2 p, vec2 uv, inout Look look) {
   look.milk = 0.86;
   look.shine = 0.4;
   look.light = hot(heat) * (0.92 + 0.08 * noise(p / 5.0 + uTime * 3.0));
+  look.light += hot(0.2 + 0.6 * min(heat, 1.0)) * 0.55 * soak(p, 0.4); // heat soaking in round the rim, turning the corners with the card
 }
 
 vec3 halo(vec2 p, float away) {

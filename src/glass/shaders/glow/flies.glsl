@@ -13,5 +13,5 @@ void glass(vec2 p, vec2 uv, inout Look look) {
   look.blur = 14.0;
   look.tint = vec3(0.02, 0.04, 0.035);
   look.milk = 0.78;
-  look.light = light;
+  look.light = light + FLY * vec3(0.5, 0.9, 0.6) * 0.16 * soak(p, 0.42); // the same light soaking in round the rim, turning the corners with the card
 }
