@@ -209,11 +209,11 @@ How a material file works:
 | `ball` | White ball in a rounded groove that fills with blue |
 | `dish` | Raised clay bar with a dish pressed into it; the dish turns cream |
 
-Nothing is a painted-on shadow or highlight. A style file (`src/switch/styles/*.glsl`) describes its switch once, as a height above the sheet for every point, and says what each part is made of. `src/switch/switch.frag` then lights every style the same way: each point is lit by how it faces a large soft light (sampled at seven places, so shadow edges are wide gradients), shaded as far as the shape blocks its view of that light, and darkened a little where walls crowd it. So every shadow stays attached to what casts it. The light is set at the top of `switch.frag` (`SUN`, `SPREAD` for how soft it is, `AMBIENT`).
+Nothing is a painted-on shadow or highlight. A style file (`src/switch/styles/*.glsl`) describes its switch once, as a height above the sheet for every point, and says what each part is made of. `src/switch/switch.frag` then lights every style the same way: each point is lit by how it faces a large soft light (sampled at seven places, so shadow edges are wide gradients), shaded as far as the shape blocks its view of that light, and darkened a little where walls crowd it. So every shadow stays attached to what casts it. A shadow is darkest where it touches what casts it and fades to nothing within `FALL` pixels. The light is set at the top of `switch.frag` (`SUN`, `SPREAD` for how soft it is, `AMBIENT`, `FALL`).
 
 A style file starts with `// title:`, `// note:`, `// order:` and `// ink: light` (for a dark sheet), then defines:
 
-- `HALF` (half size of the switch's outline), `REACH` (how far past it shadows fall), `SHEET_TOP` and `SHEET_BOTTOM` (sheet colour)
+- `HALF` (half size of the switch's outline), `SHEET_TOP` and `SHEET_BOTTOM` (sheet colour)
 - `float height(vec2 p)`: height above the sheet, design pixels
 - `vec3 paint(vec2 p, vec3 sheet)`: the colour of the material at each point
 - `vec3 glow(vec2 p)`: light given off by lamps, added unshaded

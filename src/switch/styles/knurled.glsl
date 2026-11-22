@@ -3,7 +3,6 @@
 // order: 1
 // ink: dark
 #define HALF vec2(161.0, 89.0)   // outline of the whole switch, half width and height
-#define REACH 2.0                // how far past the outline its shadows fall on the sheet
 #define SHEET_TOP vec3(0.935, 0.935, 0.94)
 #define SHEET_BOTTOM vec3(0.83, 0.83, 0.835)
 #define LIP 11.0    // width of the sloping wall between sheet and track floor

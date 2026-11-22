@@ -3,7 +3,6 @@
 // order: 3
 // ink: light
 #define HALF vec2(128.0, 78.0)
-#define REACH 44.0
 #define SHEET_TOP vec3(0.215, 0.22, 0.235)
 #define SHEET_BOTTOM vec3(0.14, 0.145, 0.16)
 #define PLATE vec2(116.0, 66.0)  // half size of the rocker plate

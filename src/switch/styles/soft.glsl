@@ -3,7 +3,6 @@
 // order: 2
 // ink: dark
 #define HALF vec2(160.0, 80.0)
-#define REACH 2.0
 #define SHEET_TOP vec3(0.925, 0.935, 0.95)
 #define SHEET_BOTTOM vec3(0.82, 0.835, 0.86)
 #define DEPTH 10.0   // how deep the track is pressed in

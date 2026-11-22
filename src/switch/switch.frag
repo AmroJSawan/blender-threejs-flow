@@ -19,6 +19,7 @@ uniform float uOn[2];      // where each switch is: 0 = off … 1 = on (a spring
 #define AMBIENT 0.5                  // light that reaches everything, even in shadow
 #define SOFT 1.0                     // shadow edge from each part of the light: higher = harder
 #define STEPS 14                     // samples along each line to the light
+#define FALL 44.0                    // how far a shadow can reach, design px; it fades out toward that distance
 
 float knobAt; // position of the switch being drawn, 0…1
 
@@ -36,7 +37,7 @@ float box(vec2 p, vec2 half_, float radius) {
 /** 1 inside a shape, 0 outside, one screen pixel of soft edge. */
 float cover(float distance_) { return smoothstep(0.75, -0.75, distance_ * uPixelRatio * uScale); }
 
-// The style provides:  HALF, REACH, SHEET_TOP, SHEET_BOTTOM,
+// The style provides:  HALF, SHEET_TOP, SHEET_BOTTOM,
 //   float height(vec2 p),  vec3 paint(vec2 p, vec3 sheet),  vec3 glow(vec2 p)
 #include "style"
 
@@ -61,12 +62,15 @@ vec3 drawSwitch(vec2 p, float on, vec3 sheet) {
     float facing = clamp((dot(normal, sun) + WRAP) / (sun.z + WRAP), 0.0, 1.25); // 1 on flat ground
     vec2 toward = normalize(sun.xy);
     float climb = sun.z / length(sun.xy);
-    float open = 1.0;
+    float blocked = 0.0;
     for (int i = 0; i < STEPS; i++) {
-      float t = (float(i) + 0.4 + jitter) * 3.0;
-      open = min(open, SOFT * (h + 0.6 + t * climb - height(p + toward * t)) / (t * climb)); // 1 or more on open flat ground
+      float t = (float(i) + 0.4 + jitter) * FALL / float(STEPS + 1);
+      float cleared = SOFT * (h + 0.6 + t * climb - height(p + toward * t)) / (t * climb); // 1 or more on open flat ground
+      // Whatever blocks the light counts for less the further away it is, so a shadow is darkest
+      // where it touches what casts it and has faded to nothing by FALL.
+      blocked = max(blocked, clamp(1.0 - cleared, 0.0, 1.0) * (1.0 - smoothstep(0.4, 1.0, t / FALL)));
     }
-    direct += facing * clamp(open, 0.0, 1.0);
+    direct += facing * (1.0 - blocked);
   }
   direct /= 7.0;
 
@@ -91,7 +95,7 @@ void main() {
   vec2 second = (px - uCentre[1]) / uScale;
   bool upper = abs(first.y) < abs(second.y);
   vec2 p = upper ? first : second;
-  if (abs(p.x) < HALF.x + REACH && abs(p.y) < HALF.y + REACH) colour = drawSwitch(p, upper ? uOn[0] : uOn[1], sheet);
+  if (abs(p.x) < HALF.x + FALL + 2.0 && abs(p.y) < HALF.y + FALL + 2.0) colour = drawSwitch(p, upper ? uOn[0] : uOn[1], sheet);
   colour += (fract(sin(dot(gl_FragCoord.xy, vec2(127.1, 311.7))) * 43758.5453) - 0.5) * 0.014;
   gl_FragColor = vec4(colour, 1.0);
 }
