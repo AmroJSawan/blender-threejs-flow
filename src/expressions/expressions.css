@@ -1,0 +1,7 @@
+/* The expressions page: a full-window 3D scene with the study pages' quiet labels (see switch.css). */
+.expressions-page { background: #000; transition: background-color 0.3s ease; }
+.expressions-page canvas { opacity: 0; transition: opacity 0.3s ease; }
+.expressions-page canvas.ready { opacity: 1; }
+.expressions-page header,
+.expressions-page #note,
+.expressions-page .styles { z-index: 1; }
