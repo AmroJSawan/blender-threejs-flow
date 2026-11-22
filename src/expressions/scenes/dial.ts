@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { flowing, plate, steel, type Expression } from '../kit'
+import { flowing, keyed, plate, steel, type Expression } from '../kit'
 
 /**
  * A study after "Semantic Restructuring" by Reijo Palmiste, worked out from the clip frame by frame.
@@ -64,21 +64,28 @@ const DROP = 0.22
 /**
  * How far the whole dial is tipped back about its level axis, degrees, on top of its resting attitude:
  * read from how flattened its outline is, and how brightly its face is lit, in the reference. Only the turning
- * points and one pose between each pair are kept, so the curve through them swings cleanly.
+ * points are kept, so each swing between them is one even ease out and in, like a pendulum.
  */
 const TIPPED: [number, number][] = [
-  [3.2, 0], [3.46, 23],                    // leans back
-  [3.58, 8], [3.71, -20],                  // nods forward until it stands upright: the lamp no longer reaches its face
-  [3.8, 40], [3.87, 65],                   // back, right over to edge-on
-  [3.95, 30], [4.03, -17],                 // forward again, upright and dark
-  [4.12, 26], [4.22, 63],                  // back to edge-on a second time
-  [4.3, 24], [4.42, 5],                    // and home …
-  [4.53, -3], [4.68, 1.2], [4.85, 0],      // … where it rocks once, a little, and settles
+  [3.2, 0], [3.46, 22],                    // leans back
+  [3.71, -18],                             // nods forward until it stands upright: the lamp no longer reaches its face
+  [3.88, 64],                              // back, right over to edge-on
+  [4.04, -16],                             // forward again, upright and dark
+  [4.22, 62],                              // back to edge-on a second time
+  [4.5, -2.5], [4.68, 1], [4.85, 0],       // and home, where it rocks once, a little, and settles
 ]
+/**
+ * The tumble is played slower than the reference. There it lasts about 1.6 s and each frame is blurred by the
+ * motion; without that blur the same speed reads as a hard shake. Here the stretch of the reference between
+ * TUMBLE_FROM[0] and TUMBLE_FROM[1] seconds is spread over TUMBLE_OVER, and the keyframes above keep the reference's times.
+ */
+const TUMBLE_FROM = [3.2, 4.85]
+const TUMBLE_OVER = [2.85, 5.6]
+
 /** The hub's flip: once a second, starting at this moment in the second and taking this long. Not while the dial is tumbling. */
 const FLIP_AT = 0.04
 const FLIP_TAKES = 0.62
-const TUMBLING = [3.5, 4.6]
+const TUMBLING = [3.1, 5.4] // in the loop's own seconds
 
 /** Eases in and out with no jolt at either end. */
 const ease = (t: number) => t * t * t * (t * (t * 6 - 15) + 10)
@@ -149,12 +156,14 @@ const dial: Expression = {
         const at = time % LOOP
         // The dial's attitude: a slow wobble, plus however far the tumble has tipped it.
         const swing = (at / LOOP) * Math.PI * 2
-        body.rotation.x = -0.36 - 0.08 * Math.sin(swing) - THREE.MathUtils.degToRad(flowing(at, TIPPED))
+        // Where the tumble's keyframes are read: the reference's clock, which runs slow through the tumble and catches up after.
+        const clock = keyed(at, [[0, 0], [TUMBLE_OVER[0], TUMBLE_FROM[0]], [TUMBLE_OVER[1], TUMBLE_FROM[1]], [LOOP, LOOP]])
+        body.rotation.x = -0.36 - 0.08 * Math.sin(swing) - THREE.MathUtils.degToRad(flowing(clock, TIPPED))
         body.rotation.y = 0.16 * Math.sin(swing + 1)
         ring.rotation.z = -swing // clockwise, once per loop
 
         // Each flap only ever turns on its axle.
-        for (const { flap, first, second } of flaps) flap.rotation.x = THREE.MathUtils.degToRad(flowing(at, first) + flowing(at, second))
+        for (const { flap, first, second } of flaps) flap.rotation.x = THREE.MathUtils.degToRad(flowing(at, first) + flowing(clock, second))
 
         // The hub turns half way over once a second, and turns slowly in its own plane between flips.
         const beat = (at % 1) - FLIP_AT
