@@ -35,12 +35,12 @@ const EDGES = [5, 75, 100, 120, 200, 265, 285, 300, 330, 350, 365]
  * 180 is right over and flat again.
  */
 const FIRST_TURN: [number, number][][] = [
-  [[0.45, 0], [0.8, 95], [1.15, 180]],                 // wide, top right: one slow turn
+  [[0.45, 0], [1.18, 180]],                            // wide, top right: one slow turn
   [[0.25, 0], [0.5, 40], [1.1, 44], [1.4, 180]],       // narrow: opens, waits, goes over
   [[0.3, 0], [0.55, 26], [1.0, 28], [1.3, 0]],         // narrow: opens a little, waits, closes again
-  [[0.6, 0], [0.9, 90], [1.2, 180]],                   // wide, left
-  [[0.5, 0], [0.75, 80], [1.05, 180]],                 // wide, lower left: the bright streak
-  [[0.55, 0], [0.9, 100], [1.25, 180]],
+  [[0.6, 0], [1.24, 180]],                             // wide, left
+  [[0.5, 0], [1.08, 180]],                             // wide, lower left: the bright streak
+  [[0.55, 0], [1.26, 180]],
   [[0.3, 0], [0.46, 62], [0.92, 68], [1.2, 180]],      // the three narrow ones: open one after another, wait, go over
   [[0.34, 0], [0.5, 66], [0.97, 72], [1.26, 180]],
   [[0.38, 0], [0.54, 60], [1.02, 66], [1.32, 180]],
@@ -58,27 +58,30 @@ const FLAT_BY = 4.18
 const STEP = 15
 const STAIRS_HOLD = 4.27
 /** … they drop flat one after another, LANDS seconds apart, each taking DROP seconds. */
-const LANDS = 0.035
-const DROP = 0.16
+const LANDS = 0.04
+const DROP = 0.22
 
 /**
  * How far the whole dial is tipped back about its level axis, degrees, on top of its resting attitude:
- * read from how flattened its outline is, and how brightly its face is lit, in each frame of the reference.
+ * read from how flattened its outline is, and how brightly its face is lit, in the reference. Only the turning
+ * points and one pose between each pair are kept, so the curve through them swings cleanly.
  */
 const TIPPED: [number, number][] = [
-  [3.2, 0], [3.45, 23], [3.56, 17],                         // leans back
-  [3.6, -3], [3.64, -11], [3.68, -17], [3.72, -20],         // nods forward until it stands upright: the lamp no longer reaches its face
-  [3.76, 5], [3.8, 43], [3.84, 61], [3.87, 65],             // back, right over to edge-on
-  [3.92, 46], [3.96, 24], [4.0, -9], [4.04, -17],           // forward again, upright and dark
-  [4.08, 8], [4.12, 28], [4.16, 46], [4.2, 60], [4.22, 63], // back to edge-on a second time
-  [4.24, 43], [4.28, 24], [4.32, 13], [4.4, 3], [4.5, 0],   // and home
+  [3.2, 0], [3.46, 23],                    // leans back
+  [3.58, 8], [3.71, -20],                  // nods forward until it stands upright: the lamp no longer reaches its face
+  [3.8, 40], [3.87, 65],                   // back, right over to edge-on
+  [3.95, 30], [4.03, -17],                 // forward again, upright and dark
+  [4.12, 26], [4.22, 63],                  // back to edge-on a second time
+  [4.3, 24], [4.42, 5],                    // and home …
+  [4.53, -3], [4.68, 1.2], [4.85, 0],      // … where it rocks once, a little, and settles
 ]
 /** The hub's flip: once a second, starting at this moment in the second and taking this long. Not while the dial is tumbling. */
-const FLIP_AT = 0.05
-const FLIP_TAKES = 0.55
-const TUMBLING = [3.55, 4.45]
+const FLIP_AT = 0.04
+const FLIP_TAKES = 0.62
+const TUMBLING = [3.5, 4.6]
 
-const ease = (t: number) => t * t * (3 - 2 * t)
+/** Eases in and out with no jolt at either end. */
+const ease = (t: number) => t * t * t * (t * (t * 6 - 15) + 10)
 
 const dial: Expression = {
   title: 'Dial',
