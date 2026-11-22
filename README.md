@@ -158,7 +158,7 @@ Every card hangs on springs (drag it and let go), but each kind of glass has the
 
 ## Glow cards page
 
-`glow.html` is the light series: the same card and code as the glass page, over a dimmed background, on a near-black backdrop, with kinds that give off light (`src/glass/shaders/glow/*.glsl`, also `glow.html?glow=ember`). A glow kind sets `look.light` (light added on top of the card) and, with `#define HALO`, a function `vec3 halo(vec2 p, float away)` that lights the background `away` px outside the rim.
+`glow.html` is the light series: the same card and code as the glass page, on a near-black backdrop, with kinds that give off light (`src/glass/shaders/glow/*.glsl`, also `glow.html?glow=ember`). A glow kind sets `look.light` (light added on top of the card) and, with `#define HALO`, a function `vec3 halo(vec2 p, float away)` that lights the background `away` px outside the rim.
 
 | Kind | Light | Physics | What the shader reads |
 |---|---|---|---|
