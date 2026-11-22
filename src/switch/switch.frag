@@ -2,8 +2,8 @@
 // Nothing here is a painted-on shadow or highlight. The switch is described once, as a height
 // above the sheet for every point (`height`): the sheet is 0, the track is cut down into it, the
 // knob stands up from the track's floor. All light and shade then follow from that shape:
-// each point is lit by how it faces the light, is in shadow if the shape blocks its line to the
-// light, and is a little darker where walls crowd it. So every shadow is attached to what casts it.
+// each point is lit by how it faces a large soft light, is shaded as far as the shape blocks its
+// view of that light, and is a little darker where walls crowd it. So every shadow is attached to what casts it.
 precision highp float;
 varying vec2 vUv;
 uniform vec2 uSize;        // picture size, CSS pixels
@@ -23,9 +23,11 @@ uniform float uOn[2];      // where each knob is: 0 = off (left) … 1 = on (rig
 #define CELL 7.0    // size of one knurl pyramid
 // Light.
 #define SUN vec3(-0.26, 0.72, 0.64)  // direction to the light: above, slightly left, toward the viewer
-#define AMBIENT 0.56                 // light that reaches everything, even in shadow
-#define SOFT 1.3                     // shadow edge: higher = harder
-#define STEPS 22                     // samples along the line to the light
+#define SPREAD 0.42                  // size of the light: 0 = a bare bulb (hard shadows), larger = a big soft panel
+#define WRAP 0.3                     // how far light creeps round onto surfaces facing away
+#define AMBIENT 0.62                 // light that reaches everything, even in shadow
+#define SOFT 1.1                     // shadow edge from each part of the light: higher = harder
+#define STEPS 14                     // samples along each line to the light
 // Colours.
 #define ACCENT vec3(0.985, 0.5, 0.04)   // track when on
 #define OFF vec3(0.43, 0.43, 0.44)      // track when off
@@ -73,27 +75,36 @@ vec3 drawSwitch(vec2 p, float on, vec3 sheet) {
   if (outer > 2.0) return sheet; // nothing rises high enough to shade the sheet beyond the rim
   knobAt = on;
   float h = height(p);
-  vec3 sun = normalize(SUN);
-
   // How the surface faces: from the height just left/right and below/above.
   float e = 0.8;
   vec3 normal = normalize(vec3(height(p - vec2(e, 0.0)) - height(p + vec2(e, 0.0)), height(p - vec2(0.0, e)) - height(p + vec2(0.0, e)), 2.0 * e));
-  float facing = min(max(dot(normal, sun), 0.0) / sun.z, 1.3); // 1 on flat ground
 
-  // Cast shadow: walk toward the light and see how nearly the shape blocks the way.
-  vec2 toward = normalize(sun.xy);
-  float climb = sun.z / length(sun.xy);
-  float open = 1.0;
-  for (int i = 1; i <= STEPS; i++) {
-    float t = float(i) * 2.0;
-    open = min(open, SOFT * (h + 0.6 + t * climb - height(p + toward * t)) / t);
+  // Soft light: the light is a large panel, not a point. It is sampled at its centre and six
+  // places round its edge (turned a little differently for every pixel, which blends the samples); each sample lights the surface by how it faces it, and is blocked or
+  // not by the shape on the way there. Averaged, shadow edges become wide, gentle gradients.
+  float jitter = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453); // hides the steps
+  float direct = 0.0;
+  float spin = fract(sin(dot(gl_FragCoord.xy, vec2(39.346, 11.135))) * 43758.5453);
+  for (int j = 0; j < 7; j++) {
+    float angle = (float(j) + spin) * 1.0472;
+    vec3 sun = normalize(SUN + (j == 0 ? vec3(0.0) : SPREAD * vec3(cos(angle), sin(angle), 0.0)));
+    float facing = clamp((dot(normal, sun) + WRAP) / (sun.z + WRAP), 0.0, 1.25); // 1 on flat ground
+    vec2 toward = normalize(sun.xy);
+    float climb = sun.z / length(sun.xy);
+    float open = 1.0;
+    for (int i = 0; i < STEPS; i++) {
+      float t = (float(i) + 0.4 + jitter) * 3.0;
+      open = min(open, SOFT * (h + 0.6 + t * climb - height(p + toward * t)) / t);
+    }
+    direct += facing * clamp(open, 0.0, 1.0);
   }
-  open = clamp(open, 0.0, 1.0);
+  direct /= 7.0;
+  vec3 sun = normalize(SUN);
 
   // Crowding: less of the room's light reaches a point with walls close by.
   float walls = max(height(p + vec2(6.0, 0.0)) - h, 0.0) + max(height(p - vec2(6.0, 0.0)) - h, 0.0)
               + max(height(p + vec2(0.0, 6.0)) - h, 0.0) + max(height(p - vec2(0.0, 6.0)) - h, 0.0);
-  float light = (AMBIENT + (1.0 - AMBIENT) * facing * open) * (1.0 - 0.3 * clamp(walls / 36.0, 0.0, 1.0));
+  float light = (AMBIENT + (1.0 - AMBIENT) * direct) * (1.0 - 0.3 * clamp(walls / 48.0, 0.0, 1.0));
 
   // What each part is made of.
   vec2 k = p - vec2(mix(-(W - H), W - H, on), 0.0);

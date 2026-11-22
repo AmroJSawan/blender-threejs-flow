@@ -198,7 +198,7 @@ How a material file works:
 
 ## Switch study page
 
-`switch.html` is a finish study: two tactile switches (recessed track, bezel ring, knurled knob) drawn entirely in one fragment shader, `src/switch/switch.frag`, with no images and no 3D model. Nothing in it is a painted-on shadow or highlight. The shader describes the switch once, as a height above the sheet for every point (`height`): the track is cut into the sheet and the knob stands on the track's floor. Each point is then lit by how it faces the light, shadowed if the shape blocks its line to the light, and darkened a little where walls crowd it, so every shadow stays attached to what casts it. Shape sizes, the light (`SUN`, `AMBIENT`, `SOFT`) and the colours are named at the top of the shader.
+`switch.html` is a finish study: two tactile switches (recessed track, bezel ring, knurled knob) drawn entirely in one fragment shader, `src/switch/switch.frag`, with no images and no 3D model. Nothing in it is a painted-on shadow or highlight. The shader describes the switch once, as a height above the sheet for every point (`height`): the track is cut into the sheet and the knob stands on the track's floor. Each point is then lit by how it faces a large soft light (sampled at seven places, so shadow edges are wide gradients), shaded as far as the shape blocks its view of that light, and darkened a little where walls crowd it, so every shadow stays attached to what casts it. Shape sizes, the light (`SUN`, `SPREAD` for how soft it is, `AMBIENT`) and the colours are named at the top of the shader.
 
 `src/switch/main.ts` holds the knob spring and layout (`settings`), and lays an invisible real button with `role="switch"` over each drawn switch, so keyboard and screen readers work.
 
