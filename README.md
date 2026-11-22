@@ -3,7 +3,8 @@
 Design the scene in Blender, press Export (or just save), and the browser refreshes with the new scene.
 Scroll, mouse, hover and fragment shaders are handled by a small vanilla three.js app.
 
-**Live demo:** https://amrojsawan.github.io/blender-threejs-flow/ (republished automatically on every push to `main`)
+**Lab index:** https://amrojsawan.github.io/blender-threejs-flow/ (republished automatically on every push to `main`)
+**3D styles:** https://amrojsawan.github.io/blender-threejs-flow/styles.html
 **Glass cards:** https://amrojsawan.github.io/blender-threejs-flow/glass.html
 **Glow cards:** https://amrojsawan.github.io/blender-threejs-flow/glow.html
 **Material cards:** https://amrojsawan.github.io/blender-threejs-flow/materials.html
@@ -279,6 +280,18 @@ The size on the page is fixed by `UNIT` in the script (CSS pixels per Blender un
 `orbit` and `rods` copy their reference clips' motion frame by frame: the lists of `[seconds, value]` at the top of each file are the reference's own timing (view, turn, heat, each moon and rod), and `PACE` slows or speeds the whole thing. Like the clips, each plays through and then starts again.
 
 With the system's reduced-motion setting on, the expressions play at `settings.calm` of full speed. `expressions.html?expression=orbit&at=2.2` freezes an expression at that many seconds, for checking a pose; choosing another expression lets go of it.
+
+## Lab index (the entry page)
+
+`index.html` is the way in: a design R&D index listing the eight studies, each with what it asks, how it is made, how many specimens it holds and its state. On a wide screen with a mouse, pointing at a study (or tabbing to it) loads that study live in the viewer on the right; one runs at a time. On phones and touch screens it is a plain list of links. It works without JavaScript.
+
+| File | For |
+|---|---|
+| `index.html` | The studies themselves: add an `<li>` to list a new one |
+| `src/lab/lab.css` | The look: colours and the one accent (`--signal`) are at the top |
+| `src/lab/main.ts` | The viewer: `settings.rest` is how long the pointer must rest on a study before it loads |
+
+The Blender scroll scene that used to be the entry page is now `styles.html`.
 
 ## Phones: card view
 

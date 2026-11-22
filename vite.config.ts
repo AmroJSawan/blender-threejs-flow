@@ -38,6 +38,6 @@ export default defineConfig({
   base: './', // relative asset paths: the built site works at any URL
   plugins: [reloadOnExport(), saveRecordings()],
   server: { port: 5173 },
-  // Five pages: the 3D scene (index.html), the card series (glass.html, glow.html, materials.html) and the switch study (switch.html).
-  build: { rollupOptions: { input: ['index.html', 'glass.html', 'glow.html', 'materials.html', 'switch.html', 'switch3d.html', 'switch-css.html', 'expressions.html'] } },
+  // The lab index (index.html) and one page per study.
+  build: { rollupOptions: { input: ['index.html', 'styles.html', 'glass.html', 'glow.html', 'materials.html', 'switch.html', 'switch3d.html', 'switch-css.html', 'expressions.html'] } },
 })

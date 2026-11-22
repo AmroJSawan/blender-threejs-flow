@@ -1,0 +1,171 @@
+/* The lab index: a dark bench with hairline rules, small technical labels, and a live viewer. */
+.lab {
+  --ground: #09090a;
+  --line: rgba(255, 255, 255, 0.09);
+  --faint: rgba(255, 255, 255, 0.42);
+  --ink: rgba(255, 255, 255, 0.72);
+  --strong: #f4f4f2;
+  --signal: #ff6a2b; /* the one accent: the live dot, the chosen study */
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --gutter: clamp(16px, 3.2vw, 44px);
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  font: 400 15px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  letter-spacing: -0.005em;
+  /* A measuring grid, barely there. */
+  background:
+    linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 100% 96px,
+    linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 96px 100%,
+    var(--ground);
+  background-attachment: fixed;
+}
+.lab * { box-sizing: border-box; }
+.lab a { color: inherit; text-decoration: none; }
+.lab a:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; }
+
+/* Small technical labels. */
+.lab .label,
+.lab .bar,
+.lab .no,
+.lab .tags,
+.lab .caption,
+.lab .foot,
+.lab .method {
+  font: 500 11px/1.4 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.lab .label { margin: 0 0 22px; }
+
+.lab .bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px var(--gutter);
+  border-bottom: 1px solid var(--line);
+  background: var(--ground);
+}
+.lab footer.bar { border-top: 1px solid var(--line); border-bottom: 0; }
+.lab .bar a:hover { color: var(--strong); }
+.lab .mark { color: var(--strong); }
+.lab .meta { display: flex; gap: 22px; }
+.lab .live { color: var(--strong); }
+.lab .live::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--signal);
+  vertical-align: 1px;
+  animation: lab-pulse 2.4s ease-in-out infinite;
+}
+@keyframes lab-pulse { 50% { opacity: 0.35; } }
+
+.lab main { padding: 0 var(--gutter); }
+
+/* The brief. */
+.lab .intro {
+  padding: clamp(40px, 8vw, 104px) 0 clamp(36px, 6vw, 72px);
+  border-bottom: 1px solid var(--line);
+  background: var(--ground);
+}
+.lab h1 {
+  margin: 0;
+  max-width: 22ch;
+  color: var(--strong);
+  font-size: clamp(34px, 5.6vw, 76px);
+  font-weight: 500;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.lab .lede { max-width: 58ch; margin: 28px 0 0; font-size: clamp(15px, 1.25vw, 17px); text-wrap: pretty; }
+.lab .method { display: flex; flex-wrap: wrap; gap: 8px 0; margin: 40px 0 0; }
+.lab .method div { display: flex; gap: 10px; padding-right: 28px; margin-right: 28px; border-right: 1px solid var(--line); }
+.lab .method div:last-child { border: 0; }
+.lab .method dt { color: var(--signal); }
+.lab .method dd { margin: 0; color: var(--ink); }
+
+/* The bench: the index on the left, the viewer on the right. */
+.lab .bench { display: grid; grid-template-columns: minmax(0, 1fr); background: var(--ground); }
+.lab .index { padding: 36px 0 56px; }
+.lab ol { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.lab li { border-bottom: 1px solid var(--line); }
+.lab [data-study] {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 24px;
+  gap: 12px;
+  align-items: start;
+  padding: 20px 8px 20px 0;
+  transition: background-color 0.2s ease, padding-left 0.2s ease;
+}
+.lab .no { padding-top: 5px; transition: color 0.2s ease; }
+.lab .body { display: grid; gap: 6px; }
+.lab .name { color: var(--strong); font-size: clamp(20px, 2vw, 26px); font-weight: 500; letter-spacing: -0.02em; line-height: 1.15; }
+.lab .what { max-width: 52ch; text-wrap: pretty; }
+.lab .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.lab .tags span { padding: 3px 7px; border: 1px solid var(--line); border-radius: 3px; }
+.lab .tags .state { color: var(--ink); }
+.lab .tags .work { color: var(--signal); border-color: color-mix(in srgb, var(--signal) 45%, transparent); }
+.lab .tags .proof { color: #d8c98a; border-color: rgba(216, 201, 138, 0.35); }
+.lab .go { padding-top: 4px; color: var(--faint); font-size: 18px; transition: transform 0.2s ease, color 0.2s ease; }
+.lab [data-study]:hover,
+.lab [data-study]:focus-visible,
+.lab [data-study].shown { padding-left: 12px; background: rgba(255, 255, 255, 0.035); }
+.lab [data-study]:hover .go,
+.lab [data-study]:focus-visible .go { transform: translateX(4px); color: var(--strong); }
+.lab [data-study].shown .no { color: var(--signal); }
+
+/* The viewer exists only where there is room and a pointer to aim with. */
+.lab .viewer { display: none; }
+@media (min-width: 1000px) and (hover: hover) {
+  .lab .bench { grid-template-columns: minmax(0, 0.92fr) minmax(0, 1fr); gap: var(--gutter); }
+  .lab .viewer { display: block; padding: 36px 0 56px; border-left: 1px solid var(--line); padding-left: var(--gutter); }
+  .lab .plate { position: sticky; top: 28px; }
+}
+.lab .caption { display: flex; gap: 14px; margin: 0 0 14px; }
+.lab .caption #viewer-no { color: var(--signal); }
+.lab .caption #viewer-name { color: var(--strong); margin-right: auto; }
+.lab .window {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #000;
+}
+.lab .window iframe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1280px; /* the study is laid out at this size, then scaled to fit the window */
+  height: 800px;
+  border: 0;
+  transform-origin: 0 0;
+  pointer-events: none; /* a preview: open the study to handle it */
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.lab .window iframe.ready { opacity: 1; }
+/* Register marks in the window's corners. */
+.lab .corner { position: absolute; z-index: 1; width: 12px; height: 12px; border: solid rgba(255, 255, 255, 0.5); border-width: 1px 0 0 1px; pointer-events: none; }
+.lab .corner:nth-child(1) { left: 8px; top: 8px; }
+.lab .corner:nth-child(2) { right: 8px; top: 8px; transform: rotate(90deg); }
+.lab .corner:nth-child(3) { right: 8px; bottom: 8px; transform: rotate(180deg); }
+.lab .corner:nth-child(4) { left: 8px; bottom: 8px; transform: rotate(270deg); }
+.lab .foot { display: flex; justify-content: space-between; gap: 16px; margin: 14px 0 0; }
+.lab .foot a { color: var(--strong); }
+.lab .foot a:hover { color: var(--signal); }
+
+@media (max-width: 640px) {
+  .lab h1 br { display: none; }
+  .lab .meta span:not(.live) { display: none; }
+  .lab [data-study] { grid-template-columns: 30px minmax(0, 1fr) 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lab .live::before { animation: none; }
+  .lab [data-study], .lab .go, .lab .window iframe { transition: none; }
+}
