@@ -143,6 +143,22 @@ export function stepped(time: number, every: number, hold = 0.35): number {
   return count + moving * moving * (3 - 2 * moving)
 }
 
+/**
+ * A value read off a list of keyframes, [seconds, value], in order: straight lines between them,
+ * held before the first and after the last. For motion copied from a reference, frame by frame.
+ */
+export function keyed(time: number, keys: [number, number][]): number {
+  if (time <= keys[0][0]) return keys[0][1]
+  for (let index = 1; index < keys.length; index++) {
+    const [at, value] = keys[index]
+    if (time <= at) {
+      const [before, from] = keys[index - 1]
+      return from + ((value - from) * (time - before)) / (at - before)
+    }
+  }
+  return keys[keys.length - 1][1]
+}
+
 // ---- Clay: matt grey, lit by the stage's soft light ---------------------------------------------
 export function clay(shade = 0.72): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({ color: new THREE.Color(shade, shade, shade), roughness: 0.82, metalness: 0 })
