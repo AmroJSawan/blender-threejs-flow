@@ -67,23 +67,37 @@ vec3 rim(vec2 p, float width) {
   return vec3(clamp(1.0 + box.x / width, 0.0, 1.0), box.yz);
 }
 
-/**
- * Like `rim`, for light soaking in from the edge: every contour of the band is the card's own outline
- * moved inward with the SAME corner radius, so the light turns each corner exactly as the card does
- * (`rim` rounds the inner contours off more and more instead).
- * x: 1 at the rim falling to 0 at `width` px inside; yz: outward direction.
- */
-vec3 inset(vec2 p, float width) {
+/** How far `p` is inside the rim (px), measured so that every contour is the card's own outline moved inward with the SAME corner radius; yz: outward direction. */
+vec3 insideRim(vec2 p) {
   vec2 a = abs(p) - (uSize * 0.5 - uRadius);  // position relative to the centre of the nearest corner's arc
   float big = max(a.x, a.y), small_ = min(a.x, a.y);
-  float deep = uRadius - big;                  // px inside the rim, along a straight side
+  float deep = uRadius - big;                  // along a straight side
   vec2 outward = a.x > a.y ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
   if (small_ + deep > 0.0) {                   // in a corner: on the arc of radius uRadius whose centre has moved in by `deep`
     float sum = a.x + a.y;
     deep = 0.5 * (sqrt(max(sum * sum - 2.0 * (dot(a, a) - uRadius * uRadius), 0.0)) - sum);
     outward = normalize(a + deep);
   }
-  return vec3(clamp(1.0 - deep / width, 0.0, 1.0), sign(p) * outward);
+  return vec3(deep, sign(p) * outward);
+}
+
+/**
+ * Like `rim`, for light soaking in from the edge: the light turns each corner exactly as the card does
+ * (`rim` rounds the inner contours off more and more instead).
+ * The measure is averaged over a small neighbourhood: where a corner's curve meets a straight side the
+ * bend changes abruptly, and unsmoothed that shows as a faint line running in from each corner.
+ * x: 1 at the rim falling to 0 at `width` px inside; yz: outward direction.
+ */
+#define SMOOTHING 14
+vec3 inset(vec2 p, float width) {
+  float reach = min(uRadius * 0.75, width * 0.5); // how far the averaging looks, px
+  vec3 sum = insideRim(p);
+  for (int i = 0; i < SMOOTHING; i++) {
+    float angle = float(i) * 2.39996;
+    sum += insideRim(p + vec2(cos(angle), sin(angle)) * reach * sqrt((float(i) + 0.5) / float(SMOOTHING)));
+  }
+  sum /= float(SMOOTHING + 1);
+  return vec3(clamp(1.0 - sum.x / width, 0.0, 1.0), normalize(sum.yz + 1e-5));
 }
 
 /**
