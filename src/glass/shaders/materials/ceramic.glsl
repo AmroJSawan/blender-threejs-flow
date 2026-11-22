@@ -1,19 +1,24 @@
 // title: Ceramic
-// note: Glazed ceramic. The glaze is thick and slightly uneven, so the lamp's reflection wobbles as it crosses, and it runs thin and pale along the edges where the clay shows through.
-// order: 7
-#define GLAZE vec3(0.08, 0.15, 0.42)  // colour where the glaze is thick
-#define THIN vec3(0.62, 0.7, 0.78)    // colour where it runs thin, at the edges
-#define BEVEL 16.0                    // width of the rounded edge, px
-#define UNEVEN 0.5                    // how wavy the glaze is
+// note: Glazed porcelain, off-white and softly rounded at the edge. The glaze is glassy, so the studio panels reflect in it clearly but faintly, and they waver a little where the glaze lies uneven.
+// order: 8
+// stage: #24231f
+// lights: 0.12
+// ink: dark
+#define SIDE_COLOUR vec3(0.6, 0.59, 0.56)
+#define BASE vec3(0.9, 0.885, 0.86)  // colour of the porcelain
+#define BEVEL 16.0                   // width of the rounded edge, px
+#define UNEVEN 0.35                  // how wavy the glaze is
+#define GLAZE 0.11                   // how much of the studio the glaze reflects
 
-float glaze(vec2 p) { return noise(p / 70.0); }
+float glaze(vec2 p) { return noise(p / 80.0); }
 
 void glass(vec2 p, vec2 uv, inout Look look) {
   vec3 edge = rim(p, BEVEL);
   vec2 wave = vec2(glaze(p + vec2(3.0, 0.0)) - glaze(p - vec2(3.0, 0.0)), glaze(p + vec2(0.0, 3.0)) - glaze(p - vec2(0.0, 3.0)));
-  vec3 normal = normalOf(-edge.yz * edge.x * edge.x * 1.5 + wave * UNEVEN);
+  vec3 normal = normalOf(-edge.yz * edge.x * edge.x * 1.3 + wave * UNEVEN);
   look.milk = 1.0;
   look.shine = 0.0;
-  look.tint = mix(GLAZE, THIN, pow(edge.x, 1.6) * 0.75) * (0.34 + 0.75 * diffuse(normal, p, 0.5));
-  look.light = vec3(gleam(normal, p, 220.0) * 0.9 + gleam(normal, p, 14.0) * 0.1);
+  look.edge = 0.0;
+  look.tint = BASE * (0.6 + 0.42 * shade(p, normal));
+  look.light = studio(p, normal, 0.03) * GLAZE;
 }

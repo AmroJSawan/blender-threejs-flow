@@ -1,17 +1,24 @@
 // title: Satin
-// note: A smooth satin finish, between matte and gloss: the highlight is wide and gentle and melts into the colour without a hard spot.
-// order: 4
-#define BASE vec3(0.06, 0.3, 0.25)   // colour of the card
-#define BEVEL 12.0                   // width of the rounded edge, px
-#define SHARP 45.0                   // how tight the sheen is (low = wide)
-#define SHINE 0.34                   // how bright it is
+// note: Anodised satin with colour running from amber through rose to violet. The studio light lies on it as a wide, gentle band with no hard edge, and takes on the colour underneath.
+// order: 3
+// stage: #17151c
+// lights: 0.25
+#define SIDE_COLOUR vec3(0.3, 0.12, 0.2)
+#define FROM vec3(1.0, 0.56, 0.2)    // colour at the upper left
+#define MID vec3(0.92, 0.26, 0.42)   // colour in the middle
+#define TO vec3(0.36, 0.2, 0.86)     // colour at the lower right
+#define BEVEL 6.0                    // width of the rounded edge, px
+#define ROUGH 0.42                   // how soft the reflections are
 
 void glass(vec2 p, vec2 uv, inout Look look) {
   vec3 edge = rim(p, BEVEL);
-  vec3 normal = normalOf(-edge.yz * edge.x * edge.x * 1.2);
+  vec3 normal = normalOf(-edge.yz * edge.x * edge.x * 1.1);
+  float across = clamp(0.5 - dot(p / uSize, normalize(KEY)) * 0.95, 0.0, 1.0);
+  vec3 colour = mix(mix(FROM, MID, smoothstep(0.0, 0.55, across)), TO, smoothstep(0.45, 1.0, across));
   look.milk = 1.0;
   look.shine = 0.0;
-  look.grain = 0.012;
-  look.tint = BASE * (0.32 + 0.75 * diffuse(normal, p, 0.4));
-  look.light = vec3(0.8, 1.0, 0.94) * gleam(normal, p, SHARP) * SHINE;
+  look.edge = 0.0;
+  look.grain = 0.014;
+  look.tint = colour * (0.42 + 0.62 * shade(p, normal));
+  look.light = studio(p, normal, ROUGH) * mix(vec3(1.0), colour, 0.6) * 0.42;
 }

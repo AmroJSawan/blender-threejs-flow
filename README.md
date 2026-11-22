@@ -174,20 +174,26 @@ Every card hangs on springs (drag it and let go), but each kind of glass has the
 
 ## Material cards page
 
-`materials.html` is the surface-finish series: the same card and code again, with kinds that are materials (`src/glass/shaders/materials/*.glsl`, also `materials.html?material=satin`). The physics here is light: one lamp hangs over the upper left of the card and follows the pointer, and each finish answers it in its own way.
+`materials.html` is the surface-finish series (`src/glass/shaders/materials/*.glsl`, also `materials.html?material=satin`). It is staged like a product photograph rather than a demo: a plain dark backdrop with a few out-of-focus colour lights and film grain, the card floating over a wide soft shadow and resting at a slight angle, quiet small print, and light that comes from large studio panels instead of a point lamp. Leaning the card or moving the pointer slides the panels' reflections across the surface.
 
-| Kind | Finish | How it takes the light |
+| Kind | Finish | How it takes the studio light |
 |---|---|---|
-| `glass` | Modern glass: lightly frosted pane, rounded rim | Blurs and bends what is behind it; faint soft highlight |
-| `matte` | Soft-touch matte | Scatters evenly: no glint, a slow fall from lit to shaded, fine grain |
-| `plastic` | Regular moulded plastic | One clear medium-sized highlight |
-| `satin` | Smooth satin | A wide gentle sheen with no hard spot |
-| `lacquer` | High-gloss black lacquer | Tiny hard glint plus a sliding reflection of a window |
-| `metal` | Brushed aluminium | Scratches pull the highlight into a tall streak |
-| `ceramic` | Glazed ceramic | Reflection wobbles on the uneven glaze; glaze runs pale at the edges |
-| `pearl` | Pearl | Colour shifts with the angle of the light |
+| `glass` | Thick frosted slab over colour lights | Blurs the body, bends and colour-splits at the rounded rim, hairline of light on the edge |
+| `matte` | Soft-touch matte black | No reflection: a slow fall of light and fine grain |
+| `satin` | Anodised gradient, amber to violet | A wide, soft band that takes on the colour underneath |
+| `gloss` | Deep colour under a clear coat | Crisp-edged panel reflections that slide |
+| `brushed` | Titanium, fine linear brush | Grooves smear the light sideways into a soft field |
+| `spun` | Steel brushed in circles | Bright spokes from the centre that swing round |
+| `foil` | Holographic foil on silver | Light breaks into a smooth run of spectrum colours |
+| `ceramic` | Glazed off-white porcelain | Clear but faint reflections that waver on the uneven glaze |
 
-A solid material sets `look.milk = 1` (nothing shows through), `look.shine = 0` (it does its own highlights), its colour in `look.tint` and its highlights in `look.light`. `card.frag` gives every kind four helpers for this: `normalOf(slope)`, `toLamp(p)`, `diffuse(normal, p, wrap)` and `gleam(normal, p, sharp)`; `LAMP_HEIGHT` there sets how high the lamp hangs. Each file names its colour and finish numbers at the top.
+How a material file works:
+
+- It sets `look.milk = 1` (nothing shows through), `look.shine = 0` and `look.edge = 0` (it draws its own highlights and edge), its colour in `look.tint` and its reflections in `look.light`.
+- `card.frag` provides the studio: `normalOf(slope)`, `shade(p, normal)` for soft even light, and `studio(p, normal, rough)` for what the surface reflects (`rough` 0 = crisp panel edges, 1 = fully soft). `EYE`, `LEAN` and `KEY` there set how fast reflections travel and where the main panel stands; the panels themselves are the four lines inside `studio`.
+- `#define SIDE_COLOUR vec3(...)` gives the card visible thickness under its lower edge.
+- Header lines: `// stage: #1b1c20` (backdrop colour), `// lights: 0.3` (strength of the colour lights behind), `// ink: dark` (dark print for light materials).
+- Page-wide staging is in `settings.series.material` in `src/glass/main.ts`: `lift` (shadow), `lean` (resting angle), `tilt` (how far it leans toward the pointer).
 
 ## Phones: card view
 

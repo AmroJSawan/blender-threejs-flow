@@ -6,6 +6,9 @@ uniform float uTime;
 uniform vec2 uResolution;   // picture size, CSS pixels
 uniform sampler2D uType;    // one line of words, tiling sideways
 uniform float uTypeAspect;  // its width / height
+uniform float uStage;       // 1 = a plain studio backdrop instead of the lights, grid and type
+uniform vec3 uStageColour;  // colour of that backdrop
+uniform float uLights;      // how strong its out-of-focus colour lights are
 uniform float uDim;         // 1 = full brightness; lower for pages where the card itself gives the light
 
 #define ROW 150.0   // height of a row of type, px
@@ -21,6 +24,18 @@ void main() {
   vec2 px = vUv * uResolution;
   vec2 p = (vUv - 0.5) * vec2(uResolution.x / uResolution.y, 1.0);
   float t = uTime;
+
+  if (uStage > 0.5) {
+    // Studio backdrop: one colour, brighter behind the card and falling off to the corners,
+    // a few large out-of-focus colour lights, and fine film grain.
+    vec3 wall = uStageColour * (1.35 - 0.95 * smoothstep(0.0, 1.0, length(p * vec2(0.85, 1.0))));
+    wall += uLights * light(p, vec2(-0.13 + sin(t * 0.23) * 0.07, 0.1 + cos(t * 0.19) * 0.06), 0.42, vec3(0.42, 0.3, 1.0));
+    wall += uLights * light(p, vec2(0.14 + cos(t * 0.17 + 1.0) * 0.07, -0.12 + sin(t * 0.21 + 2.0) * 0.06), 0.4, vec3(1.0, 0.4, 0.22));
+    wall += uLights * 0.7 * light(p, vec2(0.1 + sin(t * 0.13 + 4.0) * 0.08, 0.2 + cos(t * 0.15) * 0.05), 0.3, vec3(0.1, 0.75, 0.95));
+    wall += (fract(sin(dot(px, vec2(127.1, 311.7))) * 43758.5453) - 0.5) * 0.022;
+    gl_FragColor = vec4(wall, 1.0);
+    return;
+  }
 
   vec3 colour = vec3(0.035, 0.04, 0.06);
   colour += light(p, vec2(sin(t * 0.21) * 0.38, cos(t * 0.17) * 0.24), 0.75, vec3(0.14, 0.34, 1.0));

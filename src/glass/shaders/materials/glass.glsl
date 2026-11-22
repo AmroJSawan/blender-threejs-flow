@@ -1,17 +1,30 @@
 // title: Glass
-// note: Modern glass: a lightly frosted pane that softens what is behind it, with a rounded rim that bends the picture and splits its colours. The lamp's soft highlight follows the pointer.
+// note: A thick slab of frosted glass over soft colour lights. The body blurs what is behind it, the rounded rim bends it and splits its colours, and a fine bright line runs round the edge where it catches the studio light.
 // order: 1
-#define FROST 20.0   // blur, px
-#define BODY 0.12    // how milky the pane is
-#define RIM 14.0     // width of the rounded rim, px
+// stage: #0d0e13
+// lights: 1
+#define FROST 26.0   // blur of the body, px
+#define BODY 0.07    // how milky the slab is
+#define RIM 18.0     // width of the rounded rim, px
+#define LINE 0.85    // brightness of the fine line on the edge
 
 void glass(vec2 p, vec2 uv, inout Look look) {
   vec3 edge = rim(p, RIM);
-  look.slope = -edge.yz * edge.x * edge.x * 1.1;
-  look.blur = FROST;
-  look.split = 0.12;
-  look.tint = vec3(0.94, 0.97, 1.0);
-  look.milk = BODY;
-  look.grain = 0.02;
-  look.light = vec3(0.95, 0.98, 1.0) * gleam(normalOf(look.slope), p, 30.0) * 0.14;
+  float curve = edge.x * edge.x;
+  look.slope = -edge.yz * curve * 1.5;
+  look.depth = 46.0;
+  look.blur = FROST * (1.0 - 0.55 * curve); // the rim is clearer than the body
+  look.split = 0.3;
+  look.tint = vec3(0.93, 0.95, 1.0);
+  look.milk = BODY + 0.05 * shade(p, normalOf(vec2(0.0)));
+  look.grain = 0.028;
+  look.shine = 0.0;
+  look.edge = 0.0;
+
+  // Studio light: a broad soft wash on the body, crisp on the rounded rim, and a hairline on the very edge
+  // that is brightest where it faces the light and where it faces away from it.
+  look.light = studio(p, normalOf(vec2(0.0)), 0.6) * 0.1;
+  look.light += studio(p, normalOf(look.slope * 0.5), 0.05) * curve * 0.5;
+  float facing = dot(edge.yz, normalize(KEY));
+  look.light += vec3(0.95, 0.97, 1.0) * LINE * rim(p, 1.6).x * (0.16 + 0.84 * facing * facing);
 }
