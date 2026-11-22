@@ -8,6 +8,7 @@ Scroll, mouse, hover and fragment shaders are handled by a small vanilla three.j
 **Glow cards:** https://amrojsawan.github.io/blender-threejs-flow/glow.html
 **Material cards:** https://amrojsawan.github.io/blender-threejs-flow/materials.html
 **Switch study:** https://amrojsawan.github.io/blender-threejs-flow/switch.html
+**Switch in 3D:** https://amrojsawan.github.io/blender-threejs-flow/switch3d.html
 
 **Stack:** three.js (WebGL 2) · GSAP ScrollTrigger · Lenis · Vite · TypeScript
 
@@ -222,6 +223,19 @@ A style file starts with `// title:`, `// note:`, `// order:` and `// ink: light
 
 `src/switch/main.ts` holds the spring and layout (`settings`), and lays an invisible real button with `role="switch"` over each drawn switch, so keyboard and screen readers work.
 
+## Switch in 3D page
+
+`switch3d.html` is the knurled switch as a real 3D model made in Blender, shown with three.js. Move the pointer and the view leans round it; click, tap or press Space to switch it.
+
+How it works:
+
+1. `blender/make_switch.py` (run with `npm run switch`, about a minute, in a background Blender) models the switch from the numbers at its top: sheet, sloping wall, track floor with two marks, and a knob with a knurled face.
+2. It lights the model with one wide, soft, far-away light plus even room light, and bakes the light that falls on each part into pictures. A baked shadow cannot follow a moving knob, so it bakes twice: with the knob on and with it off.
+3. It saves `blender/switch.blend` and exports `public/switch3d/`: `switch.glb` and four light pictures (`base-on`, `base-off`, `knob-on`, `knob-off`).
+4. `src/switch3d/main.ts` draws the model unlit: each part shows its own colour times the baked light, blending the "on" and "off" pictures as the knob travels. The floor colour blends between its two colours the same way. Camera and spring are in `settings` at the top.
+
+To change the look, edit the numbers at the top of `make_switch.py` (shape, colours, `LIGHT_SOFT` for shadow softness, `ROOM` for how filled the shadows are) and run `npm run switch` again. You can also open `blender/switch.blend`, but the baked pictures only update when the script runs.
+
 ## Phones: card view
 
 On screens up to `config.cards.maxWidth` (768 px) the scroll scene is replaced by a vertical list of cards.
@@ -238,6 +252,7 @@ Set `config.cards.enabled = false` to show the scroll scene on every screen.
 | `npm run build` | Type-check and build to `dist/` |
 | `npm run export` | Export `blender/demo.blend` without opening Blender |
 | `npm run demo` | Rebuild the demo scene from `blender/make_demo.py` |
+| `npm run switch` | Rebuild the 3D switch and bake its light (`blender/make_switch.py`) |
 | `npm run optimize` | Compress `public/scene.glb` (Meshopt + WebP) before shipping |
 
 `export` and `demo` assume Blender at `/Applications/Blender.app`; edit `package.json` if yours is elsewhere.
