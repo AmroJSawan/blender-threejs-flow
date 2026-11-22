@@ -356,19 +356,20 @@ def rocker():
 
 def slider():
     HALF = (1.52, 0.52)   # half size of the slot's outline
+    ROUND = 0.28          # its corner radius: the block's own, plus the gap round the block and the wall
     LIP = 0.05            # width of its wall
     DEPTH = 0.16          # how deep the slot is
     BLOCK = (0.6, 0.39)   # half size of the sliding block
     BLOCK_ROUND = 0.15
     STAND = 0.045         # how far the block stands above the sheet
-    TRAVEL = 0.74
+    TRAVEL = 0.79
     RIDGE = 0.11          # spacing of the three finger ridges
     LAMP_AT = -1.24
     base_mats = [material("Sheet", (0.82, 0.8, 0.77)), material("Well", (0.02, 0.02, 0.022)), material("Lamp", (0.05, 1.0, 0.16), off=(0.035, 0.04, 0.035), glow=True)]
     knob_mats = [material("Block", (0.9, 0.89, 0.87))]
 
     bm = bmesh.new()
-    shell(bm, HALF, HALF[1], sheet_steps() + [(-0.012, 0.0, 0), (-0.003, -0.004, 1), (0.004, -0.016, 1), (LIP * 0.6, -DEPTH + 0.03, 1), (LIP, -DEPTH, 1)], corner=20)
+    shell(bm, HALF, ROUND, sheet_steps() + [(-0.012, 0.0, 0), (-0.003, -0.004, 1), (0.004, -0.016, 1), (LIP * 0.6, -DEPTH + 0.03, 1), (LIP, -DEPTH, 1)])
     # The lamp: a short lit bar standing on the floor at the far end.
     shell(bm, (0.03, 0.16), 0.03, [(0.0, -DEPTH, 2), (0.003, -DEPTH + 0.012, 2), (0.012, -DEPTH + 0.021, 2), (0.03, -DEPTH + 0.024, 2)], close=False, corner=6, offset=(LAMP_AT, 0.0))
     base = finish("Base", bm, base_mats, crease=45)
@@ -379,7 +380,7 @@ def slider():
         shell(bm, (0.03, 0.25), 0.03, [(0.0, STAND - 0.002, 0), (0.005, STAND + 0.011, 0), (0.015, STAND + 0.019, 0), (0.03, STAND + 0.022, 0)], close=False, corner=6, offset=(index * RIDGE, 0.0))
     knob = finish("Knob", bm, knob_mats, crease=45)
     return dict(title="Slider", note="A block with three finger ridges sliding in a dark slot. Pushed across, it uncovers a green lamp at the far end.",
-                base=base, knob=knob, travel=TRAVEL, rim=(*HALF, HALF[1]), pit=(*HALF, HALF[1]), floor=-DEPTH)
+                base=base, knob=knob, travel=TRAVEL, rim=(*HALF, ROUND), pit=(*HALF, ROUND), floor=-DEPTH)
 
 
 def ball():
