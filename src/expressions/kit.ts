@@ -202,22 +202,14 @@ export function ember({ hot, warm = hot, axis = 'y', from, to, body = 0.016 }: E
       uTo: { value: to },
       uBody: { value: body },
       uHeat: { value: 1 },
-      // A shape lying along x can be bent sideways (toward y): uBend is how far its far end swings, as a share of
-      // its length, starting from x = uBendFrom and reaching full strength uBendOver further on.
-      uBend: { value: 0 },
-      uBendFrom: { value: 0 },
-      uBendOver: { value: 1 },
     },
     vertexShader: /* glsl */ `
       varying vec3 vPlace;
       varying vec3 vNormal;
       varying vec3 vToEye;
-      uniform float uBend, uBendFrom, uBendOver;
       void main() {
         vPlace = position;
-        float along = clamp((position.x - uBendFrom) / uBendOver, 0.0, 1.0);
-        vec3 bent = position + vec3(0.0, uBend * along * along * uBendOver, 0.0);
-        vec4 seen = modelViewMatrix * vec4(bent, 1.0);
+        vec4 seen = modelViewMatrix * vec4(position, 1.0);
         vNormal = normalMatrix * normal;
         vToEye = -seen.xyz;
         gl_Position = projectionMatrix * seen;
