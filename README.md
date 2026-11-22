@@ -174,6 +174,11 @@ Every card hangs on springs (drag it and let go), but each kind of glass has the
 | `flies` | Two dozen blinking points | A swarm that gathers round the pointer and scatters | `uFlies` (`flies.ts`, tuning in `swarm`) |
 | `lamp` | Warm lamp behind frost | Swings after the pointer on a spring | `uFollow` |
 | `button` | Button with an inner glow: strong under the top edge and round the upper corners, slight round every edge | Bright spot slides after the pointer; a tap presses it and it flares | `uFollow`, `uAge` |
+| `smoke` | Near-black card with pale light soaking in from every edge; a ruler of fine ticks | Light gathers toward the pointer, ticks slide; a tap makes it swell | `uFollow`, `uAge` |
+| `horizon` | Blue edge light turning teal toward the bottom, round a sun half risen over a horizon | Sun rises and sinks with the pointer; a tap makes the light swell | `uFollow`, `uAge` |
+| `orchid` | Violet middle with edges cooling to blue and cyan; a pulsing cluster of dots | Edge colour leans toward the pointer; a tap brightens the dots | `uFollow`, `uAge` |
+| `lagoon` | Teal light soaking in from the edges, with a brighter stretch drifting round the rim | The bright stretch jumps to the side the pointer is on; a tap makes it swell | `uFollow`, `uAge` |
+| `aura` | Violet edge light round a deep blue middle, fine rings breathing round a small moon | Rings lean toward the pointer; a tap sends a ring outward | `uFollow`, `uAge` |
 
 ## Material cards page
 
