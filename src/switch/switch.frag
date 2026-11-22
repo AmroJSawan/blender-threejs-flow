@@ -15,7 +15,7 @@ uniform float uOn[2];      // where each knob is: 0 = off (left) … 1 = on (rig
 // Shape, in design pixels.
 #define W 150.0     // half length of the track
 #define H 78.0      // half height of the track
-#define LIP 9.0     // width of the sloping wall between sheet and track floor
+#define LIP 11.0    // width of the sloping wall between sheet and track floor
 #define DEPTH 22.0  // how deep the track is cut into the sheet
 #define KNOB 72.0   // knob radius
 #define FACE 57.0   // radius of the knurled face inside the knob
@@ -23,8 +23,8 @@ uniform float uOn[2];      // where each knob is: 0 = off (left) … 1 = on (rig
 #define CELL 7.0    // size of one knurl pyramid
 // Light.
 #define SUN vec3(-0.26, 0.72, 0.64)  // direction to the light: above, slightly left, toward the viewer
-#define SPREAD 0.42                  // size of the light: 0 = a bare bulb (hard shadows), larger = a big soft panel
-#define WRAP 0.3                     // how far light creeps round onto surfaces facing away
+#define SPREAD 0.8                   // size of the light: 0 = a bare bulb (hard shadows), larger = a big soft panel
+#define WRAP 0.5                     // how far light creeps round onto surfaces facing away
 #define AMBIENT 0.62                 // light that reaches everything, even in shadow
 #define SOFT 1.1                     // shadow edge from each part of the light: higher = harder
 #define STEPS 14                     // samples along each line to the light
@@ -62,8 +62,8 @@ float height(vec2 p) {
   vec2 k = p - vec2(mix(-(W - H), W - H, knobAt), 0.0);
   float r = length(k);
   if (r < KNOB + 2.0) {
-    float top = RISE - 3.5 * (r * r) / (KNOB * KNOB) - 3.0 * pow(smoothstep(FACE + 6.0, KNOB, r), 2.0) - 1.6 * smoothstep(FACE + 1.2, FACE - 1.2, r); // gently domed
-    top += 1.3 * knurl(k) * smoothstep(FACE - 1.0, FACE - 5.0, r);
+    float top = RISE - 5.0 * (r * r) / (KNOB * KNOB) - 1.2 * pow(smoothstep(FACE + 8.0, KNOB, r), 2.0) - 1.2 * smoothstep(FACE + 1.5, FACE - 1.5, r); // gently domed
+    top += 1.0 * knurl(k) * smoothstep(FACE - 1.0, FACE - 5.0, r);
     h = mix(h, top, smoothstep(KNOB + 0.8, KNOB - 0.8, r));
   }
   return h;
@@ -99,8 +99,6 @@ vec3 drawSwitch(vec2 p, float on, vec3 sheet) {
     direct += facing * clamp(open, 0.0, 1.0);
   }
   direct /= 7.0;
-  vec3 sun = normalize(SUN);
-
   // Crowding: less of the room's light reaches a point with walls close by.
   float walls = max(height(p + vec2(6.0, 0.0)) - h, 0.0) + max(height(p - vec2(6.0, 0.0)) - h, 0.0)
               + max(height(p + vec2(0.0, 6.0)) - h, 0.0) + max(height(p - vec2(0.0, 6.0)) - h, 0.0);
@@ -115,8 +113,6 @@ vec3 drawSwitch(vec2 p, float on, vec3 sheet) {
 
   // In shade a colour gets deeper, not just greyer.
   colour = pow(colour, vec3(1.0 + 0.75 * clamp(1.0 - light, 0.0, 1.0))) * light;
-  // The knob is smooth enough to show a soft glint of the light.
-  colour += knob * 0.1 * pow(max(dot(normal, normalize(sun + vec3(0.0, 0.0, 1.0))), 0.0), 24.0);
   return colour;
 }
 
