@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { keyed, plate, steel, type Expression } from '../kit'
+import { flowing, plate, steel, type Expression } from '../kit'
 
 /**
  * A study after "Semantic Restructuring" by Reijo Palmiste, worked out from the clip frame by frame.
@@ -10,12 +10,12 @@ import { keyed, plate, steel, type Expression } from '../kit'
  * - The hub flips right over once a second, showing the black ball it sits on.
  * - Event one (0.3–1.4 s): the plates restructure in place. Narrow ones dip toward the hub, wide ones
  *   roll toward the lamp, one lifts and slides out over the rim, one slides out underneath.
- * - Event two (3.3–4.5 s), the tumble: the dial leans back and rights itself; the lamp cuts out, leaving an
- *   edge-lit silhouette; it comes back on as the dial snaps over to edge-on with the plates thrown apart
- *   above and below it; the dial rocks back up to face front while two plates swing out and drop; the lamp
- *   cuts out again and every plate rolls up on edge, so the dial is a wheel of thin spokes; it rocks over
- *   to edge-on a second time as the plates lie flat and the narrow ones rise as a staircase; then it comes
- *   home and the steps land one after another. Its back is never shown.
+ * - The lamp hangs above. The dial rests tipped back toward it; whenever it swings upright its face goes dark.
+ * - Event two (3.3–4.5 s), the tumble: two great nods. The dial leans back, swings forward until it stands
+ *   upright and dark, then right back to edge-on with the plates thrown apart above and below it. It swings
+ *   forward again while two plates swing out and drop, and stands upright with every plate rolled up on edge:
+ *   a dark wheel of thin lit spokes. It swings back to edge-on a second time as the plates lie flat and the
+ *   narrow ones rise as a staircase, then comes home, the steps landing one after another. Its back is never shown.
  * Every list below is [seconds, value].
  */
 const LOOP = 6
@@ -44,17 +44,17 @@ const MOVES: Move[] = [
 ]
 /**
  * Event two. How far the dial is tipped back about its level axis, degrees, on top of its resting attitude:
- * read from how flattened its outline is in each frame of the reference.
+ * read from how flattened its outline is, and how brightly its face is lit, in each frame of the reference.
+ * It is two great nods: forward until it stands upright (and goes dark), back until it is edge-on.
  */
-const TURNED: [number, number][] = [
-  [3.3, 0], [3.45, 23], [3.56, 17], [3.6, -3], [3.64, -7], [3.76, -5], // leans back, rights itself, holds
-  [3.8, 46], [3.84, 61], [3.86, 68], [3.88, 66],                         // snaps over to edge-on
-  [3.92, 46], [3.96, 24], [4.0, -15], [4.04, -12],                       // and back up to face front
-  [4.08, 8], [4.12, 28], [4.16, 46], [4.2, 60], [4.22, 66],              // over to edge-on a second time
-  [4.24, 43], [4.28, 24], [4.32, 9], [4.4, -6], [4.5, 0],                // and home
+const TIPPED: [number, number][] = [
+  [3.2, 0], [3.45, 23], [3.56, 17],                                   // leans back
+  [3.6, -3], [3.64, -11], [3.68, -17], [3.72, -20],                   // swings forward until it stands upright: the lamp no longer reaches its face
+  [3.76, 5], [3.8, 43], [3.84, 61], [3.87, 65],                       // back, right over to edge-on
+  [3.92, 46], [3.96, 24], [4.0, -9], [4.04, -17],                     // forward again, upright and dark
+  [4.08, 8], [4.12, 28], [4.16, 46], [4.2, 60], [4.22, 63],           // back to edge-on a second time
+  [4.24, 43], [4.28, 24], [4.32, 13], [4.4, 3], [4.5, 0],             // and home
 ]
-/** The lamp: it cuts out twice, and a light from behind takes over, picking out edges only. */
-const LAMP: [number, number][] = [[3.58, 1], [3.66, 0.05], [3.76, 0.08], [3.8, 1], [4.0, 1], [4.03, 0.06], [4.1, 0.12], [4.15, 1]]
 /** How far apart the plates are thrown along the dial's axis (0 = seated). */
 const APART: [number, number][] = [[3.74, 0], [3.84, 1], [3.92, 0.55], [4.0, 0]]
 /** Every plate rolls up on edge about its own length, degrees: at 90 the dial is a wheel of spokes. */
@@ -134,8 +134,7 @@ const dial: Expression = {
     disc.position.z = -0.02
     const lip = new THREE.Mesh(new THREE.TorusGeometry(HUB + 0.05, 0.045, 12, 96), metal)
     lip.position.z = 0.03
-    const dark = steel({ body: 0.02, glint: 1.1, tight: 90, grain: 0 })
-    const ball = new THREE.Mesh(new THREE.SphereGeometry(HUB * 0.93, 64, 32, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2).rotateX(Math.PI / 2), dark)
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(HUB * 0.93, 64, 32, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2).rotateX(Math.PI / 2), steel({ body: 0.02, glint: 1.1, tight: 90, grain: 0 }))
     ball.position.z = -0.03
     hub.add(disc, lip, ball)
     body.add(hub)
@@ -146,26 +145,21 @@ const dial: Expression = {
         const at = time % LOOP
         // The dial's attitude: a slow wobble, plus however far the tumble has turned it.
         const swing = (at / LOOP) * Math.PI * 2
-        body.rotation.x = -0.3 - 0.1 * Math.sin(swing) - THREE.MathUtils.degToRad(keyed(at, TURNED))
+        body.rotation.x = -0.36 - 0.08 * Math.sin(swing) - THREE.MathUtils.degToRad(flowing(at, TIPPED))
         body.rotation.y = 0.16 * Math.sin(swing + 1)
         ring.rotation.z = -swing // clockwise, once per loop
-        const lamp = keyed(at, LAMP)
-        for (const material of [metal, dark]) {
-          material.uniforms.uLamp.value = lamp
-          material.uniforms.uBack.value = (1 - lamp) * 0.9
-        }
 
-        const apart = ease(keyed(at, APART))
-        const onEdge = THREE.MathUtils.degToRad(keyed(at, ON_EDGE))
-        const swung = ease(keyed(at, SWING))
-        const risen = ease(keyed(at, STAIRS))
+        const apart = ease(flowing(at, APART))
+        const onEdge = THREE.MathUtils.degToRad(flowing(at, ON_EDGE))
+        const swung = ease(flowing(at, SWING))
+        const risen = ease(flowing(at, STAIRS))
         plates.forEach(({ move, slide, hinge, roll, level, step, swings }) => {
           // Each step of the staircase lands a moment after the one below it.
           const landed = ease(THREE.MathUtils.clamp((at - 4.27 - step * LANDS) / 0.15, 0, 1))
-          slide.position.z = (move.lift ? keyed(at, move.lift) : 0) + apart * level + step * STEP * risen * (1 - landed)
-          slide.position.x = (move.out ? keyed(at, move.out) : 0) + (swings ? swung * 0.7 : 0)
-          hinge.rotation.y = (move.dip ? keyed(at, move.dip) : 0) + (swings ? swung * 0.55 : 0)
-          roll.rotation.x = (move.roll ? keyed(at, move.roll) : 0) + onEdge
+          slide.position.z = (move.lift ? flowing(at, move.lift) : 0) + apart * level + step * STEP * risen * (1 - landed)
+          slide.position.x = (move.out ? flowing(at, move.out) : 0) + (swings ? swung * 0.7 : 0)
+          hinge.rotation.y = (move.dip ? flowing(at, move.dip) : 0) + (swings ? swung * 0.55 : 0)
+          roll.rotation.x = (move.roll ? flowing(at, move.roll) : 0) + onEdge
         })
 
         // The hub flips right over once a second, and turns slowly between flips.

@@ -159,6 +159,34 @@ export function keyed(time: number, keys: [number, number][]): number {
   return keys[keys.length - 1][1]
 }
 
+/**
+ * The same as `keyed`, but a smooth curve through the keyframes instead of straight lines: it eases
+ * into and out of every key, never overshoots one, and comes to rest wherever the value holds.
+ * For motion that should flow, such as something swinging.
+ */
+export function flowing(time: number, keys: [number, number][]): number {
+  const last = keys.length - 1
+  if (time <= keys[0][0]) return keys[0][1]
+  if (time >= keys[last][0]) return keys[last][1]
+  let index = 1
+  while (keys[index][0] < time) index++
+  const slope = (at: number) => (keys[at + 1][1] - keys[at][1]) / (keys[at + 1][0] - keys[at][0])
+  /** The speed the value passes through a key at: none at the ends or at a turning point, else between the speeds either side. */
+  const speed = (at: number) => {
+    if (at === 0 || at === last) return 0
+    const before = slope(at - 1)
+    const after = slope(at)
+    return before * after <= 0 ? 0 : (2 * before * after) / (before + after)
+  }
+  const [t0, v0] = keys[index - 1]
+  const [t1, v1] = keys[index]
+  const span = t1 - t0
+  const u = (time - t0) / span
+  const u2 = u * u
+  const u3 = u2 * u
+  return (2 * u3 - 3 * u2 + 1) * v0 + (u3 - 2 * u2 + u) * span * speed(index - 1) + (-2 * u3 + 3 * u2) * v1 + (u3 - u2) * span * speed(index)
+}
+
 // ---- Clay: matt grey, lit by the stage's soft light ---------------------------------------------
 export function clay(shade = 0.72): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({ color: new THREE.Color(shade, shade, shade), roughness: 0.82, metalness: 0 })
@@ -243,11 +271,10 @@ type Steel = {
   /** How much fine grain shows (0 = polished). */
   grain?: number
 }
-/** Flat faces take one even tone that changes as they tilt toward or away from the lamp; edges catch a bright line. */
-export function steel({ body = 0.36, glint = 0.22, tight = 70, grain = 0.45 }: Steel = {}): THREE.ShaderMaterial {
+/** Flat faces take one even tone that changes as they tip toward or away from the lamp above; edges catch a bright line. */
+export function steel({ body = 0.62, glint = 0.3, tight = 60, grain = 0.45 }: Steel = {}): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    // uLamp dims the lamp (1 = on); uBack brings up a second light from above and behind, which picks out edges only.
-    uniforms: { uBody: { value: body }, uGlint: { value: glint }, uTight: { value: tight }, uGrain: { value: grain }, uLamp: { value: 1 }, uBack: { value: 0 } },
+    uniforms: { uBody: { value: body }, uGlint: { value: glint }, uTight: { value: tight }, uGrain: { value: grain } },
     vertexShader: /* glsl */ `
       varying vec3 vPlace;
       varying vec3 vNormal;
@@ -263,19 +290,20 @@ export function steel({ body = 0.36, glint = 0.22, tight = 70, grain = 0.45 }: S
       varying vec3 vPlace;
       varying vec3 vNormal;
       varying vec3 vSeen;
-      uniform float uBody, uGlint, uTight, uGrain, uLamp, uBack;
+      uniform float uBody, uGlint, uTight, uGrain;
       float hash(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
       void main() {
         vec3 n = normalize(vNormal);
         vec3 toEye = normalize(-vSeen);
-        vec3 lamp = vec3(3.2, 3.4, -13.6) - vSeen;            // the lamp: close in, up and to the right, so its light falls away across the subject
+        // The lamp hangs above the subject, a little to the right and only just in front of it. A face turned to the
+        // viewer is almost dark; it brightens as it tips back toward the lamp. Close in, so the light falls away across the subject.
+        vec3 lamp = vec3(2.6, 6.5, -15.8) - vSeen;
         vec3 toLamp = normalize(lamp);
-        float lit = max(dot(n, toLamp), 0.0) / (1.0 + 0.045 * dot(lamp, lamp));
+        float lit = max(dot(n, toLamp), 0.0) / (1.0 + 0.012 * dot(lamp, lamp));
         float shine = pow(max(dot(n, normalize(toLamp + toEye)), 0.0), uTight);
         float rim = pow(1.0 - max(dot(n, toEye), 0.0), 3.0);
         float speck = 1.0 + uGrain * (hash(floor(vPlace * 110.0)) - 0.5);
-        float behind = pow(max(dot(n, normalize(vec3(0.15, 1.0, -0.35))), 0.0), 3.0); // faces turned up and away catch the light from behind
-        vec3 colour = vec3(0.006 + uBody * lit * uLamp) * speck + vec3(uGlint * shine * uLamp) + vec3(0.035 * rim) + vec3(uBack * behind * (0.25 + rim));
+        vec3 colour = vec3(0.006 + uBody * lit) * speck + vec3(uGlint * shine) + vec3(0.035 * rim);
         gl_FragColor = vec4(colour, 1.0);
         #include <colorspace_fragment>
       }`,
