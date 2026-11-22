@@ -2,6 +2,7 @@
 // note: Blue light soaking in from the edges, turning teal toward the bottom, round a sun half risen over a horizon. The sun rises and sinks a little with the pointer; a tap makes the light swell.
 // order: 11
 // springs: 0.7
+// radius: 58
 #define SKY vec3(0.4, 0.5, 1.0)       // edge light at the top
 #define SEA vec3(0.16, 0.66, 0.7)     // … and at the bottom
 #define BODY vec3(0.012, 0.02, 0.04)
@@ -13,7 +14,7 @@
 #define SWELL 0.5
 
 void glass(vec2 p, vec2 uv, inout Look look) {
-  vec3 edge = rim(p, min(uSize.x, uSize.y) * REACH);
+  vec3 edge = inset(p, min(uSize.x, uSize.y) * REACH);
   float toward = max(1.0 + 0.35 * dot(edge.yz, uFollow / (uSize * 0.5)), 0.2);
   float soak = (pow(edge.x, 1.9) + 0.2 * pow(edge.x, 9.0)) * toward * (1.0 + 0.7 * exp(-uAge / SWELL));
   vec3 glow = mix(SEA, SKY, smoothstep(0.1, 0.9, uv.y));
@@ -36,5 +37,5 @@ void glass(vec2 p, vec2 uv, inout Look look) {
   look.edge = 0.0;
   look.tint = BODY + vec3(0.02, 0.035, 0.06) * (1.0 - above); // the sea is a shade lighter than the sky
   look.light = glow * POWER * soak + light;
-  look.light += glow * 0.35 * smoothstep(1.4, 0.0, (1.0 - rim(p, 3.0).x) * 3.0);
+  look.light += glow * 0.35 * smoothstep(1.4, 0.0, (1.0 - inset(p, 3.0).x) * 3.0);
 }

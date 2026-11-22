@@ -123,7 +123,7 @@ A screen effect redraws the finished picture through one fragment shader in `src
 | `src/glass/body.ts` | The card as a body on springs; all tuning is in `feel` at the top |
 | `src/glass/main.ts` | Page set-up; card size, the words behind it and each page's staging (`settings.series`) are at the top |
 
-A variant starts with comment lines that describe it (`// title:`, `// note:`, `// order:`, optional `// springs:` where higher = looser and bouncier, optional `// stretch: 1` for a soft body that squashes along its path) and defines one function that fills in the look of the glass at each point:
+A variant starts with comment lines that describe it (`// title:`, `// note:`, `// order:`, optional `// springs:` where higher = looser and bouncier, optional `// stretch: 1` for a soft body that squashes along its path, optional `// radius: 58` for its own corner radius in px) and defines one function that fills in the look of the glass at each point:
 
 ```glsl
 void glass(vec2 p, vec2 uv, inout Look look) {  // p: px from the card centre, uv: 0–1
@@ -179,6 +179,8 @@ Every card hangs on springs (drag it and let go), but each kind of glass has the
 | `orchid` | Violet middle with edges cooling to blue and cyan; a pulsing cluster of dots | Edge colour leans toward the pointer; a tap brightens the dots | `uFollow`, `uAge` |
 | `lagoon` | Teal light soaking in from the edges, with a brighter stretch drifting round the rim | The bright stretch jumps to the side the pointer is on; a tap makes it swell | `uFollow`, `uAge` |
 | `aura` | Violet edge light round a deep blue middle, fine rings breathing round a small moon | Rings lean toward the pointer; a tap sends a ring outward | `uFollow`, `uAge` |
+
+The last five are inner-glow cards: light soaks in from the edge and fades toward the middle. They use `inset(p, width)` from `card.frag`, whose contours are the card's own outline moved inward with the same corner radius, so the light turns each corner exactly as the card does (`rim` rounds its inner contours off into an oval instead). `REACH` is how far in the light reaches and `POWER` its brightness at the edge.
 
 ## Material cards page
 

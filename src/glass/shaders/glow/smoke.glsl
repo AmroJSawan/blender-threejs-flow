@@ -2,6 +2,7 @@
 // note: A near-black card with pale light soaking in from every edge and fading to nothing toward the middle. The light gathers on the side the pointer is on; a tap makes it swell.
 // order: 10
 // springs: 0.7
+// radius: 58
 #define GLOW vec3(0.74, 0.73, 0.84)  // colour of the light at the edge
 #define BODY vec3(0.012, 0.013, 0.02) // colour of the dark middle
 #define REACH 0.46    // how far in the light reaches, as a share of the card's width (0.5 = to the middle)
@@ -19,7 +20,7 @@ float ticks(vec2 p) {
 }
 
 void glass(vec2 p, vec2 uv, inout Look look) {
-  vec3 edge = rim(p, min(uSize.x, uSize.y) * REACH); // x: 1 at the rim … 0 at REACH inside; yz: outward direction
+  vec3 edge = inset(p, min(uSize.x, uSize.y) * REACH); // x: 1 at the rim … 0 at REACH inside; yz: outward direction
   float toward = max(1.0 + GATHER * dot(edge.yz, uFollow / (uSize * 0.5)), 0.2);
   float soak = (pow(edge.x, 1.9) + 0.2 * pow(edge.x, 9.0)) * toward * (1.0 + 0.7 * exp(-uAge / SWELL));
   look.blur = 20.0;
@@ -28,6 +29,6 @@ void glass(vec2 p, vec2 uv, inout Look look) {
   look.edge = 0.0;
   look.tint = BODY;
   look.light = GLOW * POWER * soak;
-  look.light += GLOW * 0.35 * smoothstep(1.4, 0.0, (1.0 - rim(p, 3.0).x) * 3.0); // a fine line right on the rim
+  look.light += GLOW * 0.35 * smoothstep(1.4, 0.0, (1.0 - inset(p, 3.0).x) * 3.0); // a fine line right on the rim
   look.light += vec3(0.6) * ticks(p);
 }

@@ -67,6 +67,25 @@ vec3 rim(vec2 p, float width) {
   return vec3(clamp(1.0 + box.x / width, 0.0, 1.0), box.yz);
 }
 
+/**
+ * Like `rim`, for light soaking in from the edge: every contour of the band is the card's own outline
+ * moved inward with the SAME corner radius, so the light turns each corner exactly as the card does
+ * (`rim` rounds the inner contours off more and more instead).
+ * x: 1 at the rim falling to 0 at `width` px inside; yz: outward direction.
+ */
+vec3 inset(vec2 p, float width) {
+  vec2 a = abs(p) - (uSize * 0.5 - uRadius);  // position relative to the centre of the nearest corner's arc
+  float big = max(a.x, a.y), small_ = min(a.x, a.y);
+  float deep = uRadius - big;                  // px inside the rim, along a straight side
+  vec2 outward = a.x > a.y ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+  if (small_ + deep > 0.0) {                   // in a corner: on the arc of radius uRadius whose centre has moved in by `deep`
+    float sum = a.x + a.y;
+    deep = 0.5 * (sqrt(max(sum * sum - 2.0 * (dot(a, a) - uRadius * uRadius), 0.0)) - sum);
+    outward = normalize(a + deep);
+  }
+  return vec3(clamp(1.0 - deep / width, 0.0, 1.0), sign(p) * outward);
+}
+
 // ---- Studio light for the materials page ----
 // The card is lit like a product photograph: no point lamp, but large soft light panels whose
 // reflections sweep across the surface as the card leans or the pointer moves.

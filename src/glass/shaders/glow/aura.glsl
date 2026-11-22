@@ -2,6 +2,7 @@
 // note: Violet light soaking in from the edges round a deep blue middle, where fine rings breathe round a small moon. The rings lean toward the pointer; a tap sends one bright ring outward.
 // order: 14
 // springs: 0.7
+// radius: 58
 #define GLOW vec3(0.44, 0.28, 1.0)
 #define BODY vec3(0.012, 0.03, 0.085)
 #define RING vec3(0.3, 0.78, 1.0)
@@ -13,7 +14,7 @@
 #define SWELL 0.9
 
 void glass(vec2 p, vec2 uv, inout Look look) {
-  vec3 edge = rim(p, min(uSize.x, uSize.y) * REACH);
+  vec3 edge = inset(p, min(uSize.x, uSize.y) * REACH);
   float toward = max(1.0 + 0.35 * dot(edge.yz, uFollow / (uSize * 0.5)), 0.2);
   float soak = (pow(edge.x, 1.9) + 0.2 * pow(edge.x, 9.0)) * toward * (1.0 + 0.5 * exp(-uAge / SWELL));
 
@@ -32,5 +33,5 @@ void glass(vec2 p, vec2 uv, inout Look look) {
   look.edge = 0.0;
   look.tint = BODY * (1.0 - 0.5 * edge.x);
   look.light = GLOW * POWER * soak + RING * (0.5 * ring + 0.6 * wave) * (1.0 - disc) + MOON * 0.75 * lit * disc;
-  look.light += GLOW * 0.4 * smoothstep(1.4, 0.0, (1.0 - rim(p, 3.0).x) * 3.0);
+  look.light += GLOW * 0.4 * smoothstep(1.4, 0.0, (1.0 - inset(p, 3.0).x) * 3.0);
 }

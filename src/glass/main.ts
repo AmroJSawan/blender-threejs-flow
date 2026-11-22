@@ -40,6 +40,7 @@ const settings = {
 //   // title: Frost      // note: one sentence      // order: 2
 //   // springs: 1.5 (looser, bouncier body)      // stretch: 1 (soft body that squashes)
 //   // stage: #15161a (its own backdrop colour)   // lights: 0.3 (colour lights behind)   // ink: dark (dark print)
+//   // radius: 58 (its own corner radius, px)
 // Each kind only runs the physics its shader mentions: uLiquid (water), uSand, uFog, uRibs, uHeat, uFlies.
 const kinds = {
   glass: import.meta.glob<string>('./shaders/variants/*.glsl', { query: '?raw', import: 'default', eager: true }),
@@ -62,6 +63,7 @@ const variants = Object.entries(sources)
       order: Number(tag('order') ?? 99),
       springs: Number(tag('springs') ?? 1),
       stretch: Number(tag('stretch') ?? 0),
+      radius: Number(tag('radius') ?? settings.radius),
       stage: tag('stage'),
       lights: tag('lights'),
       darkInk: tag('ink') === 'dark',
@@ -215,6 +217,7 @@ function show(name: string) {
   card = material
   body.loose = current.springs
   body.soft = current.stretch
+  uniforms.uRadius.value = current.radius
   born = performance.now()
   if (current.sand) sand.reset() // fresh raked sand every time it is chosen
   printFace(current.title, variants.indexOf(current), current.darkInk)
