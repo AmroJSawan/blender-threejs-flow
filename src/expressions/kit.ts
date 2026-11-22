@@ -246,7 +246,8 @@ type Steel = {
 /** Flat faces take one even tone that changes as they tilt toward or away from the lamp; edges catch a bright line. */
 export function steel({ body = 0.36, glint = 0.22, tight = 70, grain = 0.45 }: Steel = {}): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    uniforms: { uBody: { value: body }, uGlint: { value: glint }, uTight: { value: tight }, uGrain: { value: grain } },
+    // uLamp dims the lamp (1 = on); uBack brings up a second light from above and behind, which picks out edges only.
+    uniforms: { uBody: { value: body }, uGlint: { value: glint }, uTight: { value: tight }, uGrain: { value: grain }, uLamp: { value: 1 }, uBack: { value: 0 } },
     vertexShader: /* glsl */ `
       varying vec3 vPlace;
       varying vec3 vNormal;
@@ -262,7 +263,7 @@ export function steel({ body = 0.36, glint = 0.22, tight = 70, grain = 0.45 }: S
       varying vec3 vPlace;
       varying vec3 vNormal;
       varying vec3 vSeen;
-      uniform float uBody, uGlint, uTight, uGrain;
+      uniform float uBody, uGlint, uTight, uGrain, uLamp, uBack;
       float hash(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
       void main() {
         vec3 n = normalize(vNormal);
@@ -273,7 +274,8 @@ export function steel({ body = 0.36, glint = 0.22, tight = 70, grain = 0.45 }: S
         float shine = pow(max(dot(n, normalize(toLamp + toEye)), 0.0), uTight);
         float rim = pow(1.0 - max(dot(n, toEye), 0.0), 3.0);
         float speck = 1.0 + uGrain * (hash(floor(vPlace * 110.0)) - 0.5);
-        vec3 colour = vec3(0.006 + uBody * lit) * speck + vec3(uGlint * shine) + vec3(0.035 * rim);
+        float behind = pow(max(dot(n, normalize(vec3(0.15, 1.0, -0.35))), 0.0), 3.0); // faces turned up and away catch the light from behind
+        vec3 colour = vec3(0.006 + uBody * lit * uLamp) * speck + vec3(uGlint * shine * uLamp) + vec3(0.035 * rim) + vec3(uBack * behind * (0.25 + rim));
         gl_FragColor = vec4(colour, 1.0);
         #include <colorspace_fragment>
       }`,
