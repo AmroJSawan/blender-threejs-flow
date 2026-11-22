@@ -116,9 +116,9 @@ A screen effect redraws the finished picture through one fragment shader in `src
 |---|---|
 | `src/glass/shaders/variants/*.glsl` | **One file per kind of glass.** Drop a file in and it appears in the switcher |
 | `src/glass/shaders/card.frag` | The shared part: card shape, shadow, blur, colour split, light, print |
-| `src/glass/shaders/background.frag` | What lies behind the glass (colour lights, grid, rows of type) |
+| `src/glass/shaders/background.frag` | The stage behind the card: backdrop colour, out-of-focus colour lights, film grain, and rows of large type on the glass page |
 | `src/glass/body.ts` | The card as a body on springs; all tuning is in `feel` at the top |
-| `src/glass/main.ts` | Page set-up; card size and the words behind it are in `settings` at the top |
+| `src/glass/main.ts` | Page set-up; card size, the words behind it and each page's staging (`settings.series`) are at the top |
 
 A variant starts with comment lines that describe it (`// title:`, `// note:`, `// order:`, optional `// springs:` where higher = looser and bouncier, optional `// stretch: 1` for a soft body that squashes along its path) and defines one function that fills in the look of the glass at each point:
 
@@ -158,7 +158,7 @@ Every card hangs on springs (drag it and let go), but each kind of glass has the
 
 ## Glow cards page
 
-`glow.html` is the light series: the same card and code as the glass page, over a dimmed background, with kinds that give off light (`src/glass/shaders/glow/*.glsl`, also `glow.html?glow=ember`). A glow kind sets `look.light` (light added on top of the card) and, with `#define HALO`, a function `vec3 halo(vec2 p, float away)` that lights the background `away` px outside the rim.
+`glow.html` is the light series: the same card and code as the glass page, over a dimmed background, on a near-black backdrop, with kinds that give off light (`src/glass/shaders/glow/*.glsl`, also `glow.html?glow=ember`). A glow kind sets `look.light` (light added on top of the card) and, with `#define HALO`, a function `vec3 halo(vec2 p, float away)` that lights the background `away` px outside the rim.
 
 | Kind | Light | Physics | What the shader reads |
 |---|---|---|---|
@@ -174,7 +174,7 @@ Every card hangs on springs (drag it and let go), but each kind of glass has the
 
 ## Material cards page
 
-`materials.html` is the surface-finish series (`src/glass/shaders/materials/*.glsl`, also `materials.html?material=satin`). It is staged like a product photograph rather than a demo: a plain dark backdrop with a few out-of-focus colour lights and film grain, the card floating over a wide soft shadow and resting at a slight angle, quiet small print, and light that comes from large studio panels instead of a point lamp. Leaning the card or moving the pointer slides the panels' reflections across the surface.
+`materials.html` is the surface-finish series (`src/glass/shaders/materials/*.glsl`, also `materials.html?material=satin`). All three card pages are staged like a product photograph rather than a demo, and this page takes it furthest: a plain dark backdrop with a few out-of-focus colour lights and film grain, the card floating over a wide soft shadow and resting at a slight angle, quiet small print, and light that comes from large studio panels instead of a point lamp. Leaning the card or moving the pointer slides the panels' reflections across the surface.
 
 | Kind | Finish | How it takes the studio light |
 |---|---|---|
@@ -193,7 +193,7 @@ How a material file works:
 - `card.frag` provides the studio: `normalOf(slope)`, `shade(p, normal)` for soft even light, and `studio(p, normal, rough)` for what the surface reflects (`rough` 0 = crisp panel edges, 1 = fully soft). `EYE`, `LEAN` and `KEY` there set how fast reflections travel and where the main panel stands; the panels themselves are the four lines inside `studio`.
 - `#define SIDE_COLOUR vec3(...)` gives the card visible thickness under its lower edge.
 - Header lines: `// stage: #1b1c20` (backdrop colour), `// lights: 0.3` (strength of the colour lights behind), `// ink: dark` (dark print for light materials).
-- Page-wide staging is in `settings.series.material` in `src/glass/main.ts`: `lift` (shadow), `lean` (resting angle), `tilt` (how far it leans toward the pointer).
+- Page-wide staging for each of the three pages is in `settings.series` in `src/glass/main.ts`: `stage` and `lights` (backdrop colour and colour lights), `words` (rows of type behind the card, used by the glass page), `lift` (shadow), `lean` (resting angle), `tilt` (how far it leans toward the pointer). The header lines above work on any page.
 
 ## Phones: card view
 

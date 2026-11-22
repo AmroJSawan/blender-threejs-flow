@@ -3,8 +3,8 @@
 // order: 1
 // springs: 0.7
 #define WIDTH 58.0   // how far in from the rim the bend reaches, px
-#define BEND 1.5     // lean of the surface at the rim
-#define SPLIT 0.16   // colour fringe
+#define BEND 0.95    // lean of the surface at the rim
+#define SPLIT 0.1    // colour fringe
 #define THICK 900.0  // how far the picture shifts when the slab leans
 
 void glass(vec2 p, vec2 uv, inout Look look) {

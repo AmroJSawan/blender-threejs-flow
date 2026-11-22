@@ -6,7 +6,7 @@
 #define SOFT 2.5                       // smoothing of the dunes, in cells
 #define LIT vec3(1.0, 0.96, 0.9)       // colour facing the light
 #define SHADE vec3(0.86, 0.8, 1.0)     // colour turning away from it
-#define BODY 0.88                      // how solid the lit side is
+#define BODY 0.5                       // how solid the lit side is
 
 /** Sand height, averaged over a small neighbourhood so no cell edges show. */
 float dune(vec2 uv) {

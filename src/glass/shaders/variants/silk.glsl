@@ -21,8 +21,8 @@ void glass(vec2 p, vec2 uv, inout Look look) {
   vec3 edge = rim(p, 12.0);
   look.slope = lean * DEPTH - edge.yz * 0.7 * edge.x;
   look.depth = 64.0;
-  look.blur = 2.0 + 5.0 * smoothstep(0.4, -0.6, height); // the valleys are a little softer
-  look.split = 0.2;
+  look.blur = 4.0 + 6.0 * smoothstep(0.4, -0.6, height); // the valleys are a little softer
+  look.split = 0.07;
   look.tint = mix(vec3(0.75, 0.7, 1.0), vec3(1.0, 0.8, 0.9), height * 0.5 + 0.5);
   look.milk = 0.1;
 }

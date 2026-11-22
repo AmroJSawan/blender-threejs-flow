@@ -2,8 +2,8 @@
 // note: Rigid dimpled glass. Random soft dents each bend the picture their own way; lean it and the picture slips behind the dents.
 // order: 7
 // springs: 0.7
-#define DENT 34.0    // size of a dent, px
-#define DEPTH 0.55   // how steep the dents are
+#define DENT 72.0    // size of a dent, px
+#define DEPTH 0.42   // how steep the dents are
 #define THICK 900.0  // how far the picture shifts when the glass leans
 
 float dents(vec2 q) { return noise(q) + 0.45 * noise(q * 2.3 + 7.0); }
@@ -15,6 +15,7 @@ void glass(vec2 p, vec2 uv, inout Look look) {
   vec3 edge = rim(p, 12.0);
   look.slope = lean * DEPTH - edge.yz * 0.7 * edge.x + uTilt * THICK;
   look.depth = 44.0;
-  look.blur = 1.5;
-  look.split = 0.1;
+  look.blur = 5.0;
+  look.shine = 0.45;
+  look.split = 0.04;
 }

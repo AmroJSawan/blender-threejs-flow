@@ -174,7 +174,7 @@ void main() {
   float sheen = smoothstep(0.55, 0.0, abs(dot(uv - 0.5, vec2(0.7, 0.7)) + 0.18 + dot(uTilt, vec2(600.0, -600.0))));
   colour += sheen * 0.045 * look.edge;
   float facing = dot(box.yz, normalize(vec2(-0.6, 0.8)));
-  colour += smoothstep(2.2, 0.0, -box.x) * (0.14 + 0.5 * facing * facing) * look.edge;
+  colour += smoothstep(1.6, 0.0, -box.x) * (0.12 + 0.75 * facing * facing) * look.edge;
 
   vec4 print = texture2D(uFace, uv);
   colour = mix(colour, print.rgb, print.a);

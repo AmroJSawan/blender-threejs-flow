@@ -19,19 +19,19 @@ const settings = {
   fill: [0.8, 0.56] as [number, number],
   maxHeight: 540,
   radius: 30,
-  /** Words behind the glass. */
-  words: 'REFRACTION · BLUR · DISTORTION · FLUID · GLASS · ',
+  /** Words behind the glass (shown on pages whose `words` is above 0). */
+  words: 'Refraction   Blur   Distortion   Fluid   Glass   ',
   /**
-   * The three pages share this code. Per page: the word printed on the card, the kind shown first
-   * (unless the address says ?glass=name, ?glow=name or ?material=name), and how bright the background is.
+   * The three pages share this code and are staged like a product photograph. Per page:
+   * - `print`: the word on the card; `start`: the kind shown first (unless the address says ?glass=name, ?glow=name or ?material=name)
+   * - `stage`, `lights`: backdrop colour and strength of the colour lights behind (a kind can name its own)
+   * - `words`: strength of the rows of type behind the card; `shadow`: a soft shadow under the print, for cards you see through
+   * - `lift`: how high the card floats (its shadow); `lean`: its resting angle; `tilt`: how far it leans toward the pointer
    */
   series: {
-    glass: { print: 'GLASS', start: 'clear', dim: 1, studio: false, lift: 1, lean: [0, 0], tilt: 1 },
-    glow: { print: 'GLOW', start: 'neon', dim: 0.3, studio: false, lift: 1, lean: [0, 0], tilt: 1 },
-    // The materials page is staged like a product photograph: a plain backdrop (each kind names its
-    // colour), the card floating higher (`lift`), resting at a slight angle (`lean`) and leaning
-    // further toward the pointer (`tilt`).
-    material: { print: 'MATERIAL', start: 'glass', dim: 1, studio: true, lift: 2.1, lean: [0.00026, -0.00016], tilt: 1.7 },
+    glass: { print: 'GLASS', start: 'clear', stage: '#0d0e13', lights: 1, words: 0.8, shadow: true, lift: 1.7, lean: [0.00018, -0.00011], tilt: 1.3 },
+    glow: { print: 'GLOW', start: 'neon', stage: '#090a0d', lights: 0.1, words: 0, shadow: false, lift: 1.7, lean: [0.00018, -0.00011], tilt: 1.3 },
+    material: { print: 'MATERIAL', start: 'glass', stage: '#15161a', lights: 0.3, words: 0, shadow: false, lift: 2.1, lean: [0.00026, -0.00016], tilt: 1.7 },
   },
   maxPixelRatio: 2,
 }
@@ -39,7 +39,7 @@ const settings = {
 // Every .glsl file in shaders/variants (glass page), shaders/glow (glow page) or shaders/materials (materials page) is one kind of card. Its first lines describe it:
 //   // title: Frost      // note: one sentence      // order: 2
 //   // springs: 1.5 (looser, bouncier body)      // stretch: 1 (soft body that squashes)
-//   materials page only:  // stage: #15161a (backdrop colour)   // lights: 0.3 (colour lights behind)   // ink: dark (dark print)
+//   // stage: #15161a (its own backdrop colour)   // lights: 0.3 (colour lights behind)   // ink: dark (dark print)
 // Each kind only runs the physics its shader mentions: uLiquid (water), uSand, uFog, uRibs, uHeat, uFlies.
 const kinds = {
   glass: import.meta.glob<string>('./shaders/variants/*.glsl', { query: '?raw', import: 'default', eager: true }),
@@ -62,8 +62,8 @@ const variants = Object.entries(sources)
       order: Number(tag('order') ?? 99),
       springs: Number(tag('springs') ?? 1),
       stretch: Number(tag('stretch') ?? 0),
-      stage: tag('stage') ?? '#15161a',
-      lights: Number(tag('lights') ?? 0.3),
+      stage: tag('stage'),
+      lights: tag('lights'),
       darkInk: tag('ink') === 'dark',
       water: /uLiquid|look\.liquid/.test(source),
       sand: source.includes('uSand'),
@@ -94,10 +94,10 @@ const font = (size: number, weight = 800) => `${weight} ${size}px system-ui, -ap
 function typeTexture(words: string) {
   const sheet = document.createElement('canvas')
   const pen = sheet.getContext('2d')!
-  pen.font = font(200)
+  pen.font = font(200, 500)
   sheet.width = Math.min(Math.ceil(pen.measureText(words).width), 4096)
   sheet.height = 256
-  pen.font = font(200)
+  pen.font = font(200, 500)
   pen.fillStyle = '#fff'
   pen.textBaseline = 'middle'
   pen.fillText(words, 0, 136, sheet.width)
@@ -117,39 +117,23 @@ function printFace(title: string, index: number, darkInk: boolean) {
   const count = `${String(index + 1).padStart(2, '0')} / ${String(variants.length).padStart(2, '0')}`
   pen.textBaseline = 'alphabetic'
   pen.textAlign = 'left'
-  if (series.studio) {
-    // Quiet print, like the marking on a product: small, light, no shadow.
-    pen.shadowBlur = 0
-    pen.fillStyle = darkInk ? 'rgba(24, 26, 32, 0.62)' : 'rgba(255, 255, 255, 0.6)'
-    pen.font = font(21, 500)
-    pen.letterSpacing = '7px'
-    pen.fillText(series.print, 60, 92)
-    pen.textAlign = 'right'
-    pen.fillText(count, face.width - 60, 92)
-    pen.textAlign = 'left'
-    pen.fillText('SURFACE FINISH', 60, face.height - 64)
-    pen.letterSpacing = '-1px'
-    pen.fillStyle = darkInk ? 'rgba(24, 26, 32, 0.9)' : 'rgba(255, 255, 255, 0.94)'
-    pen.font = font(64, 500)
-    pen.fillText(title, 56, face.height - 108)
-    pen.letterSpacing = '0px'
-    faceTexture.needsUpdate = true
-    return
-  }
-  pen.fillStyle = 'rgba(255, 255, 255, 0.95)'
-  pen.shadowColor = 'rgba(8, 10, 18, 0.55)' // keeps the print readable over bright type behind the glass
-  pen.shadowBlur = 22
-  pen.font = font(30, 600)
-  pen.letterSpacing = '6px'
-  pen.fillText(series.print, 64, 104)
+  // Quiet print, like the marking on a product: small and light.
+  pen.shadowColor = 'rgba(8, 10, 18, 0.5)'
+  pen.shadowBlur = series.shadow ? 16 : 0
+  pen.fillStyle = darkInk ? 'rgba(24, 26, 32, 0.62)' : 'rgba(255, 255, 255, 0.66)'
+  pen.font = font(21, 500)
+  pen.letterSpacing = '7px'
+  pen.fillText(series.print, 60, 92)
   pen.textAlign = 'right'
-  pen.fillText(count, face.width - 64, 104)
+  pen.fillText(count, face.width - 60, 92)
   pen.textAlign = 'left'
+  pen.fillStyle = darkInk ? 'rgba(24, 26, 32, 0.9)' : 'rgba(255, 255, 255, 0.95)'
+  pen.letterSpacing = '-1px'
+  let size = 64
+  do pen.font = font(size, 500)
+  while (pen.measureText(title).width > face.width - 120 && (size -= 4) > 30)
+  pen.fillText(title, 56, face.height - 68)
   pen.letterSpacing = '0px'
-  let size = 96
-  do pen.font = font(size, 700)
-  while (pen.measureText(title).width > face.width - 128 && (size -= 6) > 30)
-  pen.fillText(title, 64, face.height - 76)
   faceTexture.needsUpdate = true
 }
 
@@ -167,8 +151,7 @@ const background = new THREE.ShaderMaterial({
     uResolution: { value: new THREE.Vector2(1, 1) },
     uType: { value: type },
     uTypeAspect: { value: type.image.width / type.image.height },
-    uDim: { value: series.dim },
-    uStage: { value: series.studio ? 1 : 0 },
+    uWords: { value: series.words },
     uStageColour: { value: new THREE.Vector3() },
     uLights: { value: 0 },
   },
@@ -236,9 +219,9 @@ function show(name: string) {
   if (current.sand) sand.reset() // fresh raked sand every time it is chosen
   printFace(current.title, variants.indexOf(current), current.darkInk)
   // Backdrop colour, written as it should look on screen (#rrggbb).
-  const hex = parseInt(current.stage.slice(1), 16)
+  const hex = parseInt((current.stage ?? series.stage).slice(1), 16)
   background.uniforms.uStageColour.value.set((hex >> 16) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255)
-  background.uniforms.uLights.value = current.lights
+  background.uniforms.uLights.value = Number(current.lights ?? series.lights)
   note.textContent = current.note
   for (const [key, button] of buttons) button.setAttribute('aria-pressed', String(key === current.name))
   buttons.get(current.name)?.scrollIntoView({ block: 'nearest', inline: 'center' })
