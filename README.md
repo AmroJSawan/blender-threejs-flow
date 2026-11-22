@@ -198,9 +198,29 @@ How a material file works:
 
 ## Switch study page
 
-`switch.html` is a finish study: two tactile switches (recessed track, bezel ring, knurled knob) drawn entirely in one fragment shader, `src/switch/switch.frag`, with no images and no 3D model. Nothing in it is a painted-on shadow or highlight. The shader describes the switch once, as a height above the sheet for every point (`height`): the track is cut into the sheet and the knob stands on the track's floor. Each point is then lit by how it faces a large soft light (sampled at seven places, so shadow edges are wide gradients), shaded as far as the shape blocks its view of that light, and darkened a little where walls crowd it, so every shadow stays attached to what casts it. Shape sizes, the light (`SUN`, `SPREAD` for how soft it is, `AMBIENT`) and the colours are named at the top of the shader.
+`switch.html` is a finish study: tactile switches drawn entirely in a fragment shader, with no images and no 3D model. Six styles, chosen from the bar at the bottom (also `switch.html?style=rocker`, or the arrow keys); each shows one switch on and one off, and both can be toggled.
 
-`src/switch/main.ts` holds the knob spring and layout (`settings`), and lays an invisible real button with `role="switch"` over each drawn switch, so keyboard and screen readers work.
+| Style | What it is |
+|---|---|
+| `knurled` | Track cut into the sheet, knurled knob on its floor; the floor turns orange |
+| `soft` | One material throughout, told apart by light alone; a small green lamp |
+| `rocker` | Rocker plate in a dark panel; the pressed side sinks and its mark lights |
+| `slider` | Ridged block in a dark slot; uncovers a green lamp |
+| `ball` | White ball in a rounded groove that fills with blue |
+| `dish` | Raised clay bar with a dish pressed into it; the dish turns cream |
+
+Nothing is a painted-on shadow or highlight. A style file (`src/switch/styles/*.glsl`) describes its switch once, as a height above the sheet for every point, and says what each part is made of. `src/switch/switch.frag` then lights every style the same way: each point is lit by how it faces a large soft light (sampled at seven places, so shadow edges are wide gradients), shaded as far as the shape blocks its view of that light, and darkened a little where walls crowd it. So every shadow stays attached to what casts it. The light is set at the top of `switch.frag` (`SUN`, `SPREAD` for how soft it is, `AMBIENT`).
+
+A style file starts with `// title:`, `// note:`, `// order:` and `// ink: light` (for a dark sheet), then defines:
+
+- `HALF` (half size of the switch's outline), `REACH` (how far past it shadows fall), `SHEET_TOP` and `SHEET_BOTTOM` (sheet colour)
+- `float height(vec2 p)`: height above the sheet, design pixels
+- `vec3 paint(vec2 p, vec3 sheet)`: the colour of the material at each point
+- `vec3 glow(vec2 p)`: light given off by lamps, added unshaded
+
+`knobAt` (0 to 1) is where the switch is, and `amount()` is the same eased for colours and lamps. To add a style, copy one of the files.
+
+`src/switch/main.ts` holds the spring and layout (`settings`), and lays an invisible real button with `role="switch"` over each drawn switch, so keyboard and screen readers work.
 
 ## Phones: card view
 
