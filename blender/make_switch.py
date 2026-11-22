@@ -3,8 +3,8 @@ exports public/switch3d/ (switch.glb plus six baked light pictures).
 
 Run:  npm run switch
 The page (switch3d.html) shows the model unlit and multiplies each part's colour by the baked light.
-Because a baked shadow cannot follow a moving knob, the light is baked three times, with the knob
-on, halfway and off, and the page blends between them as the knob travels.
+A baked shadow cannot follow a moving knob, so the knob's shadow is baked as its own picture, which
+the page slides along the floor with the knob. The knob itself is baked on, halfway and off.
 
 Sizes are in Blender units; 1 unit = 100 of the design pixels used by the drawn switches.
 """
@@ -46,6 +46,7 @@ LIGHT_POWER = 3.2
 ROOM = 0.2            # even light from the whole room, which fills the shadows
 MAP = 1024            # size of each baked light picture, px
 SAMPLES = 192
+SHADOW_SPAN = (3.4, 2.2)  # size of the patch of floor the knob's shadow picture covers
 OPEN = 0.6            # brightness the open, unshaded sheet is stored at (leaves headroom for brighter parts)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -242,13 +243,43 @@ def set_colour(mat, colour):
 
 
 images = {}
-for label, x, floor in (("on", STRAIGHT, "FloorOn"), ("mid", 0.0, None), ("off", -STRAIGHT, "FloorOff")):
+mid_colour = [(a + b) / 2 for a, b in zip(COLOURS["FloorOn"], COLOURS["FloorOff"])]
+# The base is baked without the knob (its shadow is baked separately, below, so it can travel with
+# the knob), once for each floor colour, because light bouncing off the floor carries its colour.
+knob.hide_render = True
+for label, floor in (("on", COLOURS["FloorOn"]), ("off", COLOURS["FloorOff"])):
+    set_colour(MATS["Floor"], floor)
+    images[("Base", label)] = bake(base, label)
+# The knob is baked in three places along its travel.
+knob.hide_render = False
+for label, x, floor in (("on", STRAIGHT, COLOURS["FloorOn"]), ("mid", 0.0, mid_colour), ("off", -STRAIGHT, COLOURS["FloorOff"])):
     knob.location.x = x
-    # The light bouncing off the floor carries its colour.
-    set_colour(MATS["Floor"], COLOURS[floor] if floor else [(a + b) / 2 for a, b in zip(COLOURS["FloorOn"], COLOURS["FloorOff"])])
+    set_colour(MATS["Floor"], floor)
     bpy.context.view_layer.update()
-    for obj in (base, knob):
-        images[(obj.name, label)] = bake(obj, label)
+    images[("Knob", label)] = bake(knob, label)
+
+# The knob's shadow: how much darker a flat floor is around the knob than with no knob there.
+# The page slides this picture along with the knob, so the shadow is always under it.
+knob.location.x = 0.0
+base.hide_render = True
+bpy.ops.mesh.primitive_plane_add(size=1.0, location=(0.0, 0.0, -DEPTH + 0.0005))
+ground = bpy.context.active_object
+ground.scale = (SHADOW_SPAN[0], SHADOW_SPAN[1], 1.0)
+ground.data.materials.append(MATS["Sheet"])
+bpy.context.view_layer.update()
+with_knob = np.array(bake(ground, "with", 512).pixels[:], dtype=np.float32).reshape(-1, 4)
+knob.hide_render = True
+without = np.array(bake(ground, "without", 512).pixels[:], dtype=np.float32).reshape(-1, 4)
+shadow = bpy.data.images.new("knob-shadow", 512, 512, float_buffer=True)
+ratio = np.ones_like(with_knob)
+ratio[:, :3] = np.clip(with_knob[:, :3].mean(axis=1, keepdims=True) / np.maximum(without[:, :3].mean(axis=1, keepdims=True), 1e-4), 0.0, 1.0)
+shadow.pixels.foreach_set(ratio.ravel())
+scene.render.image_settings.file_format = "PNG"
+scene.render.image_settings.color_mode = "RGB"
+shadow.save_render(os.path.join(OUT, "knob-shadow.png"), scene=scene)
+bpy.data.objects.remove(ground)
+knob.hide_render = False
+base.hide_render = False
 
 # Store every picture on the same scale, with the open sheet at OPEN.
 # A small square of open sheet, far from the switch, measures how bright "unshaded" is.
@@ -281,6 +312,7 @@ for mat in bpy.data.materials:  # the bake pictures are saved beside the model, 
 base["travel"] = STRAIGHT
 base["floorOff"] = COLOURS["FloorOff"]
 base["open"] = OPEN
+base["shadowSpan"] = SHADOW_SPAN
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, "switch.blend"))
 bpy.ops.object.select_all(action="DESELECT")
 base.select_set(True)

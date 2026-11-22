@@ -4,9 +4,9 @@ import '../switch/switch.css'
 
 /**
  * The 3D switch. Blender (blender/make_switch.py) made the model and four pictures of the light
- * falling on it: base and knob, each with the knob on, halfway and off. Here the model is drawn
- * unlit: every part shows its own colour times the baked light, blending from the "off" picture
- * through "halfway" to "on" as the knob travels, so the soft shadows follow it.
+ * falling on it. Here the model is drawn unlit: every part shows its own colour times the baked
+ * light. The knob's shadow is its own picture, slid along the floor with the knob, so it is always
+ * under it. The knob blends between three pictures of itself (off, halfway, on) as it travels.
  */
 const settings = {
   /** Where the model and its baked light pictures are. */
@@ -42,9 +42,26 @@ const picture = (name: string) => {
 /** 0 = knob off … 1 = on, shared by every part. */
 const uMix = { value: Number(settings.on) }
 const uOpen = { value: 0.6 }
+/** Where the knob is along the track (model units), and the size of floor its shadow picture covers. */
+const uKnobX = { value: 0 }
+const uShadowSpan = { value: new THREE.Vector2(3.4, 2.2) }
+const shadow = pictures.load(`${settings.folder}knob-shadow.png`)
+shadow.colorSpace = THREE.SRGBColorSpace
 function lit(part: 'base' | 'knob', colour: THREE.Color, fades = false) {
   return new THREE.ShaderMaterial({
-    uniforms: { uOn: { value: picture(`${part}-on`) }, uMid: { value: picture(`${part}-mid`) }, uOff: { value: picture(`${part}-off`) }, uMix, uOpen, uColour: { value: colour }, uFades: { value: fades ? 1 : 0 } },
+    defines: part === 'base' ? { BASE: '' } : {},
+    uniforms: {
+      uOn: { value: picture(`${part}-on`) },
+      uMid: { value: part === 'knob' ? picture('knob-mid') : null },
+      uOff: { value: picture(`${part}-off`) },
+      uShadow: { value: shadow },
+      uShadowSpan,
+      uKnobX,
+      uMix,
+      uOpen,
+      uColour: { value: colour },
+      uFades: { value: fades ? 1 : 0 },
+    },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
       varying vec3 vPlace;
@@ -56,16 +73,28 @@ function lit(part: 'base' | 'knob', colour: THREE.Color, fades = false) {
     fragmentShader: /* glsl */ `
       varying vec2 vUv;
       varying vec3 vPlace;
-      uniform float uFades;    // 1 on the sheet: its baked light eases to plain toward the model's edge, where the page takes over
-      uniform sampler2D uOn;   // baked light with the knob on
-      uniform sampler2D uMid;  // … halfway
-      uniform sampler2D uOff;  // … and off
+      uniform float uFades;     // 1 on the sheet: its baked light eases to plain toward the model's edge, where the page takes over
+      uniform sampler2D uOn;    // baked light, on
+      uniform sampler2D uMid;   // … halfway (knob only)
+      uniform sampler2D uOff;   // … and off
+      uniform sampler2D uShadow; // how much the knob darkens the floor around it
+      uniform vec2 uShadowSpan;
+      uniform float uKnobX;
       uniform float uMix;
-      uniform float uOpen;     // the value open, unshaded sheet was stored at
+      uniform float uOpen;      // the value open, unshaded sheet was stored at
       uniform vec3 uColour;
       void main() {
-        float at = clamp(uMix, 0.0, 1.0) * 2.0; // 0 off … 1 halfway … 2 on
-        vec3 light = mix(mix(texture2D(uOff, vUv).rgb, texture2D(uMid, vUv).rgb, min(at, 1.0)), texture2D(uOn, vUv).rgb, max(at - 1.0, 0.0)) / uOpen;
+        float at = clamp(uMix, 0.0, 1.0);
+        #ifdef BASE
+          // Baked without the knob (only the floor's colour differs between the two); the knob's shadow is laid over it.
+          vec3 light = mix(texture2D(uOff, vUv).rgb, texture2D(uOn, vUv).rgb, at);
+          vec2 around = vec2(vPlace.x - uKnobX, -vPlace.z) / uShadowSpan + 0.5;
+          float inPit = smoothstep(-0.02, -0.12, vPlace.y); // the shadow lies in the track, not on the sheet
+          light *= mix(1.0, texture2D(uShadow, around).r, inPit);
+        #else
+          vec3 light = mix(mix(texture2D(uOff, vUv).rgb, texture2D(uMid, vUv).rgb, min(at * 2.0, 1.0)), texture2D(uOn, vUv).rgb, max(at * 2.0 - 1.0, 0.0));
+        #endif
+        light /= uOpen;
         float beyond = length(vec2(max(abs(vPlace.x) - 0.72, 0.0), vPlace.z)) - 0.89; // distance outside the track's rim
         light = mix(light, vec3(1.0), uFades * smoothstep(0.08, 0.36, beyond));
         gl_FragColor = vec4(uColour * light, 1.0);
@@ -83,6 +112,7 @@ new GLTFLoader().load(`${settings.folder}switch.glb`, (gltf) => {
   // Numbers the Blender script attached to the model.
   travel = base.userData.travel ?? travel
   uOpen.value = base.userData.open ?? uOpen.value
+  if (base.userData.shadowSpan) uShadowSpan.value.fromArray(base.userData.shadowSpan)
   gltf.scene.traverse((object) => {
     if (!(object instanceof THREE.Mesh)) return
     const made = object.material as THREE.MeshStandardMaterial
@@ -125,11 +155,6 @@ function resize() {
   const fill = Math.min(settings.fill, (0.3 * height) / width * (3.3 / 1.8))
   const span = 3.3 / fill // world width of the view at the switch
   distance = span / (2 * Math.tan(THREE.MathUtils.degToRad(settings.lens / 2)) * camera.aspect)
-  const pixels = (width / span) // screen px per world unit
-  control.style.width = `${3.3 * pixels}px`
-  control.style.height = `${1.8 * pixels}px`
-  control.style.left = `${width / 2 - 1.65 * pixels}px`
-  control.style.top = `${height / 2 - 0.9 * pixels - 20}px`
 }
 addEventListener('resize', resize)
 resize()
@@ -151,7 +176,8 @@ function frame(now: number) {
   state.at += state.speed * dt
   if (settings.hold !== null) state.at = Number(settings.hold)
   uMix.value = state.at
-  if (knob) knob.position.x = (state.at * 2 - 1) * travel
+  uKnobX.value = (state.at * 2 - 1) * travel
+  if (knob) knob.position.x = uKnobX.value
   floor.colour.lerpColors(floor.off, floor.on, THREE.MathUtils.smoothstep(state.at, 0.1, 0.9))
 
   lean.x += (lean.toX - lean.x) * Math.min(dt * settings.ease, 1)
@@ -164,5 +190,25 @@ function frame(now: number) {
   camera.up.set(0, 0, -1)
   camera.lookAt(centre)
   renderer.render(scene, camera)
+
+  // Keep the real button exactly over the switch as the view leans.
+  let left = Infinity
+  let right = -Infinity
+  let top = Infinity
+  let bottom = -Infinity
+  for (const [x, z] of [[-1.65, -0.9], [1.65, -0.9], [1.65, 0.9], [-1.65, 0.9]]) {
+    corner.set(x, 0, z).project(camera)
+    const px = (corner.x * 0.5 + 0.5) * innerWidth
+    const py = (0.5 - corner.y * 0.5) * innerHeight
+    left = Math.min(left, px)
+    right = Math.max(right, px)
+    top = Math.min(top, py)
+    bottom = Math.max(bottom, py)
+  }
+  control.style.left = `${left}px`
+  control.style.top = `${top}px`
+  control.style.width = `${right - left}px`
+  control.style.height = `${bottom - top}px`
 }
+const corner = new THREE.Vector3()
 requestAnimationFrame(frame)
