@@ -276,7 +276,7 @@ The size on the page is fixed by `UNIT` in the script (CSS pixels per Blender un
 | `src/expressions/kit.ts` | The building blocks: `rings()` (one field of rings that all share a centre, with a lit zone that can be turned, sheared and narrowed), `stepped()` (time that moves pose to pose), `band()` (an arc of light with one crisp bright edge), `clay()` and `shadowed()` (matt material and shadows), `arcSlab()` (a thick slice of a ring), `ember()` (a material hot at one end and dark at the other) |
 | `src/expressions/main.ts` | The page: camera, the three stages' backdrops and light (`settings.stages`), the bar, and the fade between expressions |
 
-With the system's reduced-motion setting on, each expression holds one pose. `expressions.html?expression=orbit&at=2.2` freezes an expression at that many seconds, for checking a pose.
+With the system's reduced-motion setting on, the expressions play at `settings.calm` of full speed. `expressions.html?expression=orbit&at=2.2` freezes an expression at that many seconds, for checking a pose; choosing another expression lets go of it.
 
 ## Phones: card view
 

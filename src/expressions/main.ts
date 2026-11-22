@@ -7,8 +7,10 @@ import type { Expression, Stage } from './kit'
 const settings = {
   /** The expression shown first (unless the address says ?expression=name). */
   start: 'iris',
-  /** For checking a pose: expressions.html?at=2.5 freezes every expression at that many seconds. */
+  /** For checking a pose: expressions.html?at=2.5 freezes the expression at that many seconds, until another one is chosen. */
   at: new URLSearchParams(location.search).get('at'),
+  /** How fast time runs for people whose system asks for reduced motion (1 = full speed). */
+  calm: 0.4,
   /** Camera: lens angle, its distance, and how far (degrees) the view leans toward the pointer. */
   lens: 30,
   distance: 17,
@@ -103,6 +105,14 @@ async function show(name: string) {
   document.body.style.backgroundColor = stage.corners
   canvas.classList.add('ready')
 }
+/** Choosing an expression by hand also lets go of a frozen pose, so it can never leave the page looking stuck. */
+function choose(name: string) {
+  settings.at = null
+  const address = new URL(location.href)
+  address.searchParams.delete('at')
+  history.replaceState(null, '', address)
+  show(name)
+}
 const bar = document.createElement('div')
 bar.className = 'styles'
 bar.setAttribute('role', 'group')
@@ -111,14 +121,14 @@ for (const expression of expressions) {
   const tab = document.createElement('button')
   tab.type = 'button'
   tab.textContent = expression.title
-  tab.addEventListener('click', () => show(expression.name))
+  tab.addEventListener('click', () => choose(expression.name))
   tabs.set(expression.name, tab)
   bar.append(tab)
 }
 document.body.append(bar)
 addEventListener('keydown', (event) => {
   const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
-  if (step) show(expressions[(expressions.indexOf(wanted) + step + expressions.length) % expressions.length].name)
+  if (step) choose(expressions[(expressions.indexOf(wanted) + step + expressions.length) % expressions.length].name)
 })
 show(new URLSearchParams(location.search).get('expression') ?? settings.start)
 
@@ -141,7 +151,8 @@ addEventListener('pointermove', (event) => {
 })
 addEventListener('pointerleave', () => (lean.toX = lean.toY = 0))
 
-const still = matchMedia('(prefers-reduced-motion: reduce)').matches // then each expression holds one pose
+const pace = matchMedia('(prefers-reduced-motion: reduce)').matches ? settings.calm : 1
+let clock = 0 // seconds of animation played so far
 let before = performance.now()
 function frame(now: number) {
   requestAnimationFrame(frame)
@@ -153,7 +164,8 @@ function frame(now: number) {
   const upward = THREE.MathUtils.degToRad(-lean.y * settings.look[1])
   camera.position.set(Math.sin(sideways) * Math.cos(upward), Math.sin(upward), Math.cos(sideways) * Math.cos(upward)).multiplyScalar(distance)
   camera.lookAt(0, 0, 0)
-  current?.update(settings.at !== null ? Number(settings.at) : still ? 1.5 : now / 1000)
+  clock += dt * pace
+  current?.update(settings.at !== null ? Number(settings.at) : clock)
   renderer.render(scene, camera)
 }
 requestAnimationFrame(frame)
