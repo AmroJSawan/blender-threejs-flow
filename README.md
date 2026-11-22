@@ -8,7 +8,7 @@ Scroll, mouse, hover and fragment shaders are handled by a small vanilla three.j
 **Glow cards:** https://amrojsawan.github.io/blender-threejs-flow/glow.html
 **Material cards:** https://amrojsawan.github.io/blender-threejs-flow/materials.html
 **Switch study:** https://amrojsawan.github.io/blender-threejs-flow/switch.html
-**Switch in 3D:** https://amrojsawan.github.io/blender-threejs-flow/switch3d.html
+**Switches in 3D:** https://amrojsawan.github.io/blender-threejs-flow/switch3d.html
 
 **Stack:** three.js (WebGL 2) · GSAP ScrollTrigger · Lenis · Vite · TypeScript
 
@@ -223,19 +223,21 @@ A style file starts with `// title:`, `// note:`, `// order:` and `// ink: light
 
 `src/switch/main.ts` holds the spring and layout (`settings`), and lays an invisible real button with `role="switch"` over each drawn switch, so keyboard and screen readers work.
 
-## Switch in 3D page
+## Switches in 3D page
 
-`switch3d.html` is the knurled switch as a real 3D model made in Blender, shown with three.js. Move the pointer and the view leans round it; click, tap or press Space to switch it.
+`switch3d.html` shows the six switches of the study as real 3D models made in Blender, shown with three.js: Knurled, Soft, Rocker, Slider, Ball and Dish. Pick one from the bar at the bottom (also `switch3d.html?style=ball`, or the arrow keys). Move the pointer and the view leans round it; click, tap or press Space to switch it.
 
 How it works:
 
-1. `blender/make_switch.py` (run with `npm run switch`, about a minute, in a background Blender) models the switch from the numbers at its top: sheet, sloping wall, track floor with two marks pressed into it, and a knob with a finely knurled face.
-2. It lights the model with one wide, soft, far-away light plus even room light, and bakes the light that falls on each part into pictures.
-3. A baked shadow cannot follow a moving knob. So the base is baked without the knob, and the knob's shadow is baked as its own picture (`knob-shadow.webp`: how much darker a flat floor is around the knob), which the page slides along the floor with the knob. The knob itself is baked in three places: on, halfway and off.
-4. It saves `blender/switch.blend` and exports `public/switch3d/`: `switch.glb`, `base-on`/`base-off` (the two floor colours), `knob-on`/`knob-mid`/`knob-off`, and `knob-shadow`, all WebP (about 0.6 MB with the model; `QUALITY` in the script trades size for fidelity).
-5. `src/switch3d/main.ts` draws the model unlit: each part shows its own colour times the baked light. Until the model and every picture have arrived the page shows the plain sheet, then the switch fades in. Camera and spring are in `settings` at the top. The real `role="switch"` button is kept exactly over the switch as the view leans. `switch3d.html?hold=0.5` freezes the knob partway (0 off, 1 on) for inspection; clicks do not move it while held.
+1. `blender/make_switch.py` (run with `npm run switch`, about a minute per style, in a background Blender) models every switch. Each style is one function with its own numbers at its top (sizes, colours); the light is shared and set at the top of the file. `npm run switch -- -- ball dish` rebuilds only the named ones.
+2. It lights each model with one wide, soft, far-away light plus even room light, and bakes the light that falls on each part into pictures. Lamps (Soft, Slider, Rocker) are lit for the "on" bake, so their light on the parts round them is real too.
+3. A baked shadow cannot follow a moving knob. So for a sliding knob the base is baked without it, and the knob's shadow is baked as its own picture (`knob-shadow.webp`: how much darker a flat floor is around the knob), which the page slides along the floor with the knob. The rocker tips in place, so it stays in the base's bake. The moving part itself is baked in three places: on, halfway and off.
+4. It saves `blender/switches/<name>.blend`, exports `public/switch3d/<name>/` (`switch.glb`, `base-on`/`base-off`, `knob-on`/`knob-mid`/`knob-off`, and `knob-shadow`, all WebP; `QUALITY` in the script trades size for fidelity), and writes the list of styles the page offers to `src/switch3d/styles.json` (title, note, sheet colour).
+5. `src/switch3d/main.ts` draws a model unlit: each part shows its own colour times the baked light. A style is loaded the first time it is chosen; until its model and every picture have arrived the page shows the plain sheet in that style's colour, then the switch fades in. Camera and spring are in `settings` at the top. The real `role="switch"` button is kept exactly over the switch as the view leans. `switch3d.html?hold=0.5` freezes the knob partway (0 off, 1 on) for inspection; clicks do not move it while held.
 
-To change the look, edit the numbers at the top of `make_switch.py` (shape, colours, `LIGHT_SOFT` for shadow softness, `ROOM` for how filled the shadows are) and run `npm run switch` again. You can also open `blender/switch.blend`, but the baked pictures only update when the script runs.
+What a part does on the page is set on its material in the script: `off=` (a different colour while off), `glow=True` (a lamp, lit when on) and `gloss=` (a soft reflection of the light, used on the ball).
+
+To change a look, edit the numbers at the top of its function in `make_switch.py` (or `LIGHT_SOFT` for shadow softness, `ROOM` for how filled the shadows are) and run `npm run switch` again. To add a style, copy one of the functions and add it to `STYLES`. You can also open the `.blend` files, but the baked pictures only update when the script runs.
 
 ## Phones: card view
 
@@ -253,7 +255,7 @@ Set `config.cards.enabled = false` to show the scroll scene on every screen.
 | `npm run build` | Type-check and build to `dist/` |
 | `npm run export` | Export `blender/demo.blend` without opening Blender |
 | `npm run demo` | Rebuild the demo scene from `blender/make_demo.py` |
-| `npm run switch` | Rebuild the 3D switch and bake its light (`blender/make_switch.py`) |
+| `npm run switch` | Rebuild the 3D switches and bake their light (`blender/make_switch.py`) |
 | `npm run optimize` | Compress `public/scene.glb` (Meshopt + WebP) before shipping |
 
 `export` and `demo` assume Blender at `/Applications/Blender.app`; edit `package.json` if yours is elsewhere.
