@@ -266,17 +266,17 @@ The size on the page is fixed by `UNIT` in the script (CSS pixels per Blender un
 
 | Stage | Expressions | Look |
 |---|---|---|
-| `light` | `iris`, `crest`, `vortex`, `halo` | Glowing arcs and a ring on black, drawn with additive light |
+| `light` | `iris`, `crest`, `vortex`, `halo` | Concentric rings of light with a lit zone sweeping round them, and a glowing ring, on black |
 | `clay` | `ribbons`, `petals`, `coil`, `blades`, `blocks` | Matt grey shapes in a soft studio, with real-time soft shadows |
 | `ember` | `orbit`, `rods`, `monolith`, `zigzag` | Dark shapes that glow orange and red at one end and cool to black |
 
 | File | For |
 |---|---|
 | `src/expressions/scenes/*.ts` | **One file per expression.** Drop a file in and it appears in the bar. It gives a `title`, `note`, `order`, its `stage`, and a `build()` that returns the objects and an `update(time)` called every frame. Its numbers (how many arcs, colours, speeds) are at the top |
-| `src/expressions/kit.ts` | The building blocks: `band()` (an arc of light with one crisp bright edge), `clay()` and `shadowed()` (matt material and shadows), `arcSlab()` (a thick slice of a ring), `ember()` (a material hot at one end and dark at the other) |
+| `src/expressions/kit.ts` | The building blocks: `rings()` (one field of rings that all share a centre, with a lit zone that can be turned, sheared and narrowed), `stepped()` (time that moves pose to pose), `band()` (an arc of light with one crisp bright edge), `clay()` and `shadowed()` (matt material and shadows), `arcSlab()` (a thick slice of a ring), `ember()` (a material hot at one end and dark at the other) |
 | `src/expressions/main.ts` | The page: camera, the three stages' backdrops and light (`settings.stages`), the bar, and the fade between expressions |
 
-With the system's reduced-motion setting on, each expression holds one pose.
+With the system's reduced-motion setting on, each expression holds one pose. `expressions.html?expression=orbit&at=2.2` freezes an expression at that many seconds, for checking a pose.
 
 ## Phones: card view
 

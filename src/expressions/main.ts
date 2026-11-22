@@ -7,6 +7,8 @@ import type { Expression, Stage } from './kit'
 const settings = {
   /** The expression shown first (unless the address says ?expression=name). */
   start: 'iris',
+  /** For checking a pose: expressions.html?at=2.5 freezes every expression at that many seconds. */
+  at: new URLSearchParams(location.search).get('at'),
   /** Camera: lens angle, its distance, and how far (degrees) the view leans toward the pointer. */
   lens: 30,
   distance: 17,
@@ -66,7 +68,7 @@ sun.castShadow = true
 sun.shadow.mapSize.set(2048, 2048)
 sun.shadow.radius = 7
 sun.shadow.bias = -0.0005
-Object.assign(sun.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5, near: 1, far: 30 })
+Object.assign(sun.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 40 })
 scene.add(sun, new THREE.HemisphereLight(0xffffff, 0x3a3a3a, 0.85))
 
 // ---- Choosing an expression ---------------------------------------------------
@@ -151,7 +153,7 @@ function frame(now: number) {
   const upward = THREE.MathUtils.degToRad(-lean.y * settings.look[1])
   camera.position.set(Math.sin(sideways) * Math.cos(upward), Math.sin(upward), Math.cos(sideways) * Math.cos(upward)).multiplyScalar(distance)
   camera.lookAt(0, 0, 0)
-  current?.update(still ? 1.5 : now / 1000)
+  current?.update(settings.at !== null ? Number(settings.at) : still ? 1.5 : now / 1000)
   renderer.render(scene, camera)
 }
 requestAnimationFrame(frame)

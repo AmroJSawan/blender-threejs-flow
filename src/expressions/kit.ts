@@ -69,6 +69,80 @@ export function band({ inner, outer, start = 0, length = Math.PI * 2, bright, fa
   return new THREE.Mesh(new THREE.RingGeometry(inner, outer, 128, 1, start, length), material)
 }
 
+// ---- Light: a field of concentric rings ------------------------------------------------------------
+type Rings = {
+  /** Radius of the dark middle, and the distance from one ring to the next. */
+  hole: number
+  gap: number
+  /** How many lit zones go round the field (1 = one sweep, 2 = two opposite ones). */
+  lobes: 1 | 2
+  /** 0 = true circles. A whole number turns them into that many spiral arms. */
+  arms?: number
+  /** Colour between rings, on a ring's bright edge, and where the light is strongest far from the middle. */
+  deep: THREE.ColorRepresentation
+  bright: THREE.ColorRepresentation
+  hot: THREE.ColorRepresentation
+}
+/**
+ * One flat field of rings that all share exactly one centre. Only part of the field is lit: a zone
+ * that can be turned round the centre (`uTurn`), sheared so outer rings lag behind inner ones
+ * (`uTwist`), made narrower (`uNarrow`) and dimmed (`uPower`). The mesh's material holds those.
+ */
+export function rings({ hole, gap, lobes, arms = 0, deep, bright, hot }: Rings): THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial> {
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      uHole: { value: hole },
+      uGap: { value: gap },
+      uLobes: { value: lobes },
+      uArms: { value: arms },
+      uDeep: { value: new THREE.Color(deep) },
+      uBright: { value: new THREE.Color(bright) },
+      uHot: { value: new THREE.Color(hot) },
+      uTurn: { value: 0 },
+      uTwist: { value: 0 },
+      uNarrow: { value: 1.5 },
+      uPower: { value: 1 },
+    },
+    vertexShader: /* glsl */ `
+      varying vec2 vAt;
+      void main() {
+        vAt = position.xy;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: /* glsl */ `
+      varying vec2 vAt;
+      uniform float uHole, uGap, uLobes, uArms, uTurn, uTwist, uNarrow, uPower;
+      uniform vec3 uDeep, uBright, uHot;
+      void main() {
+        float r = length(vAt);
+        float a = atan(vAt.y, vAt.x);
+        float out_ = max(r - uHole, 0.0);
+        float lane = fract(out_ / uGap - uArms * a / 6.2831853);          // 0 … 1 from one ring to the next
+        float ring = pow(lane, 2.4) * smoothstep(1.0, 0.86, lane);         // rises to a bright edge, then stops cleanly
+        float zone = pow(0.5 + 0.5 * cos(uLobes * (a - uTurn - uTwist * out_)), uNarrow);
+        float edge = smoothstep(0.0, 0.5, out_) * smoothstep(7.0, 3.6, r); // out of the dark middle, and away at the far edge
+        float far = smoothstep(1.2, 4.2, out_);
+        vec3 colour = mix(uDeep, uBright, ring) * (0.42 + 0.9 * ring) + uHot * far * zone * (0.25 + 0.75 * ring);
+        gl_FragColor = vec4(colour * zone * edge * uPower, 1.0);
+        #include <colorspace_fragment>
+      }`,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    transparent: true,
+  })
+  return new THREE.Mesh(new THREE.PlaneGeometry(15, 15), material)
+}
+
+/**
+ * Time that moves in eased steps, for motion that goes pose to pose: it counts up by 1 every
+ * `every` seconds, spending the first `hold` share of each step at rest.
+ */
+export function stepped(time: number, every: number, hold = 0.35): number {
+  const count = Math.floor(time / every)
+  const moving = Math.min(Math.max((time / every - count - hold) / (1 - hold), 0), 1)
+  return count + moving * moving * (3 - 2 * moving)
+}
+
 // ---- Clay: matt grey, lit by the stage's soft light ---------------------------------------------
 export function clay(shade = 0.72): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({ color: new THREE.Color(shade, shade, shade), roughness: 0.82, metalness: 0 })

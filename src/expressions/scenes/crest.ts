@@ -1,30 +1,21 @@
-import * as THREE from 'three'
-import { band, type Expression } from '../kit'
+import { rings, stepped, type Expression } from '../kit'
 
-const ARCS = 16
 const crest: Expression = {
   title: 'Crest',
-  note: 'A feathered sweep of blue light, like the crest of a wave seen from inside, turning slowly round the dark.',
+  note: 'Concentric rings of blue light with a single lit sweep. It swings round the centre a quarter turn at a time, its trailing end feathering out, dimming as it passes underneath.',
   order: 2,
   stage: 'light',
   build() {
-    const object = new THREE.Group()
-    const sweep = new THREE.Group()
-    object.add(sweep)
-    const arcs = Array.from({ length: ARCS }, (_, index) => {
-      const share = index / (ARCS - 1)
-      const inner = 1.7 + share * 2.4
-      // Each arc starts a little later than the one inside it, so the ends fan out like feathers.
-      const arc = band({ inner, outer: inner + 0.6, start: index * 0.07, length: Math.PI * (0.95 - 0.35 * share), bright: '#9db2ff', faint: '#0a14ff', power: 0.6 })
-      arc.rotation.set(0.12 * Math.sin(index * 1.3), 0.12 * Math.cos(index * 1.9), 0)
-      sweep.add(arc)
-      return arc
-    })
+    const field = rings({ hole: 1.9, gap: 0.36, lobes: 1, deep: '#0a10e8', bright: '#93a8ff', hot: '#aebcff' })
+    const look = field.material.uniforms
     return {
-      object,
+      object: field,
       update(time) {
-        sweep.rotation.z = time * 0.45
-        arcs.forEach((arc, index) => (arc.rotation.z = 0.25 * Math.sin(time * 0.7 + index * 0.35))) // the feathers spread and close
+        const turn = Math.PI * 0.62 - stepped(time, 1.3) * (Math.PI / 2) // clockwise: top, right, bottom, left
+        look.uTurn.value = turn
+        look.uTwist.value = 0.2 + 0.1 * Math.sin(time * 0.8)              // outer rings trail behind: the feathered end
+        look.uNarrow.value = 4.5
+        look.uPower.value = 0.72 + 0.4 * Math.sin(turn)                    // brightest overhead, dim underneath
       },
     }
   },
