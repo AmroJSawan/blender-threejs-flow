@@ -605,7 +605,8 @@ SCENES = [
             {"name": "flow", "title": "Flow", "set": {}},
             {"name": "calm", "title": "Calm", "set": {"Lines": 5, "Gap": 0.11, "Weave": 0.0, "Loosen": 1.0, "Arc": 0.12, "Dashes": 14, "Title": "Three sources,", "Title Two": "one answer"}},
             # "wire" picks how the page draws the lines: as glass tubes (the default), or gathered into one silk strand that fans out at each end.
-            {"name": "silk", "title": "Silk", "wire": "silk", "set": {"Lines": 7, "Gap": 0.1, "Weave": 0.0, "Loosen": 1.0, "Arc": 0.14, "Title": "Many threads,", "Title Two": "one strand"}},
+            # "like" makes it the named variant over again, using that one's model and light; only the page's drawing differs.
+            {"name": "silk", "title": "Silk", "wire": "silk", "like": "flow"},
             {"name": "dense", "title": "Dense", "set": {"Lines": 15, "Gap": 0.06, "Weave": 0.32, "Loosen": 2.2, "Arc": 0.34, "Hub Radius": 1.8, "Span": 1.06, "Title": "All traffic,", "Title Two": "one protocol"}},
         ],
     },
@@ -852,6 +853,10 @@ def make(scene):
     out.mkdir(parents=True, exist_ok=True)
     listed = []
     for variant in scene["variants"]:
+        if "like" in variant:
+            twin = next(entry for entry in listed if entry["name"] == variant["like"])
+            listed.append({**twin, "name": variant["name"], "title": variant["title"], "wire": variant.get("wire", "tubes")})
+            continue
         values = {**defaults, **variant["set"]}
         for name, value in {**values, **PAGE_DRAWS}.items():
             modifier[sockets[name].identifier] = value
@@ -876,6 +881,7 @@ def make(scene):
             "name": variant["name"],
             "title": variant["title"],
             "wire": variant.get("wire", "tubes"),
+            "file": variant["name"],
             "version": hashlib.md5(file.read_bytes() + (out / f"{variant['name']}.webp").read_bytes() + (out / f"{variant['name']}-parts.webp").read_bytes()).hexdigest()[:8],
             "ground": lit,
             "parts": parts,

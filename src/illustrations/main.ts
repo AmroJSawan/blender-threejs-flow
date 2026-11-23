@@ -465,7 +465,7 @@ function load(illustration: Illustration, variant: Variant): Promise<Shown> {
   const key = `${illustration.name}/${variant.name}`
   let waiting = loaded.get(key)
   if (!waiting) {
-    const file = `${import.meta.env.BASE_URL}illustrations/${key}`
+    const file = `${import.meta.env.BASE_URL}illustrations/${illustration.name}/${variant.file}`
     waiting = Promise.all([loader.loadAsync(`${file}.glb?v=${variant.version}`), pictures.loadAsync(`${file}.webp?v=${variant.version}`), pictures.loadAsync(`${file}-parts.webp?v=${variant.version}`)]).then(([made, light, parts]) => {
       made.scene.traverse((child) => {
         if (!(child instanceof THREE.Mesh)) return
