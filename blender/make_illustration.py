@@ -385,6 +385,7 @@ CARDS = [   # key, centre, size against the hero card
 ]
 TILE_AT = (5.0, -2.1)        # the lone tile, near right
 NODE_AT = (-2.9, 4.5)         # the small ring with a label on a leader line
+SEATED = 0.3               # how far along a line (0–1) the hub's ring still shapes it
 ARC_FROM = math.radians(112) # where on the ring the coloured arc begins (0 = right, anticlockwise)
 # The bundles of lines: the angle each leaves the hub at, where it ends, the way it is heading there, and how far its curve swings.
 BUNDLES = [
@@ -497,6 +498,14 @@ def build_gateway(net, P):
         across = net.add("ShaderNodeMix", {"Factor": eased, "A": (*across_start, 0.0), "B": (*across_end, 0.0)}, data_type="VECTOR")
         offset = net.scaled(net.out(across, "Result"), m("ADD", m("MULTIPLY", from_middle, gap), wander))
         lines = net.add("GeometryNodeSetPosition", {"Geometry": lines, "Offset": offset}).outputs[0]
+        # Side by side, the copies would end in a straight row. Draw each one in toward the hub so their ends sit on its ring,
+        # following the curve; the pull eases off over the first part of the line.
+        x, y, _ = net.place()
+        reach = m("SQRT", m("ADD", m("MULTIPLY", x, x), m("MULTIPLY", y, y)))
+        held = m("MINIMUM", m("DIVIDE", along, SEATED), 1.0)
+        held = m("MULTIPLY", m("MULTIPLY", held, held), m("SUBTRACT", 3.0, m("MULTIPLY", held, 2.0)))
+        pull = m("ADD", m("MULTIPLY", m("SUBTRACT", 1.0, held), m("DIVIDE", from_hub, m("MAXIMUM", reach, 0.001))), held)
+        lines = net.add("GeometryNodeSetPosition", {"Geometry": lines, "Position": net.vector(m("MULTIPLY", x, pull), m("MULTIPLY", y, pull), 0.0)}).outputs[0]
         lines = net.stored(lines, "_flow", net.vector(along, which, 0.0))   # for the page: how far along its line a point is, and which line
 
         wires = net.material(net.tube(lines, P["Wire"], sides=8), "Wire")
@@ -504,7 +513,7 @@ def build_gateway(net, P):
         port = net.add("GeometryNodeMeshCircle", {"Vertices": 10, "Radius": m("MULTIPLY", P["Wire"], 2.6)})
         net.choose(port, "fill_type", "NGON", label="N-Gon")
         ports = net.add("GeometryNodeInstanceOnPoints", {"Points": lines, "Selection": net.out(ends, "Selection"), "Instance": port.outputs[0]})
-        return net.moved(net.join(wires, net.material(net.moved(ports.outputs[0], (0.0, 0.0, 0.012)), "Ink")), (0.0, 0.0, 0.016))
+        return net.moved(net.join(wires, net.material(net.moved(ports.outputs[0], (0.0, 0.0, 0.012)), "Dim")), (0.0, 0.0, 0.016))
 
     bundles = net.join(*[bundle(*each) for each in BUNDLES])
 

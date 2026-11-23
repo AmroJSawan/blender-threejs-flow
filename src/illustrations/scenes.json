@@ -373,7 +373,7 @@
       {
         "name": "flow",
         "title": "Flow",
-        "version": "a2048d93",
+        "version": "ad4b288f",
         "values": {
           "Hub Radius": 1.6,
           "Ring": 0.026,
@@ -464,7 +464,7 @@
       {
         "name": "calm",
         "title": "Calm",
-        "version": "00f5ef9a",
+        "version": "d610ca41",
         "values": {
           "Hub Radius": 1.6,
           "Ring": 0.026,
@@ -555,7 +555,7 @@
       {
         "name": "dense",
         "title": "Dense",
-        "version": "39c0b8b0",
+        "version": "58519e00",
         "values": {
           "Hub Radius": 1.8,
           "Ring": 0.026,

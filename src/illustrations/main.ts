@@ -35,7 +35,7 @@ const settings = {
   backdrop: '#050706',
   scenes: {
     signal: { start: 'wide', view: { from: [4.4, 7.1, 7.6], at: [0, 0.2, -0.8], lens: 30 }, focus: { aperture: 0.0009, most: 0.006 }, shape: 1.15, back: 4, beam: { strength: 0, wide: 3, tall: 9 } },
-    gateway: { start: 'flow', view: { from: [-2.6, 11.4, 12.8], at: [0, 0, -0.2], lens: 30 }, focus: { aperture: 0.0005, most: 0.005 }, shape: 1.6, back: 2.2, beam: { strength: 0.05, wide: 3.4, tall: 9 } },
+    gateway: { start: 'flow', view: { from: [-2.6, 11.4, 12.8], at: [0, 0, -0.2], lens: 30 }, focus: { aperture: 0.0005, most: 0.005 }, shape: 1.6, back: 2.2, beam: { strength: 0.03, wide: 3.4, tall: 9 } },
   } as Record<string, Staging>,
   /**
    * A card's surface: its colour at the far left, in the middle and at the near right, and how dark its sides are.
@@ -43,9 +43,9 @@ const settings = {
    */
   card: { far: '#4ff08c', middle: '#16a558', near: '#1b9fbd', sides: 0.42, sheen: 0.13, edge: 0.32, edgeWidth: 0.022, band: 0.045 },
   /** The light a card spills on the ground: its two colours, how strong, and how far it spreads (metres). */
-  spill: { left: '#1fd16a', right: '#1a9fb5', strength: 0.3, spread: 1.05 },
+  spill: { left: '#1fd16a', right: '#1a9fb5', strength: 0.24, spread: 1.2 },
   /** The same under the hub. */
-  hubSpill: { left: '#bfe9cf', right: '#8fd6c0', strength: 0.07, spread: 1.6 },
+  hubSpill: { left: '#bfe9cf', right: '#8fd6c0', strength: 0.05, spread: 1.9 },
   /** A chip's top and sides. */
   chip: { top: '#25302b', side: '#0d1210' },
   /** The ground: its colour, and its dots (their spacing and size come from the scene's own numbers). */
@@ -59,7 +59,7 @@ const settings = {
    * `seconds` is how long a light takes to run a line, `apart` how many line-lengths separate one light from the next,
    * `length` how much of that gap the light's bright core fills (0–1), and `haze` how strong the wide soft light round the core is.
    */
-  wire: { glass: '#9fb3a8', rest: 0.16, rim: 1.6, light: '#63f5a2', lead: '#8fe9ff', bright: 2.2, seconds: 7, apart: 1.5, length: 0.16, haze: 0.4 },
+  wire: { glass: '#9fb3a8', rest: 0.13, rim: 1.4, light: '#63f5a2', lead: '#8fe9ff', bright: 1.25, seconds: 7, apart: 1.5, length: 0.16, haze: 0.34 },
   /** Plain parts: colour, and how solid (1 = opaque). `bright` above 1 makes a part glow; `flat` marks parts with no thickness. */
   parts: {
     Outline: { colour: '#2c3b33' },
@@ -68,14 +68,14 @@ const settings = {
     Ink: { colour: '#f3fff7', flat: true },
     Dim: { colour: '#f3fff7', opacity: 0.62, flat: true },
     Accent: { colour: '#9dffbf', flat: true },
-    Glow: { colour: '#46f58a', bright: 2.4 },
-    Ring: { colour: '#eefff4', bright: 1.25 },
+    Glow: { colour: '#46f58a', bright: 1.5 },
+    Ring: { colour: '#dff3e8', bright: 1.02 },
   } as Record<string, { colour: string; opacity?: number; bright?: number; flat?: boolean }>,
   /** How far (degrees) the view leans toward the pointer, and how quickly it follows. */
   look: [5, 3] as [number, number],
   ease: 3,
   /** Glow round bright parts: strength, how far it spreads, and how bright a part must be to glow. */
-  bloom: { strength: 0.5, radius: 0.6, threshold: 1 },
+  bloom: { strength: 0.28, radius: 0.85, threshold: 1 },
   /** The list of numbers beside the picture: a scene with more inputs than this lists its words only where a variant changes them. */
   longList: 26,
   /** Milliseconds one picture takes to fade out before the next fades in (matches the CSS). */
