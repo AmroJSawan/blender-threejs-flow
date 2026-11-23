@@ -52,9 +52,10 @@ const settings = {
   settle: 650,
   /**
    * Feedback. Vibration lengths in ms: about 10 reads as a click, 30 or more as a buzz, so a notch is short and an end stop long.
+   * A phone's motor is slow to start, though, and many do not move at all for less than about 15 ms, so these are longer than the ideal.
    * Ticks closer together than `apart` ms are dropped (touch cannot tell them apart, and it turns to noise).
    */
-  pulse: { land: 6, notch: 10, heavy: 16, stop: 34, turn: [10, 60, 15] },
+  pulse: { land: 14, notch: 20, heavy: 30, stop: 60, turn: [22, 70, 30] },
   apart: 32,
   loud: 0.5,
   /** The sheet: its dent under a finger (depth and width in px), the groove, the ridges between notches, and how strongly light shows them. */
@@ -168,10 +169,13 @@ const flipper = document.createElement('label')
 flipper.className = 'quiet'
 flipper.innerHTML = '<input type="checkbox" switch />'
 document.body.append(flipper)
+const vibrates = 'vibrate' in navigator
 function buzz(pattern: number | number[]) {
-  if ('vibrate' in navigator) navigator.vibrate(pattern)
+  if (vibrates) navigator.vibrate(pattern)
   else flipper.click()
 }
+// Say plainly when this browser gives a page no vibration, so silence under the finger is not taken for a fault.
+if (!vibrates) document.querySelector('#note')!.append(' This browser gives web pages no vibration (iPhones do not): here it is sound only.')
 let lastTick = 0
 const feel = {
   land() {
