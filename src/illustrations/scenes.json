@@ -105,7 +105,7 @@
       {
         "name": "wide",
         "title": "Wide",
-        "version": "6d79d5ea",
+        "version": "05e84550",
         "values": {
           "Card Width": 3.7,
           "Card Depth": 2.9,
@@ -136,7 +136,7 @@
       {
         "name": "tall",
         "title": "Tall",
-        "version": "a5cdae2c",
+        "version": "26002ebe",
         "values": {
           "Card Width": 2.9,
           "Card Depth": 3.7,
@@ -167,7 +167,7 @@
       {
         "name": "quiet",
         "title": "Quiet",
-        "version": "817504ec",
+        "version": "8fe1c6cd",
         "values": {
           "Card Width": 4.4,
           "Card Depth": 2.9,

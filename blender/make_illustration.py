@@ -12,7 +12,8 @@ ground. On the card: a small tile with a ring, a title and a line under it, a ti
 large figure, and a footer. A single glowing line leaves the card's far edge and curves away into the
 distance through one or two small chips.
 
-The words are parameters too, and are made into geometry by the same network.
+The words are parameters too, and are made into geometry by the same network, set in Inter
+(blender/fonts, under the SIL Open Font License).
 The colour, the glow and the shallow focus are added by the page (src/illustrations/main.ts), by
 material name; here there is only shape.
 
@@ -28,6 +29,8 @@ from pathlib import Path
 import bpy
 
 ROOT = Path(__file__).resolve().parent.parent
+# The typeface: Inter (SIL Open Font License, see blender/fonts/OFL.txt). Headline words use the heavier one.
+FONTS = {"medium": "Inter-Medium.ttf", "bold": "Inter-SemiBold.ttf"}
 NAME = "signal"
 TITLE = "Signal"
 NOTE = "One card, one line, one figure. Everything in the picture, the words included, comes out of a single node network."
@@ -170,13 +173,26 @@ class Net:
         closed = self.add("GeometryNodeMergeByDistance", {"Geometry": self.join(smooth.outputs[0], bottom.outputs[0]), "Distance": 0.0001})
         return closed.outputs[0]
 
-    def written(self, text, size, material, align="LEFT"):
+    def written(self, text, size, material, align="LEFT", weight="medium"):
         """Words as flat geometry lying on the ground, reading along +X from the origin (or up to it, or centred on it)."""
         curves = self.add("GeometryNodeStringToCurves", {"String": text, "Size": size})
+        if hasattr(curves, "font"):
+            curves.font = typeface(weight)
+        else:  # from Blender 5.1 the font is an input of the node
+            self.socket(curves, "Font").default_value = typeface(weight)
         self.choose(curves, "align_x", align)
         filled = self.add("GeometryNodeFillCurve", {"Curve": self.out(curves, "Curve Instances")})
         self.choose(filled, "mode", "NGONS", label="N-gons")
         return self.material(filled.outputs[0], material)
+
+
+def typeface(weight):
+    """One of FONTS, loaded once and packed into the .blend so the file opens anywhere."""
+    path = ROOT / "blender" / "fonts" / FONTS[weight]
+    font = bpy.data.fonts.load(str(path), check_existing=True)
+    if not font.packed_file:
+        font.pack()
+    return font
 
 
 def build_network():
@@ -239,7 +255,7 @@ def build_network():
 
     # Title and subtitle, beside the tile.
     words_at = m("ADD", left, TILE + 0.18)
-    title = net.moved(net.written(P["Title"], 0.27, "Ink"), net.vector(words_at, m("SUBTRACT", back, 0.24), 0.004))
+    title = net.moved(net.written(P["Title"], 0.27, "Ink", weight="bold"), net.vector(words_at, m("SUBTRACT", back, 0.24), 0.004))
     subtitle = net.moved(net.written(P["Subtitle"], 0.155, "Dim"), net.vector(words_at, m("SUBTRACT", back, 0.47), 0.004))
 
     # A tick at the top right.
@@ -258,7 +274,7 @@ def build_network():
     panel = net.slab(net.rounded(panel_wide, panel_deep, m("MAXIMUM", m("SUBTRACT", P["Corner"], INSET), 0.08), corners), 0.022)
     panel = net.moved(net.material(panel, "Panel"), (0.0, panel_mid, 0.002))
     inside = 0.028
-    figure = net.moved(net.written(P["Figure"], 0.58, "Ink"), net.vector(m("ADD", left, 0.02), panel_mid - 0.06, inside))
+    figure = net.moved(net.written(P["Figure"], 0.58, "Ink", weight="bold"), net.vector(m("ADD", left, 0.02), panel_mid - 0.06, inside))
     aside = net.moved(net.written(P["Aside"], 0.3, "Ink", align="RIGHT"), net.vector(m("SUBTRACT", right, 0.02), panel_mid - 0.06, inside))
     caption = net.moved(net.written(P["Caption"], 0.15, "Dim"), net.vector(m("ADD", left, 0.02), m("ADD", m("MULTIPLY", panel_deep, -0.5), panel_mid + 0.2), inside))
 

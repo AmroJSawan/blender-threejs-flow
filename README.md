@@ -297,7 +297,7 @@ npm run illustration
 ```
 
 - **The parameters** are the node group's inputs, listed as `PARAMETERS` at the top of the script: the card's size, thickness and corner radius, how high it floats, the line's reach, drift and bend, the number of chips, the dot spacing, and every word on the card. Open `blender/illustrations/signal.blend` and they are on the object's modifier; change one and every part follows.
-- **The words are geometry** made by the same network, so they stay sharp at any size. The card's layout follows its size: the panel fills the space between the head and foot strips, and right-hand items stay on the right edge.
+- **The words are geometry** made by the same network, so they stay sharp at any size. They are set in Inter (`blender/fonts`, SIL Open Font License; `FONTS` in the script names the two weights). To change the typeface, put another font there and point `FONTS` at it; use one whose outlines do not overlap, or letters such as 4 and + come out with holes. The card's layout follows its size: the panel fills the space between the head and foot strips, and right-hand items stay on the right edge.
 - **Variants** are the same network with different numbers and words (`VARIANTS` in the script). Each is exported to `public/illustrations/signal/<name>.glb`; the page lists them and shows what each was made from, with the changed values marked.
 - **Round things** take their segment count from `Resolution`.
 
