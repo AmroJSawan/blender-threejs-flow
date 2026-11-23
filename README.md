@@ -315,7 +315,7 @@ npm run illustration
 - `chip`: a chip's top and side colours.
 - `spill`, `hubSpill`: the light a card, and the hub, throw on the ground.
 - `ground`, `plate`: the ground and its dots; the hub's plate and its faint grid.
-- `wire`: the thin lines and the lights that run along them: colour, how many, how fast, how long a tail.
+- `wire`: the thin lines, drawn as glass tubes, and the light that moves inside them: the glass and its brighter outline, the light's two colours, how fast it runs, how far apart the lights are, how long the bright core is and how strong the soft haze round it.
 - `parts`: the plain parts. A `bright` above 1 makes a part glow (the line); `opacity` makes it see-through (the panel, the tile, the dim text).
 - `look`: how far the camera leans toward the pointer.
 - `bloom`: the glow round bright parts.

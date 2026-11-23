@@ -403,7 +403,7 @@ GATEWAY_PARAMETERS = [
     ("Gap", "FLOAT", 0.085, 0.01, "Space between the lines where they leave the hub"),
     ("Loosen", "FLOAT", 1.5, 0.2, "How many times wider the bundle is by its far end"),
     ("Weave", "FLOAT", 0.2, 0.0, "How far the lines wander across each other on the way"),
-    ("Wire", "FLOAT", 0.008, 0.001, "Radius of one line"),
+    ("Wire", "FLOAT", 0.011, 0.001, "Radius of one line"),
     ("Span", "FLOAT", 1.0, 0.5, "How far out everything round the hub stands"),
     *[(name, kind, {"Ground": 70.0, "Dot Pitch": 0.34}.get(name, default), least, about) for name, kind, default, least, about in COMMON],
     ("Title", "STRING", "Every signal,", None, "First line on the hub"),
@@ -499,7 +499,7 @@ def build_gateway(net, P):
         lines = net.add("GeometryNodeSetPosition", {"Geometry": lines, "Offset": offset}).outputs[0]
         lines = net.stored(lines, "_flow", net.vector(along, which, 0.0))   # for the page: how far along its line a point is, and which line
 
-        wires = net.material(net.tube(lines, P["Wire"], sides=5), "Wire")
+        wires = net.material(net.tube(lines, P["Wire"], sides=8), "Wire")
         ends = net.add("GeometryNodeCurveEndpointSelection", {"Start Size": 1, "End Size": 1})
         port = net.add("GeometryNodeMeshCircle", {"Vertices": 10, "Radius": m("MULTIPLY", P["Wire"], 2.6)})
         net.choose(port, "fill_type", "NGON", label="N-Gon")

@@ -53,11 +53,13 @@ const settings = {
   /** The hub's plate: its colour, the faint grid on it (colour, spacing in metres), and how far in from the rim the grid has faded out (0–1). */
   plate: { colour: '#0a110e', grid: '#22332a', pitch: 0.4, fade: 0.25 },
   /**
-   * The thin lines: their resting colour and brightness, and the light that travels along them toward the hub:
-   * its colour and brightness (above 1 it glows), how many lights are on a line at once, how many seconds one takes
-   * to run the length of a line, and how long its tail is (higher = shorter).
+   * The thin lines, drawn as glass tubes with light moving inside them toward the hub.
+   * `glass` is the unlit tube and `rest` how bright it is; `rim` is how much brighter its outline is than its middle.
+   * `light` is the moving light and `lead` the colour it shifts toward at its front; `bright` above 1 makes it glow.
+   * `seconds` is how long a light takes to run a line, `apart` how many line-lengths separate one light from the next,
+   * `length` how much of that gap the light's bright core fills (0–1), and `haze` how strong the wide soft light round the core is.
    */
-  wire: { colour: '#9fb3a8', rest: 0.2, light: '#7dffb0', bright: 2.1, beads: 0.55, seconds: 6, tail: 9 },
+  wire: { glass: '#9fb3a8', rest: 0.16, rim: 1.6, light: '#63f5a2', lead: '#8fe9ff', bright: 2.2, seconds: 7, apart: 1.5, length: 0.16, haze: 0.4 },
   /** Plain parts: colour, and how solid (1 = opaque). `bright` above 1 makes a part glow; `flat` marks parts with no thickness. */
   parts: {
     Outline: { colour: '#2c3b33' },
@@ -236,34 +238,56 @@ const plateMaterial = new THREE.ShaderMaterial({
 })
 materials.set('Plate', plateMaterial)
 /**
- * The thin lines. Each point says how far along its line it is (_flow.x, 0 at the hub … 1 at the far end) and which line of
- * its bundle it is on (_flow.y), so a light can run along each line, out of step with its neighbours.
+ * The thin lines: glass tubes with light moving inside. Each point says how far along its line it is (_flow.x, 0 at the hub … 1 at
+ * the far end) and which line of its bundle it is on (_flow.y), so each line's light is out of step with its neighbours'.
+ * The light has no hard front or back: a bright core inside a much wider, fainter haze, both fading smoothly to nothing.
+ * Seen through the middle of the tube the light is at its strongest; toward the tube's outline it thins, while the glass itself brightens.
  */
 materials.set(
   'Wire',
   new THREE.ShaderMaterial({
     uniforms: {
-      uColour: { value: new THREE.Color(settings.wire.colour).multiplyScalar(settings.wire.rest) },
+      uGlass: { value: new THREE.Color(settings.wire.glass).multiplyScalar(settings.wire.rest) },
+      uRim: { value: settings.wire.rim },
       uLight: { value: new THREE.Color(settings.wire.light).multiplyScalar(settings.wire.bright) },
-      uRun: { value: new THREE.Vector3(settings.wire.beads, 1 / settings.wire.seconds, settings.wire.tail) },
+      uLead: { value: new THREE.Color(settings.wire.lead).multiplyScalar(settings.wire.bright) },
+      uRun: { value: new THREE.Vector4(1 / settings.wire.apart, 1 / settings.wire.seconds, settings.wire.length, settings.wire.haze) },
       uTime: clock,
     },
     vertexShader: /* glsl */ `
       attribute vec3 _flow;
       varying vec3 vFlow;
+      varying vec3 vNormal;
+      varying vec3 vToEye;
       void main() {
         vFlow = _flow;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        vec4 seen = modelViewMatrix * vec4(position, 1.0);
+        vNormal = normalMatrix * normal;
+        vToEye = -seen.xyz;
+        gl_Position = projectionMatrix * seen;
       }`,
     fragmentShader: /* glsl */ `
       varying vec3 vFlow;
-      uniform vec3 uColour, uLight, uRun;
-      uniform float uTime;
+      varying vec3 vNormal;
+      varying vec3 vToEye;
+      uniform vec3 uGlass, uLight, uLead;
+      uniform vec4 uRun;
+      uniform float uRim, uTime;
       void main() {
-        float turn = fract(vFlow.x * uRun.x + uTime * uRun.y * uRun.x + fract(sin(vFlow.y * 12.9898) * 43758.5453)); // rises to 1 where a light's head is
-        float light = pow(turn, uRun.z) * smoothstep(0.0, 0.06, vFlow.x) * smoothstep(1.0, 0.85, vFlow.x);
-        float nearer = mix(1.0, 0.45, smoothstep(0.0, 1.0, vFlow.x));                  // a line is a little brighter near the hub
-        gl_FragColor = vec4(uColour * nearer + uLight * light, 1.0);
+        float facing = clamp(dot(normalize(vNormal), normalize(vToEye)), 0.0, 1.0);   // 1 through the tube's middle … 0 at its outline
+        float edge = 1.0 - facing;
+        float own = fract(sin(vFlow.y * 12.9898) * 43758.5453);                        // this line's place in the rhythm
+        // Where this point is within the gap between one light and the next: 0 at a light's centre, ±0.5 half way to its neighbours.
+        float from = fract(vFlow.x * uRun.x + uTime * uRun.y * uRun.x + own) - 0.5;
+        float core = exp(-pow(from / (uRun.z * 0.5), 2.0));
+        float haze = exp(-pow(from / 0.3, 2.0)) * (0.5 + 0.5 * cos(from * 6.2831853));  // wide, and exactly nothing half way between lights
+        float ends = smoothstep(0.0, 0.1, vFlow.x) * smoothstep(1.0, 0.8, vFlow.x);   // lights rise out of the far end and sink into the hub
+        vec3 colour = mix(uLight, uLead, smoothstep(0.0, -uRun.z, from));               // cooler at the front, as light bends through glass
+        float inside = mix(0.35, 1.0, facing * facing);                                  // the light sits in the tube's core
+        vec3 lit = colour * (core * inside + haze * uRun.w * mix(0.6, 1.0, edge)) * ends; // the haze is what the glass scatters, so it reaches the outline
+        float nearer = mix(1.0, 0.5, smoothstep(0.0, 1.0, vFlow.x));                   // a line is a little brighter near the hub
+        vec3 glass = uGlass * nearer * (1.0 + uRim * edge * edge);
+        gl_FragColor = vec4(glass + lit, 1.0);
         #include <colorspace_fragment>
       }`,
   }),

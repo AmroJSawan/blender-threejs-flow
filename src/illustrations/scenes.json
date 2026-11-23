@@ -373,7 +373,7 @@
       {
         "name": "flow",
         "title": "Flow",
-        "version": "bb7c19c7",
+        "version": "a2048d93",
         "values": {
           "Hub Radius": 1.6,
           "Ring": 0.026,
@@ -383,7 +383,7 @@
           "Gap": 0.085,
           "Loosen": 1.5,
           "Weave": 0.2,
-          "Wire": 0.008,
+          "Wire": 0.011,
           "Span": 1.0,
           "Dot Pitch": 0.34,
           "Dot Size": 0.014,
@@ -464,7 +464,7 @@
       {
         "name": "calm",
         "title": "Calm",
-        "version": "c8593fa8",
+        "version": "00f5ef9a",
         "values": {
           "Hub Radius": 1.6,
           "Ring": 0.026,
@@ -474,7 +474,7 @@
           "Gap": 0.11,
           "Loosen": 1.0,
           "Weave": 0.0,
-          "Wire": 0.008,
+          "Wire": 0.011,
           "Span": 1.0,
           "Dot Pitch": 0.34,
           "Dot Size": 0.014,
@@ -555,7 +555,7 @@
       {
         "name": "dense",
         "title": "Dense",
-        "version": "dbed75a0",
+        "version": "39c0b8b0",
         "values": {
           "Hub Radius": 1.8,
           "Ring": 0.026,
@@ -565,7 +565,7 @@
           "Gap": 0.06,
           "Loosen": 2.2,
           "Weave": 0.32,
-          "Wire": 0.008,
+          "Wire": 0.011,
           "Span": 1.06,
           "Dot Pitch": 0.34,
           "Dot Size": 0.014,
