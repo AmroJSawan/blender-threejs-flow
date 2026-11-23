@@ -105,7 +105,16 @@
       {
         "name": "wide",
         "title": "Wide",
-        "version": "dfde9c18",
+        "version": "53523cb2",
+        "ground": {
+          "span": 18.0,
+          "stored": 3.0,
+          "edge": [
+            0.2406,
+            0.2407,
+            0.2406
+          ]
+        },
         "values": {
           "Card Width": 3.7,
           "Card Depth": 2.9,
@@ -131,26 +140,21 @@
           "Mark": "+12%",
           "Chip One": "Scored",
           "Chip Two": "Received"
-        },
-        "lights": [
-          {
-            "kind": "card",
-            "at": [
-              0,
-              0
-            ],
-            "half": [
-              1.85,
-              1.45
-            ],
-            "round": 0.42
-          }
-        ]
+        }
       },
       {
         "name": "tall",
         "title": "Tall",
-        "version": "86c60125",
+        "version": "cf4650c2",
+        "ground": {
+          "span": 18.0,
+          "stored": 3.0,
+          "edge": [
+            0.2406,
+            0.2407,
+            0.2407
+          ]
+        },
         "values": {
           "Card Width": 2.9,
           "Card Depth": 3.7,
@@ -176,26 +180,21 @@
           "Mark": "live",
           "Chip One": "Model",
           "Chip Two": "Prompt"
-        },
-        "lights": [
-          {
-            "kind": "card",
-            "at": [
-              0,
-              0
-            ],
-            "half": [
-              1.45,
-              1.85
-            ],
-            "round": 0.5
-          }
-        ]
+        }
       },
       {
         "name": "quiet",
         "title": "Quiet",
-        "version": "4fb972e6",
+        "version": "363deeca",
+        "ground": {
+          "span": 18.0,
+          "stored": 3.0,
+          "edge": [
+            0.2407,
+            0.2409,
+            0.2407
+          ]
+        },
         "values": {
           "Card Width": 4.4,
           "Card Depth": 2.9,
@@ -221,21 +220,7 @@
           "Mark": "+21%",
           "Chip One": "Scored",
           "Chip Two": "Received"
-        },
-        "lights": [
-          {
-            "kind": "card",
-            "at": [
-              0,
-              0
-            ],
-            "half": [
-              2.2,
-              1.45
-            ],
-            "round": 0.7
-          }
-        ]
+        }
       }
     ]
   },
@@ -373,7 +358,16 @@
       {
         "name": "flow",
         "title": "Flow",
-        "version": "ad4b288f",
+        "version": "502e6492",
+        "ground": {
+          "span": 28.0,
+          "stored": 3.0,
+          "edge": [
+            0.078,
+            0.078,
+            0.078
+          ]
+        },
         "values": {
           "Hub Radius": 1.6,
           "Ring": 0.026,
@@ -406,65 +400,21 @@
           "Three Caption": "median time",
           "Tile Label": "Archive",
           "Node Label": "Gateway"
-        },
-        "lights": [
-          {
-            "kind": "hub",
-            "at": [
-              0,
-              0
-            ],
-            "half": [
-              1.6,
-              1.6
-            ],
-            "round": 1.6
-          },
-          {
-            "kind": "card",
-            "at": [
-              -5.6,
-              3.0
-            ],
-            "half": [
-              0.9520000000000001,
-              0.7000000000000001
-            ],
-            "round": 0.23520000000000002,
-            "scale": 0.56
-          },
-          {
-            "kind": "card",
-            "at": [
-              6.0,
-              -3.6
-            ],
-            "half": [
-              0.85,
-              0.625
-            ],
-            "round": 0.21,
-            "scale": 0.5
-          },
-          {
-            "kind": "card",
-            "at": [
-              -6.0,
-              -3.2
-            ],
-            "half": [
-              0.748,
-              0.55
-            ],
-            "round": 0.1848,
-            "scale": 0.44
-          }
-        ]
+        }
       },
       {
         "name": "calm",
         "title": "Calm",
-        "version": "d610ca41",
+        "version": "10ad6c4c",
+        "ground": {
+          "span": 28.0,
+          "stored": 3.0,
+          "edge": [
+            0.078,
+            0.078,
+            0.078
+          ]
+        },
         "values": {
           "Hub Radius": 1.6,
           "Ring": 0.026,
@@ -497,65 +447,21 @@
           "Three Caption": "median time",
           "Tile Label": "Archive",
           "Node Label": "Gateway"
-        },
-        "lights": [
-          {
-            "kind": "hub",
-            "at": [
-              0,
-              0
-            ],
-            "half": [
-              1.6,
-              1.6
-            ],
-            "round": 1.6
-          },
-          {
-            "kind": "card",
-            "at": [
-              -5.6,
-              3.0
-            ],
-            "half": [
-              0.9520000000000001,
-              0.7000000000000001
-            ],
-            "round": 0.23520000000000002,
-            "scale": 0.56
-          },
-          {
-            "kind": "card",
-            "at": [
-              6.0,
-              -3.6
-            ],
-            "half": [
-              0.85,
-              0.625
-            ],
-            "round": 0.21,
-            "scale": 0.5
-          },
-          {
-            "kind": "card",
-            "at": [
-              -6.0,
-              -3.2
-            ],
-            "half": [
-              0.748,
-              0.55
-            ],
-            "round": 0.1848,
-            "scale": 0.44
-          }
-        ]
+        }
       },
       {
         "name": "dense",
         "title": "Dense",
-        "version": "58519e00",
+        "version": "caacc81e",
+        "ground": {
+          "span": 28.0,
+          "stored": 3.0,
+          "edge": [
+            0.078,
+            0.078,
+            0.078
+          ]
+        },
         "values": {
           "Hub Radius": 1.8,
           "Ring": 0.026,
@@ -588,60 +494,7 @@
           "Three Caption": "median time",
           "Tile Label": "Archive",
           "Node Label": "Gateway"
-        },
-        "lights": [
-          {
-            "kind": "hub",
-            "at": [
-              0,
-              0
-            ],
-            "half": [
-              1.8,
-              1.8
-            ],
-            "round": 1.8
-          },
-          {
-            "kind": "card",
-            "at": [
-              -5.936,
-              3.18
-            ],
-            "half": [
-              0.9520000000000001,
-              0.7000000000000001
-            ],
-            "round": 0.23520000000000002,
-            "scale": 0.56
-          },
-          {
-            "kind": "card",
-            "at": [
-              6.36,
-              -3.8160000000000003
-            ],
-            "half": [
-              0.85,
-              0.625
-            ],
-            "round": 0.21,
-            "scale": 0.5
-          },
-          {
-            "kind": "card",
-            "at": [
-              -6.36,
-              -3.3920000000000003
-            ],
-            "half": [
-              0.748,
-              0.55
-            ],
-            "round": 0.1848,
-            "scale": 0.44
-          }
-        ]
+        }
       }
     ]
   }

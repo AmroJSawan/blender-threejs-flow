@@ -1,6 +1,5 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-import { BokehPass } from 'three/addons/postprocessing/BokehPass.js'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
@@ -16,8 +15,6 @@ type Staging = {
   start: string
   /** The camera, in the scene's own metres (x right, y up, z toward the viewer): where it stands, what it looks at, its lens angle. */
   view: { from: Triple; at: Triple; lens: number }
-  /** Shallow focus: sharp at what the camera looks at, softer with distance from it. `most` caps the blur. */
-  focus: { aperture: number; most: number }
   /** The window shape (width ÷ height) the view was composed for; in a narrower window the camera steps back, up to `back` times as far. Past that the sides are cropped. */
   shape: number
   back: number
@@ -34,22 +31,21 @@ const settings = {
   start: 'signal',
   backdrop: '#050706',
   scenes: {
-    signal: { start: 'wide', view: { from: [4.4, 7.1, 7.6], at: [0, 0.2, -0.8], lens: 30 }, focus: { aperture: 0.0009, most: 0.006 }, shape: 1.15, back: 4, beam: { strength: 0, wide: 3, tall: 9 } },
-    gateway: { start: 'flow', view: { from: [-2.6, 11.4, 12.8], at: [0, 0, -0.2], lens: 30 }, focus: { aperture: 0.0005, most: 0.005 }, shape: 1.6, back: 2.2, beam: { strength: 0.03, wide: 3.4, tall: 9 } },
+    signal: { start: 'wide', view: { from: [4.4, 7.1, 7.6], at: [0, 0.2, -0.8], lens: 30 }, shape: 1.15, back: 4, beam: { strength: 0, wide: 3, tall: 9 } },
+    gateway: { start: 'flow', view: { from: [-2.6, 11.4, 12.8], at: [0, 0, -0.2], lens: 30 }, shape: 1.6, back: 2.2, beam: { strength: 0.014, wide: 3.4, tall: 9 } },
   } as Record<string, Staging>,
   /**
    * A card's surface: its colour at the far left, in the middle and at the near right, and how dark its sides are.
    * `edge` is the bright line round the top face (how strong, how wide in metres); `band` is the soft diagonal streak of light across it.
    */
   card: { far: '#3bcf7b', middle: '#159a54', near: '#1b8fa9', sides: 0.42, sheen: 0.06, edge: 0.2, edgeWidth: 0.022, band: 0.03 },
-  /** The light a card spills on the ground: its two colours, how strong, and how far it spreads (metres). */
-  spill: { left: '#1fd16a', right: '#1a9fb5', strength: 0.11, spread: 1.3 },
-  /** The same under the hub. */
-  hubSpill: { left: '#bfe9cf', right: '#8fd6c0', strength: 0.05, spread: 1.9 },
   /** A chip's top and sides. */
   chip: { top: '#25302b', side: '#0d1210' },
-  /** The ground: its colour, and its dots (their spacing and size come from the scene's own numbers). */
-  ground: { colour: '#060908', dot: '#222b26' },
+  /**
+   * The ground: its colour and its dots' colour in full light. How much light reaches each part of it (the soft pool round the
+   * middle, the shadows, the glow beside a card) was worked out in Blender and comes with each variant as a picture; `light` scales it all. `reach` is how many times further than the scene's own ground the sheet is drawn, so its edge is never seen.
+   */
+  ground: { colour: '#232b27', dot: '#59695f', light: 1, reach: 8 },
   /** The hub's plate: its colour, the faint grid on it (colour, spacing in metres), and how far in from the rim the grid has faded out (0–1). */
   plate: { colour: '#0a110e', grid: '#22332a', pitch: 0.4, fade: 0.25 },
   /**
@@ -75,7 +71,9 @@ const settings = {
   look: [5, 3] as [number, number],
   ease: 3,
   /** Glow round bright parts: strength, how far it spreads, and how bright a part must be to glow. */
-  bloom: { strength: 0.28, radius: 0.85, threshold: 1 },
+  bloom: { strength: 0.14, radius: 0.8, threshold: 1 },
+  /** Edge smoothing, samples per pixel: 8 is the cleanest, 4 is lighter work for a phone. */
+  samples: 8,
   /** The list of numbers beside the picture: a scene with more inputs than this lists its words only where a variant changes them. */
   longList: 26,
   /** Milliseconds one picture takes to fade out before the next fades in (matches the CSS). */
@@ -85,7 +83,7 @@ const settings = {
 
 type Illustration = (typeof scenes)[number]
 type Variant = Illustration['variants'][number]
-type Light = { kind: string; at: number[]; half: number[]; round: number; scale?: number }
+type GroundLight = { span: number; stored: number; edge: number[] }
 type Values = Record<string, number | string>
 const canvas = document.querySelector<HTMLCanvasElement>('#stage')!
 const note = document.querySelector<HTMLElement>('#note')!
@@ -191,24 +189,44 @@ const onGround = /* glsl */ `
     vPlace = placed.xyz;
     gl_Position = projectionMatrix * viewMatrix * placed;
   }`
-/** The ground, with its field of dots drawn on it: the same rows and columns the Blender network makes. */
+/**
+ * The ground: its field of dots (the same rows and columns the Blender network makes), under the light Blender worked out for it.
+ * That light comes as a picture of a square of ground round the middle; beyond the square the ground carries on at the light of its edge.
+ */
+const noLight = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1)
+noLight.needsUpdate = true
 const groundMaterial = new THREE.ShaderMaterial({
   uniforms: {
     uColour: { value: new THREE.Color(settings.ground.colour) },
     uDot: { value: new THREE.Color(settings.ground.dot) },
     uField: { value: new THREE.Vector3(20, 0.26, 0.014) }, // across the ground, between dots, a dot's radius
+    uLight: { value: noLight as THREE.Texture },
+    uLit: { value: new THREE.Vector2(18, 1) },             // how much ground the picture covers, metres, and the light its brightest value stands for
+    uEdge: { value: new THREE.Vector3(1, 1, 1) },          // the light at the picture's edge
   },
   vertexShader: onGround,
   fragmentShader: /* glsl */ `
     varying vec3 vPlace;
-    uniform vec3 uColour, uDot, uField;
+    uniform vec3 uColour, uDot, uField, uEdge;
+    uniform vec2 uLit;
+    uniform sampler2D uLight;
     void main() {
       float pitch = uField.x / floor(uField.x / uField.y);
       vec2 cell = (vPlace.xz + uField.x * 0.5) / pitch;
       float away = length(fract(cell + 0.5) - 0.5) * pitch;      // metres from the nearest dot's centre
       float soft = max(fwidth(away), 0.0005);
-      float dot = 1.0 - smoothstep(uField.z - soft, uField.z + soft, away);
-      gl_FragColor = vec4(mix(uColour, uDot, dot), 1.0);
+      float onDot = 1.0 - smoothstep(uField.z - soft, uField.z + soft, away);
+      vec2 at = vec2(vPlace.x, -vPlace.z) / uLit.x + 0.5;        // where this point is in the picture of the light
+      vec2 border = min(at, 1.0 - at);
+      float within = smoothstep(0.0, 0.08, min(border.x, border.y));
+      float further = length(max(abs(vPlace.xz) - uLit.x * 0.46, 0.0));   // metres beyond the picture
+      vec3 beyond = uEdge / (1.0 + further * further * 0.02);             // past the picture the light goes on falling away, slowly
+      vec3 light = mix(beyond, texture2D(uLight, clamp(at, 0.0, 1.0)).rgb * uLit.y, within);
+      vec3 colour = mix(uColour, uDot, onDot) * light;
+      // The ground is one long, dark, gentle gradient, which a screen would show as steps. A speck of unseen noise, under half of one screen level, hides them.
+      float speck = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) - 0.5;
+      colour = pow(max(pow(colour, vec3(1.0 / 2.2)) + speck / 255.0, 0.0), vec3(2.2));
+      gl_FragColor = vec4(colour, 1.0);
       #include <colorspace_fragment>
     }`,
 })
@@ -293,51 +311,6 @@ materials.set(
   }),
 )
 
-/** Light spilled on the ground by a card or the hub: brightest under its edge, fading with distance from it. */
-function spillOf(light: Light): THREE.Mesh {
-  const look = light.kind === 'hub' ? settings.hubSpill : settings.spill
-  const spread = look.spread * (light.scale ?? 1)
-  const [x, z] = light.at
-  const [halfWide, halfDeep] = light.half
-  const mesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
-    new THREE.ShaderMaterial({
-      uniforms: {
-        uAt: { value: new THREE.Vector2(x, z) },
-        uHalf: { value: new THREE.Vector2(halfWide, halfDeep) },
-        uRound: { value: Math.min(light.round, halfWide, halfDeep) },
-        uLeft: { value: new THREE.Color(look.left) },
-        uRight: { value: new THREE.Color(look.right) },
-        uStrength: { value: look.strength },
-        uSpread: { value: spread },
-      },
-      vertexShader: onGround,
-      fragmentShader: /* glsl */ `
-        varying vec3 vPlace;
-        uniform vec2 uAt, uHalf;
-        uniform float uRound, uStrength, uSpread;
-        uniform vec3 uLeft, uRight;
-        void main() {
-          vec2 place = vPlace.xz - uAt;
-          vec2 q = abs(place) - uHalf + uRound;
-          float outside = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - uRound; // metres outside the outline; negative under it
-          float light = exp(-max(outside, 0.0) / uSpread * 2.2) * smoothstep(-0.9 * uSpread, 0.1 * uSpread, outside);
-          vec3 colour = mix(uLeft, uRight, smoothstep(-uHalf.x, uHalf.x, place.x + place.y * 0.6));
-          gl_FragColor = vec4(colour * light * uStrength, 1.0);
-          #include <colorspace_fragment>
-        }`,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      transparent: true,
-    }),
-  )
-  const reach = spread * 2.5
-  mesh.scale.set(halfWide * 2 + reach * 2, 1, halfDeep * 2 + reach * 2)
-  mesh.position.set(x, 0.002, z)
-  mesh.renderOrder = 1
-  return mesh
-}
-
 /** A soft shaft of light standing over the middle of the scene, always turned to face the camera. */
 const beam = new THREE.Mesh(
   new THREE.PlaneGeometry(1, 1).translate(0, 0.5, 0),
@@ -367,40 +340,35 @@ const beam = new THREE.Mesh(
 beam.renderOrder = 2
 scene.add(beam)
 
-// ---- Glow and focus -------------------------------------------------------------
-const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }))
+// ---- Drawing: smooth edges, and a little glow round the brightest parts -----------
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: settings.samples }))
 const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), settings.bloom.strength, settings.bloom.radius, settings.bloom.threshold)
-const focus = new BokehPass(scene, camera, { focus: 8, aperture: 0.0009, maxblur: 0.006 })
-const focusUniforms = focus.uniforms as Record<string, THREE.IUniform>
-// The focus pass measures how far away everything is; the shaft of light is not a thing at a distance, so it sits that out.
-const measure = focus.render.bind(focus)
-focus.render = (...passed: Parameters<typeof measure>) => {
-  const shown = beam.visible
-  beam.visible = false
-  measure(...passed)
-  beam.visible = shown
-}
 composer.addPass(new RenderPass(scene, camera))
-composer.addPass(focus)
 composer.addPass(bloom)
 composer.addPass(new OutputPass())
 
 // ---- Loading a variant ----------------------------------------------------------
 const loader = new GLTFLoader()
-const loaded = new Map<string, Promise<THREE.Group>>()
-function load(illustration: Illustration, variant: Variant): Promise<THREE.Group> {
+const pictures = new THREE.TextureLoader()
+type Shown = { model: THREE.Group; light: THREE.Texture }
+const loaded = new Map<string, Promise<Shown>>()
+function load(illustration: Illustration, variant: Variant): Promise<Shown> {
   const key = `${illustration.name}/${variant.name}`
   let waiting = loaded.get(key)
   if (!waiting) {
-    waiting = loader.loadAsync(`${import.meta.env.BASE_URL}illustrations/${key}.glb?v=${variant.version}`).then((file) => {
-      file.scene.traverse((child) => {
+    const file = `${import.meta.env.BASE_URL}illustrations/${key}`
+    waiting = Promise.all([loader.loadAsync(`${file}.glb?v=${variant.version}`), pictures.loadAsync(`${file}.webp?v=${variant.version}`)]).then(([made, light]) => {
+      made.scene.traverse((child) => {
         if (!(child instanceof THREE.Mesh)) return
         const part = (child.material as THREE.Material).name
         child.material = materials.get(part) ?? materials.get('Ink')!
-        if (part === 'Ground') child.renderOrder = -1
+        if (part !== 'Ground') return
+        child.renderOrder = -1
+        child.scale.setScalar(settings.ground.reach) // the sheet carries on, dots and all, until its light has faded out
       })
-      for (const light of variant.lights as Light[]) file.scene.add(spillOf(light))
-      return file.scene
+      light.colorSpace = THREE.SRGBColorSpace
+      light.anisotropy = 8
+      return { model: made.scene, light }
     })
     loaded.set(key, waiting)
   }
@@ -411,12 +379,12 @@ function load(illustration: Illustration, variant: Variant): Promise<THREE.Group
 let illustration = scenes.find((entry) => entry.name === (asked.get('scene') ?? settings.start)) ?? scenes[0]
 let staging = settings.scenes[illustration.name]
 let wanted: Variant = illustration.variants[0]
-let current: THREE.Group | undefined
+let current: Shown | undefined
 let stepBack = 1 // how much further away the camera stands for a larger card or a narrower window
 const at = new THREE.Vector3()
 const armAngles = new THREE.Spherical() // from what the camera looks at, to the camera
 
-/** Sets the page up for the picture about to be shown: the camera, the focus, and the numbers the page draws from. */
+/** Sets the page up for the picture about to be shown: the camera, and the numbers the page draws from. */
 function fit() {
   const set = wanted.values as Values
   const basis = illustration.variants[0].values as Values
@@ -425,10 +393,11 @@ function fit() {
   camera.fov = staging.view.lens
   camera.aspect = innerWidth / innerHeight
   camera.updateProjectionMatrix()
-  focusUniforms.aperture.value = staging.focus.aperture
-  focusUniforms.maxblur.value = staging.focus.most
-  focusUniforms.aspect.value = camera.aspect
   groundMaterial.uniforms.uField.value.set(Number(set['Ground']), Number(set['Dot Pitch']), Number(set['Dot Size']))
+  const lit = wanted.ground as GroundLight
+  groundMaterial.uniforms.uLit.value.set(lit.span, lit.stored * settings.ground.light)
+  groundMaterial.uniforms.uEdge.value.fromArray(lit.edge).multiplyScalar(settings.ground.light)
+  if (current) groundMaterial.uniforms.uLight.value = current.light
   plateMaterial.uniforms.uRadius.value = Number(set['Hub Radius'] ?? 1)
   beam.visible = staging.beam.strength > 0
   beam.scale.set(staging.beam.wide * 3, staging.beam.tall, 1)
@@ -491,9 +460,9 @@ async function show(sceneName: string, variantName?: string | null) {
   canvas.classList.remove('ready')
   const [shown] = await Promise.all([load(shownScene, variant), current ? new Promise((done) => setTimeout(done, settings.swap)) : null])
   if (wanted !== variant) return // another one was chosen meanwhile
-  if (current) scene.remove(current)
+  if (current) scene.remove(current.model)
   current = shown
-  scene.add(shown)
+  scene.add(shown.model)
   fit()
   canvas.classList.add('ready')
 }
@@ -533,7 +502,6 @@ function draw(now: number) {
   camera.position.setFromSpherical(angles).add(at)
   camera.lookAt(at)
   beam.rotation.y = Math.atan2(camera.position.x - at.x, camera.position.z - at.z)
-  focusUniforms.focus.value = camera.position.distanceTo(at) * 0.97
   composer.render()
 }
 function frame(now: number) {

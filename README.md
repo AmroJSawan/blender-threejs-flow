@@ -308,19 +308,21 @@ npm run illustration
 - **Variants** are the same network with different numbers and words (each scene's `variants` in `SCENES` at the end of the script). Each is exported to `public/illustrations/<scene>/<name>.glb`; the page lists them and shows what each was made from, with the changed values marked.
 - **Round things** take their segment count from `Resolution`.
 
-**Look, on the page.** `src/illustrations/main.ts` colours each part by its Blender material name and adds everything that is light rather than shape. All of it is in `settings` at the top:
+**Light, in Blender too.** The light on the ground is worked out by Blender's Cycles renderer, the same way the 3D switches are lit: one wide soft lamp overhead, a dim even room, and the glowing parts (cards, the line, the hub's ring, the thin lines) shining on what is round them. The result, shadows and all, is saved per variant as `public/illustrations/<scene>/<variant>.webp` and the page lays it on the ground. Everything about it is in `LIGHT` near the top of the script: the lamp's power, size and height, how brightly each kind of part shines, and the quality of the picture. Working the light out is what takes the time: about a minute per variant.
 
-- `scenes`: per scene, the camera (`view`), the shallow focus, the window shape it was composed for, and the shaft of light over the middle (`beam`, Gateway only).
+**Look, on the page.** `src/illustrations/main.ts` colours each part by its Blender material name. The picture is drawn directly, with smoothed edges and no blur or grain over it. All of it is in `settings` at the top:
+
+- `scenes`: per scene, the camera (`view`), the window shape it was composed for, and the faint shaft of light over the middle (`beam`, Gateway only).
 - `card`: the gradient across a card (far left, middle, near right), how dark its sides are, the bright line round its top edge, and the soft streak of light across it.
 - `chip`: a chip's top and side colours.
-- `spill`, `hubSpill`: the light a card, and the hub, throw on the ground.
-- `ground`, `plate`: the ground and its dots; the hub's plate and its faint grid.
+- `ground`: the ground's and dots' colours in full light, and `light`, which scales the light Blender worked out.
+- `plate`: the hub's plate and its faint grid.
 - `wire`: the thin lines, drawn as glass tubes, and the light that moves inside them: the glass and its brighter outline, the light's two colours, how fast it runs, how far apart the lights are, how long the bright core is and how strong the soft haze round it.
 - `parts`: the plain parts. A `bright` above 1 makes a part glow (the line); `opacity` makes it see-through (the panel, the tile, the dim text).
 - `look`: how far the camera leans toward the pointer.
-- `bloom`: the glow round bright parts.
+- `bloom`: the small glow round the brightest parts. `samples`: how finely edges are smoothed.
 
-The darker corners and the film grain over the picture are plain CSS, in `src/illustrations/illustrations.css`.
+The slightly darker corners are plain CSS, in `src/illustrations/illustrations.css`.
 
 `?scene=gateway&variant=calm` links to a scene and a variant. `?keep` lets a still be saved from the canvas and adds `drawNow(seconds)` for drawing on request, with the moving lights at that moment.
 

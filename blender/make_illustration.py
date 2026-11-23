@@ -16,7 +16,9 @@ The scenes share their parts (PARTS below): the card, the chip, the tile with it
 
 The words are parameters too, and are made into geometry by the same network, set in Inter
 (blender/fonts, under the SIL Open Font License).
-The colour, the glow, the moving light on the lines and the shallow focus are added by the page
+The light on the ground is real: Blender works out how the glowing parts and one wide soft lamp light it, shadows
+included, and saves that as a picture per variant (see LIGHT below). The colour of each part and the moving light on
+the lines are added by the page
 (src/illustrations/main.ts), by material name; here there is only shape. Two things are handed to the page
 with the shape, as extra numbers on each point: where a point lies on its card ("_card", "_shape"), and how
 far along its line it is ("_flow").
@@ -24,6 +26,7 @@ far along its line it is ("_flow").
 The script writes
     blender/illustrations/<scene>.blend             the node network, to open and adjust
     public/illustrations/<scene>/<variant>.glb      the scene, once per variant
+    public/illustrations/<scene>/<variant>.webp     the light falling on its ground
     src/illustrations/scenes.json                   what the page lists
 """
 import hashlib
@@ -32,6 +35,7 @@ import math
 from pathlib import Path
 
 import bpy
+import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
 # The typeface: Inter (SIL Open Font License, see blender/fonts/OFL.txt). Headline words use the heavier one.
@@ -46,6 +50,24 @@ HEAD = 1.0           # depth of the strip that holds the tile, title and subtitl
 FOOT = 0.62          # depth of the strip that holds the footer
 INSET = 0.2          # from the card's edge to the panel
 CHIP = (1.5, 0.5, 0.14)  # a chip: across, deep, thick
+
+# ---- LIGHT: how the ground is lit. Worked out by Blender (Cycles) and saved as a picture the page lays on the ground. ----
+LIGHT = {
+    "lamp": 900.0,      # power of the one wide lamp overhead, which gives the soft pool of light and the soft shadows
+    "lamp_size": 9.0,   # how wide that lamp is, metres: wider = softer shadows
+    "lamp_height": 8.0,
+    "room": 0.012,      # even light from everywhere, which keeps the shadows from going black
+    "card": 0.55,       # how brightly a card shines on what is round it
+    "glow": 4.0,        # … the glowing line and the hub's coloured arc
+    "ring": 0.5,        # … the hub's ring
+    "wire": 0.5,        # … the thin lines
+    "samples": 128,     # more = a cleaner picture, slower to make
+    "size": 1024,       # the picture's width and height, px
+    "stored": 3.0,      # the brightest light the picture can hold (anything brighter is clipped)
+    "quality": 92,      # how closely the saved picture keeps the result (WebP, 0-100)
+}
+# The colours the glowing parts shine with: a card's far-left and near-right corners, the line, the ring.
+SHINES = {"card_far": "#3bcf7b", "card_near": "#1b8fa9", "glow": "#46f58a", "ring": "#eefff4", "wire": "#7dffb0"}
 
 
 class Net:
@@ -370,10 +392,6 @@ def build_signal(net, P):
     return net.join(ground(net, P), hero, glow, on_line(P["Chip One"], 0.5, 1), on_line(P["Chip Two"], 1.0, 2))
 
 
-def signal_lights(v):
-    return [{"kind": "card", "at": [0, 0], "half": [v["Card Width"] / 2, v["Card Depth"] / 2], "round": v["Corner"]}]
-
-
 # ======================================= SCENE: Gateway ======================================
 
 # Where things stand, metres from the hub (x to the right, y away from the viewer), before "Span" stretches them.
@@ -543,14 +561,6 @@ def build_gateway(net, P):
     return net.join(ground(net, P), plate, ring, dashes, words, tag, bundles, cards, lone, leader)
 
 
-def gateway_lights(v):
-    span = v["Span"]
-    lights = [{"kind": "hub", "at": [0, 0], "half": [v["Hub Radius"], v["Hub Radius"]], "round": v["Hub Radius"]}]
-    for _, (x, y), scale in CARDS:
-        lights.append({"kind": "card", "at": [x * span, -y * span], "half": [SATELLITE["wide"] * scale / 2, SATELLITE["deep"] * scale / 2], "round": SATELLITE["corner"] * scale, "scale": scale})
-    return lights
-
-
 SCENES = [
     {
         "name": "signal",
@@ -558,7 +568,7 @@ SCENES = [
         "note": "One card, one line, one figure. Everything in the picture, the words included, comes out of a single node network.",
         "parameters": SIGNAL_PARAMETERS,
         "build": build_signal,
-        "lights": signal_lights,
+        "span": 18.0,   # how much of the ground, round the middle, has its light worked out
         # The same network with different numbers and words. Each becomes one file the page can show.
         "variants": [
             {"name": "wide", "title": "Wide", "set": {}},
@@ -580,7 +590,7 @@ SCENES = [
         "note": "The same card, chip, tile and dotted ground, set round a hub. Bundles of thin lines carry light in from the cards to the ring.",
         "parameters": GATEWAY_PARAMETERS,
         "build": build_gateway,
-        "lights": gateway_lights,
+        "span": 28.0,
         "variants": [
             {"name": "flow", "title": "Flow", "set": {}},
             {"name": "calm", "title": "Calm", "set": {"Lines": 5, "Gap": 0.11, "Weave": 0.0, "Loosen": 1.0, "Arc": 0.12, "Dashes": 14, "Title": "Three sources,", "Title Two": "one answer"}},
@@ -588,6 +598,113 @@ SCENES = [
         ],
     },
 ]
+
+
+def linear(colour):
+    """A colour written the way the page writes it, as Blender's own numbers."""
+    parts = [int(colour[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    return [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in parts] + [1.0]
+
+
+def studio():
+    """Sets the scene up for working out light: the lamp, the room, and what each material does with light."""
+    scene = bpy.context.scene
+    scene.render.engine = "CYCLES"
+    scene.cycles.samples = LIGHT["samples"]
+    scene.cycles.use_denoising = True
+    scene.view_settings.view_transform = "Standard"
+    scene.render.bake.margin = 4
+    scene.render.image_settings.file_format = "WEBP"
+    scene.render.image_settings.quality = LIGHT["quality"]
+    scene.render.image_settings.color_mode = "RGB"
+    lamp = bpy.data.lights.new("Lamp", "AREA")
+    lamp.shape = "DISK"
+    lamp.size = LIGHT["lamp_size"]
+    lamp.energy = LIGHT["lamp"]
+    lamp_object = bpy.data.objects.new("Lamp", lamp)
+    lamp_object.location = (0.0, 0.0, LIGHT["lamp_height"])   # a new lamp points straight down
+    scene.collection.objects.link(lamp_object)
+    world = bpy.data.worlds.new("Room")
+    world.use_nodes = True
+    background = next(n for n in world.node_tree.nodes if n.type == "BACKGROUND")
+    background.inputs["Color"].default_value = (1.0, 1.0, 1.0, 1.0)
+    background.inputs["Strength"].default_value = LIGHT["room"]
+    scene.world = world
+
+    def shines(name, strength, colour=None):
+        """Makes a material give off light; returns its nodes and the node that does the shining."""
+        tree = bpy.data.materials[name].node_tree
+        tree.nodes.clear()
+        glow = tree.nodes.new("ShaderNodeEmission")
+        glow.inputs["Strength"].default_value = strength
+        if colour:
+            glow.inputs["Color"].default_value = linear(colour)
+        tree.links.new(glow.outputs[0], tree.nodes.new("ShaderNodeOutputMaterial").inputs["Surface"])
+        return tree, glow
+
+    for material in bpy.data.materials:
+        material.use_nodes = True   # everything else is left as plain matt grey: it only blocks and bounces light
+    shines("Glow", LIGHT["glow"], SHINES["glow"])
+    shines("Ring", LIGHT["ring"], SHINES["ring"])
+    shines("Wire", LIGHT["wire"], SHINES["wire"])
+    # A card shines with its own gradient: each of its points knows where on the card it is.
+    tree, glow = shines("Card", LIGHT["card"])
+    where = tree.nodes.new("ShaderNodeAttribute")
+    where.attribute_name = "_card"
+    size = tree.nodes.new("ShaderNodeAttribute")
+    size.attribute_name = "_shape"
+    at, half = tree.nodes.new("ShaderNodeSeparateXYZ"), tree.nodes.new("ShaderNodeSeparateXYZ")
+    tree.links.new(where.outputs["Vector"], at.inputs[0])
+    tree.links.new(size.outputs["Vector"], half.inputs[0])
+
+    def sum_of(operation, a, b):
+        node = tree.nodes.new("ShaderNodeMath")
+        node.operation = operation
+        for socket, value in zip(node.inputs, (a, b)):
+            if isinstance(value, bpy.types.NodeSocket):
+                tree.links.new(value, socket)
+            else:
+                socket.default_value = value
+        return node.outputs[0]
+
+    across = sum_of("DIVIDE", at.outputs["X"], sum_of("MULTIPLY", half.outputs["X"], 4.0))    # -¼ at the left edge … ¼ at the right
+    toward = sum_of("DIVIDE", at.outputs["Y"], sum_of("MULTIPLY", half.outputs["Y"], -4.0))   # -¼ at the far edge … ¼ at the near
+    blend = tree.nodes.new("ShaderNodeMix")
+    blend.data_type = "RGBA"
+    tree.links.new(sum_of("ADD", sum_of("ADD", across, toward), 0.5), blend.inputs["Factor"])
+    blend.inputs["A"].default_value = linear(SHINES["card_far"])
+    blend.inputs["B"].default_value = linear(SHINES["card_near"])
+    tree.links.new(blend.outputs["Result"], glow.inputs["Color"])
+
+
+def light_on_ground(span, file):
+    """Works out the light falling on a square of ground `span` metres across, round the middle, and saves it as a picture."""
+    bpy.ops.mesh.primitive_plane_add(size=span, location=(0.0, 0.0, 0.0005))   # a hair above the scene's own ground
+    sheet = bpy.context.active_object
+    matt = bpy.data.materials.new("Sheet")
+    matt.use_nodes = True
+    sheet.data.materials.append(matt)
+    image = bpy.data.images.new("Ground light", LIGHT["size"], LIGHT["size"], float_buffer=True)
+    node = matt.node_tree.nodes.new("ShaderNodeTexImage")
+    node.image = image
+    matt.node_tree.nodes.active = node
+    bpy.ops.object.select_all(action="DESELECT")
+    sheet.select_set(True)
+    bpy.context.view_layer.objects.active = sheet
+    bpy.ops.object.bake(type="DIFFUSE", pass_filter={"DIRECT", "INDIRECT"})
+    data = np.array(image.pixels[:], dtype=np.float32).reshape(LIGHT["size"], LIGHT["size"], 4)
+    light = data[:, :, :3]
+    border = np.concatenate([light[0], light[-1], light[:, 0], light[:, -1]]).mean(axis=0)   # the light out at the picture's edge
+    print(f"   ground light: edge {border.round(3).tolist()}, middle {light[LIGHT['size'] // 2, LIGHT['size'] // 2].round(3).tolist()}, most {float(light.max()):.2f}")
+    data[:, :, :3] = np.clip(light / LIGHT["stored"], 0.0, 1.0)
+    data[:, :, 3] = 1.0
+    image.pixels.foreach_set(data.ravel())
+    image.update()
+    image.save_render(str(file), scene=bpy.context.scene)
+    bpy.data.objects.remove(sheet)
+    bpy.data.images.remove(image)
+    bpy.data.materials.remove(matt)
+    return {"span": span, "stored": LIGHT["stored"], "edge": [round(float(v), 4) for v in border]}
 
 
 def build_network(scene):
@@ -628,6 +745,7 @@ def make(scene):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     for name in MATERIALS:
         bpy.data.materials.new(name)
+    studio()
     tree = build_network(scene)
     title = scene["title"]
     scene_object = bpy.data.objects.new(title, bpy.data.meshes.new(title))
@@ -657,12 +775,13 @@ def make(scene):
         # export_attributes carries the "_card", "_shape" and "_flow" numbers to the page.
         bpy.ops.export_scene.gltf(filepath=str(file), use_selection=True, export_apply=False, export_yup=True, export_materials="EXPORT", export_attributes=True)
         print(f"{scene['name']}/{variant['name']}: {len(baked.vertices)} points, {len(baked.polygons)} faces, {file.stat().st_size // 1024} KB, attributes {[a.name for a in baked.attributes if a.name.startswith('_')]}")
+        lit = light_on_ground(scene["span"], out / f"{variant['name']}.webp")
         listed.append({
             "name": variant["name"],
             "title": variant["title"],
-            "version": hashlib.md5(file.read_bytes()).hexdigest()[:8],
+            "version": hashlib.md5(file.read_bytes() + (out / f"{variant['name']}.webp").read_bytes()).hexdigest()[:8],
+            "ground": lit,
             "values": {name: value for name, value in values.items() if name not in PAGE_DRAWS},
-            "lights": scene["lights"](values),
         })
         bpy.data.objects.remove(shown)
         bpy.data.meshes.remove(baked)
