@@ -1,8 +1,7 @@
 import * as THREE from 'three'
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import './car.css'
 import { icon } from './icons'
-import { things, type Kind, type Thing } from './things'
+import { field, kinds, type Crossing, type Rising } from './field'
 import { feel, felt, say, voice, wake } from '../tactile/feel'
 
 /**
@@ -12,9 +11,10 @@ import { feel, felt, say, voice, wake } from '../tactile/feel'
  * - the stage, the upper part: a block of four scenes (Map, Media, Car, Phone) that rolls sideways like a drum, one scene per notch.
  *   Sliding up or down works the scene's own setting; a second-finger tap is the scene's one action.
  * - three rollers along the bottom, where a hand falls: the driver's climate by the driver, sound in the middle, the passenger's climate.
- * Each roller shows its two settings as the things they are about (see things.ts): a thermometer for temperature, a fan for its speed,
- * a loudspeaker for volume, record sleeves for the track, a seat for its heat. Tall things are worked up and down, things that spin
- * or flip are worked sideways, and each carries its usual icon. The one being changed grows.
+ * The bottom of the screen is one continuous surface with no panels (see field.ts). Each setting shows as what it does, reduced to light:
+ * temperature is a column of light that stands higher and warms, the fan is streams of air, volume is rings of sound, the track is a
+ * row of points, seat heat is glowing waved lines. What stands up is worked up and down, what runs across is worked sideways, and
+ * each carries its usual icon. The one being changed brightens and its number grows; the rest steps back.
  * The stage's scenes sit on a wide drum, with the next and the previous scene showing at its edges, so it is plain there is more that way.
  * In every zone: a finger put down changes nothing, up/down is one setting and sideways another, each step is a notch that is heard
  * and felt, the ends stop, and a second-finger tap (or a double tap) switches. The zone being changed grows; the rest dims.
@@ -33,15 +33,15 @@ const settings = {
    * The stage's drum: how much of the stage's width one scene takes (the rest shows its neighbours), and the angle between scenes.
    */
   drum: { face: 0.8, angle: 34 },
-  /** The objects on the rollers: the camera's lens angle, how bright they are lit, how much room is left round each (1 = none), and how much of its light one keeps while something else is being changed. */
-  things: { lens: 24, light: 1.1, room: 1.1, aside: 0.3 },
+  /** The band of light along the bottom: how lit a zone is when nothing is touched, when it is the one being changed, and when another is. */
+  band: { rest: 0.8, busy: 1.15, aside: 0.3, fan: 0.42 },
   /** Which side the driver sits: 'left' or 'right'. The driver's climate is on that side. */
   driver: 'left' as 'left' | 'right',
 }
 
 // ---- What can be set ---------------------------------------------------------------
 /** One setting: either a run of numbers (least … most by step) or a list of named values. `px` is the slide for one notch. */
-type Dial = { thing?: Kind; icon?: string; name: string; least: number; most: number; step: number; value: number; px: number; unit: string; names?: string[]; lowest: number; highest: number; heavy?: boolean; flipped?: boolean }
+type Dial = { thing?: Rising | Crossing; icon?: string; name: string; least: number; most: number; step: number; value: number; px: number; unit: string; names?: string[]; lowest: number; highest: number; heavy?: boolean; flipped?: boolean }
 type Turn = { name: string; on: boolean; words: [string, string]; icon?: string }
 type Axis = 'along' | 'across'
 const numbers = (name: string, least: number, most: number, step: number, value: number, px: number, unit: string, pitch: [number, number]): Dial => ({ name, least, most, step, value, px, unit, lowest: pitch[0], highest: pitch[1] })
@@ -61,17 +61,17 @@ const scene = { ...named('Scene', scenes.map((each) => each.name), 0, 150, [240,
 
 type Zone = { key: string; name: string; along: () => Dial; across: Dial; turn: () => Turn; made: HTMLElement }
 const climate = (key: string, name: string, second: Dial): Zone => {
-  const along: Dial = { ...numbers('Temperature', 16, 28, 0.5, key === 'driver' ? 21 : 22.5, 30, '°', [420, 840]), thing: 'thermometer', icon: 'temperature' }
+  const along: Dial = { ...numbers('Temperature', 16, 28, 0.5, key === 'driver' ? 21 : 22.5, 30, '°', [420, 840]), thing: 'column', icon: 'temperature' }
   const turn: Turn = { name: 'A/C', on: true, words: ['on', 'off'], icon: 'cold' }
   return { key, name, along: () => along, across: second, turn: () => turn, made: document.createElement('section') }
 }
-const volume: Dial = { ...numbers('Volume', 0, 30, 1, 12, 22, '', [380, 900]), thing: 'speaker', icon: 'volume' }
+const volume: Dial = { ...numbers('Volume', 0, 30, 1, 12, 22, '', [380, 900]), thing: 'rings', icon: 'volume' }
 const sound: Turn = { name: 'Sound', on: true, words: ['on', 'muted'], icon: 'volume' }
 const zones: Zone[] = [
   { key: 'stage', name: 'Stage', along: () => scenes[scene.value].along, across: scene, turn: () => scenes[scene.value].turn, made: document.createElement('section') },
-  climate('driver', 'Driver', { ...numbers('Fan', 0, 7, 1, 3, 46, '', [300, 520]), thing: 'fan', icon: 'fan' }),
-  { key: 'sound', name: 'Sound', along: () => volume, across: { ...named('Track', ['Low Sun', 'Glass Road', 'Night Shift', 'Open Water', 'Slow Signal'], 1, 70, [330, 560]), thing: 'records', icon: 'track' }, turn: () => sound, made: document.createElement('section') },
-  climate('passenger', 'Passenger', { ...numbers('Seat heat', 0, 3, 1, 1, 60, '', [300, 520]), thing: 'seat', icon: 'seat' }),
+  climate('driver', 'Driver', { ...numbers('Fan', 0, 7, 1, 3, 46, '', [300, 520]), thing: 'air', icon: 'fan' }),
+  { key: 'sound', name: 'Sound', along: () => volume, across: { ...named('Track', ['Low Sun', 'Glass Road', 'Night Shift', 'Open Water', 'Slow Signal'], 1, 70, [330, 560]), thing: 'points', icon: 'track' }, turn: () => sound, made: document.createElement('section') },
+  climate('passenger', 'Passenger', { ...numbers('Seat heat', 0, 3, 1, 1, 60, '', [300, 520]), thing: 'element', icon: 'seat' }),
 ]
 const [stage, ...rollers] = zones
 const dialOf = (zone: Zone, axis: Axis) => (axis === 'along' ? zone.along() : zone.across)
@@ -125,8 +125,8 @@ const row = document.createElement('div')
 row.className = 'row'
 for (const zone of rollers) {
   zone.made.className = `zone roller ${zone.key}`
-  // Each setting is a picture of its thing with its icon and value under it, and arrows on the sides it is worked from.
-  const half = (axis: Axis, dial: Dial) => `<div class="part ${axis}"><i class="way"></i><div class="seat"></div><i class="way"></i><p class="read">${icon(dial.icon!)}<b></b><span>${dial.name}</span></p></div>`
+  // Each setting's icon, value and name sit under its light, with a small sign of the way it is worked.
+  const half = (axis: Axis, dial: Dial) => `<div class="part ${axis}"><p class="read">${icon(dial.icon!)}<b></b><span>${dial.name}</span><i class="way"></i></p></div>`
   zone.made.innerHTML = `<header><span class="title">${zone.name}</span><span class="switch">${icon(zone.turn().icon!)}<em></em></span></header><div class="pair">${half('along', zone.along())}${half('across', zone.across)}</div>`
   row.append(zone.made)
 }
@@ -335,25 +335,13 @@ function draw(now: number) {
   requestAnimationFrame(draw)
 }
 
-// ---- The objects on the rollers: each drawn where its setting keeps a seat for it, lit softly from above --------------
-const renderer = new THREE.WebGLRenderer({ canvas: wheelsCanvas, antialias: true, alpha: true })
-renderer.toneMapping = THREE.ACESFilmicToneMapping
-renderer.toneMappingExposure = settings.things.light
-renderer.autoClear = false // the page clears once a frame, then draws each object in its own place
-const room = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture
-const lens = new THREE.PerspectiveCamera(settings.things.lens, 1, 0.1, 100)
-const shown: { zone: Zone; axis: Axis; thing: Thing; scene: THREE.Scene; lamp: THREE.DirectionalLight; seat: Element; veil: number }[] = []
-for (const zone of rollers)
-  for (const axis of ['along', 'across'] as const) {
-    const dial = dialOf(zone, axis)
-    const thing = things[dial.thing!](place({ ...dial, value: dial.most }) + 1)
-    const scene = new THREE.Scene()
-    scene.environment = room
-    const lamp = new THREE.DirectionalLight('#ffffff', 1.3) // a wide soft lamp above and a little in front
-    lamp.position.set(-1.5, 5, 4)
-    scene.add(thing.made, lamp)
-    shown.push({ zone, axis, thing, scene, lamp, seat: zone.made.querySelector(`.part.${axis} .seat`)!, veil: 1 })
-  }
+// ---- The band of light along the bottom (field.ts): told each frame where the zones are and what they are set to ------
+const renderer = new THREE.WebGLRenderer({ canvas: wheelsCanvas, antialias: false, alpha: true })
+const board = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), field)
+board.frustumCulled = false
+const picture = new THREE.Scene().add(board)
+const flat = new THREE.Camera()
+const lit = new Map(rollers.map((zone) => [zone, { on: 1, light: settings.band.rest, up: 0, over: 0, flow: 0 }]))
 function paint(passed: number, clock: number) {
   const ratio = Math.min(devicePixelRatio, 2)
   const wide = car.clientWidth
@@ -362,29 +350,35 @@ function paint(passed: number, clock: number) {
     renderer.setPixelRatio(ratio)
     renderer.setSize(wide, tall, false)
   }
-  renderer.setScissorTest(false)
-  renderer.clear()
-  renderer.setScissorTest(true)
-  const half = Math.tan((settings.things.lens * Math.PI) / 360)
-  for (const each of shown) {
-    each.thing.set(drawn.get(each.zone)!.place[each.axis], each.zone.turn().on, passed, clock)
-    const seat = each.seat.getBoundingClientRect()
-    if (seat.width < 4 || seat.height < 4) continue
-    renderer.setViewport(seat.left, tall - seat.bottom, seat.width, seat.height)
-    renderer.setScissor(seat.left, tall - seat.bottom, seat.width, seat.height)
-    lens.aspect = seat.width / seat.height
-    const back = Math.max(each.thing.size[1] / 2 / half, each.thing.size[0] / 2 / (half * lens.aspect)) * settings.things.room
-    lens.position.set(0, back * 0.1, back)
-    lens.lookAt(0, 0, 0)
-    lens.updateProjectionMatrix()
-    // Step back with the rest while something else is being changed: another zone, or this zone's other setting.
-    const busy = fingers.find((finger) => finger.axis)
-    const aside = Boolean(busy) && !(busy!.zone === each.zone && busy!.axis === each.axis)
-    each.veil += ((aside ? settings.things.aside : 1) - each.veil) * 0.16
-    each.scene.environmentIntensity = each.veil
-    each.lamp.intensity = 1.3 * each.veil
-    renderer.clearDepth()
-    renderer.render(each.scene, lens)
+  const u = field.uniforms
+  const band = row.getBoundingClientRect()
+  u.uSize.value.set(wide, tall)
+  u.uRatio.value = ratio
+  u.uTime.value = clock
+  u.uBand.value.set(band.top, band.bottom)
+  const busy = fingers.find((finger) => finger.axis)
+  const ease = (from: number, to: number, speed: number) => from + (to - from) * (1 - Math.exp(-passed * speed))
+  rollers.forEach((zone, index) => {
+    const state = lit.get(zone)!
+    const where = zone.made.getBoundingClientRect()
+    const at = drawn.get(zone)!.place
+    const mine = busy?.zone === zone
+    state.on = ease(state.on, zone.turn().on ? 1 : 0, 7)
+    state.light = ease(state.light, !busy ? settings.band.rest : mine ? settings.band.busy : settings.band.aside, 8)
+    state.up = ease(state.up, mine && busy!.axis === 'along' ? 1 : 0, 9)
+    state.over = ease(state.over, mine && busy!.axis === 'across' ? 1 : 0, 9)
+    state.flow += passed * settings.band.fan * at.across * state.on // air moves faster with every notch of the fan
+    const rising = zone.along()
+    u.uZone.value[index].set(where.left, where.right, state.on, state.light)
+    u.uUp.value[index].set(THREE.MathUtils.clamp(at.along / Math.max(place({ ...rising, value: rising.most }), 1), 0, 1), kinds[rising.thing!], state.up, 0)
+    u.uOver.value[index].set(at.across, kinds[zone.across.thing!], state.over, state.flow)
+  })
+  for (const slot of [0, 1]) {
+    const finger = fingers.filter((each) => rollers.includes(each.zone))[slot]
+    const shown = u.uFinger.value[slot]
+    shown.z = ease(shown.z, finger ? 1 : 0, finger ? 20 : 8)
+    if (finger) shown.set(finger.now.x, finger.now.y, shown.z, 0)
   }
+  renderer.render(picture, flat)
 }
 requestAnimationFrame(draw)
