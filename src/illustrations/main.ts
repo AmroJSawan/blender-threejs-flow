@@ -41,9 +41,9 @@ const settings = {
    * A card's surface: its colour at the far left, in the middle and at the near right, and how dark its sides are.
    * `edge` is the bright line round the top face (how strong, how wide in metres); `band` is the soft diagonal streak of light across it.
    */
-  card: { far: '#4ff08c', middle: '#16a558', near: '#1b9fbd', sides: 0.42, sheen: 0.13, edge: 0.32, edgeWidth: 0.022, band: 0.045 },
+  card: { far: '#3bcf7b', middle: '#159a54', near: '#1b8fa9', sides: 0.42, sheen: 0.06, edge: 0.2, edgeWidth: 0.022, band: 0.03 },
   /** The light a card spills on the ground: its two colours, how strong, and how far it spreads (metres). */
-  spill: { left: '#1fd16a', right: '#1a9fb5', strength: 0.24, spread: 1.2 },
+  spill: { left: '#1fd16a', right: '#1a9fb5', strength: 0.11, spread: 1.3 },
   /** The same under the hub. */
   hubSpill: { left: '#bfe9cf', right: '#8fd6c0', strength: 0.05, spread: 1.9 },
   /** A chip's top and sides. */
