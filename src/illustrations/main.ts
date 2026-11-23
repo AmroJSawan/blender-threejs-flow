@@ -59,6 +59,14 @@ const settings = {
    * and `loose` how much each line strays from that order (0 = a perfect sweep across the bundle … 1 = no order at all).
    */
   wire: { glass: '#9fb3a8', rest: 0.13, rim: 1.4, light: '#63f5a2', lead: '#8fe9ff', bright: 1.25, seconds: 2.6, apart: 0.62, length: 0.2, haze: 0.28, step: 0.11, loose: 0.16 },
+  /**
+   * The other way of drawing the lines (a variant asks for it): each bundle gathered into one silk strand, which fans out at both ends.
+   * `colour` is the silk. The middle line is the sharp `core`; the others are soft `veil`s, `wide` times thicker, that drift round it.
+   * `tight` is how much of the bundle's width the gathered strand keeps (0–1), and `fan` how much of the line's length each fan takes.
+   * `turns` is how many times the veils wind round the core on the way, `drift` how fast they slide (turns a second),
+   * `ends` how bright the fans are, and `seconds` how long the soft light running along the strand takes to cross it.
+   */
+  silk: { colour: '#eafff3', core: 0.95, veil: 0.09, wide: 2.4, tight: 0.5, fan: 0.07, turns: 1.3, drift: 0.07, ends: 0.32, seconds: 2.2 },
   /** Plain parts: colour, and how solid (1 = opaque). `bright` above 1 makes a part glow; `flat` marks parts with no thickness. */
   parts: {
     Outline: { colour: '#2c3b33' },
@@ -349,6 +357,69 @@ materials.set(
   }),
 )
 
+/**
+ * Silk: the same lines, gathered. Each point also knows how far it stands from the middle of its bundle (_off, in Blender's
+ * own directions: x, y, up), so here it is drawn in toward the middle everywhere but at the two ends, where the bundle fans out
+ * as modelled. On the way the outer lines wind slowly round the middle one, lifting off the ground as they cross it.
+ * Light adds up where strands overlap, which is what makes the fans and the crossings bright.
+ */
+const silkMaterial = new THREE.ShaderMaterial({
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+  uniforms: {
+    uColour: { value: new THREE.Color(settings.silk.colour) },
+    uLook: { value: new THREE.Vector4(settings.silk.core, settings.silk.veil, settings.silk.wide, settings.silk.ends) },
+    uGather: { value: new THREE.Vector4(settings.silk.tight, settings.silk.fan, settings.silk.turns, settings.silk.drift) },
+    uLines: { value: new THREE.Vector2(9, 0.011) }, // lines in a bundle, radius of one
+    uPace: { value: 1 / settings.silk.seconds },
+    uTime: clock,
+  },
+  vertexShader: /* glsl */ `
+    attribute vec3 _flow, _off;
+    varying vec3 vNormal;
+    varying vec3 vToEye;
+    varying vec3 vStrand;   // how far along, how much of a fan, how much the core
+    uniform vec4 uGather, uLook;
+    uniform vec2 uLines;
+    uniform float uTime;
+    void main() {
+      float along = _flow.x;
+      float fanned = min(exp(-along / uGather.y) + exp(-(1.0 - along) / uGather.y), 1.0);   // 1 at either end, 0 on the way
+      float core = 1.0 - step(0.5, abs(_flow.y - (uLines.x - 1.0) * 0.5));
+      vec3 out3 = vec3(_off.x, _off.z, -_off.y);                                            // Blender's directions, turned to the page's
+      float far = length(out3);
+      float own = fract(sin(_flow.y * 12.9898) * 43758.5453);
+      float turn = 6.2831853 * (along * uGather.z * (0.7 + 0.6 * own) + own + uTime * uGather.w);
+      float open = uGather.x * (1.0 - fanned) * sin(along * 3.1415927);                     // the veils leave the core and return to it
+      vec3 gathered = out3 * (fanned + open * sin(turn)) + vec3(0.0, far * open * (0.5 + 0.5 * cos(turn)), 0.0);
+      float thicker = mix(uLook.z, 1.0, max(core, fanned));
+      vec3 placed = position - out3 + gathered + normal * uLines.y * (thicker - 1.0);
+      vec4 seen = modelViewMatrix * vec4(placed, 1.0);
+      vNormal = normalMatrix * normal;
+      vToEye = -seen.xyz;
+      vStrand = vec3(along, fanned, core);
+      gl_Position = projectionMatrix * seen;
+    }`,
+  fragmentShader: /* glsl */ `
+    varying vec3 vNormal;
+    varying vec3 vToEye;
+    varying vec3 vStrand;
+    uniform vec3 uColour;
+    uniform vec4 uLook;
+    uniform float uTime, uPace;
+    void main() {
+      float facing = clamp(dot(normalize(vNormal), normalize(vToEye)), 0.0, 1.0);
+      float soft = facing * facing;                                                      // a veil thins to nothing at its outline
+      float running = 0.5 + 0.5 * cos(6.2831853 * (vStrand.x * 1.5 + uTime * uPace));    // a soft light running in toward the hub
+      float veil = uLook.y * soft * (0.55 + 0.45 * running);
+      float core = uLook.x * mix(0.6, 1.0, facing) * (0.7 + 0.3 * running);
+      float fan = uLook.w * mix(0.5, 1.0, facing) * vStrand.y * vStrand.y;
+      gl_FragColor = vec4(uColour * (mix(veil, core, vStrand.z) + fan), 1.0);
+      #include <colorspace_fragment>
+    }`,
+})
+
 /** A soft shaft of light standing over the middle of the scene, always turned to face the camera. */
 const beam = new THREE.Mesh(
   new THREE.PlaneGeometry(1, 1).translate(0, 0.5, 0),
@@ -399,7 +470,7 @@ function load(illustration: Illustration, variant: Variant): Promise<Shown> {
       made.scene.traverse((child) => {
         if (!(child instanceof THREE.Mesh)) return
         const part = (child.material as THREE.Material).name
-        child.material = materials.get(part) ?? materials.get('Ink')!
+        child.material = part === 'Wire' && variant.wire === 'silk' ? silkMaterial : (materials.get(part) ?? materials.get('Ink')!)
         if (part !== 'Ground') return
         child.renderOrder = -1
         child.scale.setScalar(settings.ground.reach) // the sheet carries on, dots and all, until its light has faded out
@@ -446,6 +517,7 @@ function fit() {
     partsLight.value = current.parts
   }
   plateMaterial.uniforms.uRadius.value = Number(set['Hub Radius'] ?? 1)
+  silkMaterial.uniforms.uLines.value.set(Number(set['Lines'] ?? 1), Number(set['Wire'] ?? 0.011))
   beam.visible = staging.beam.strength > 0
   beam.scale.set(staging.beam.wide * 3, staging.beam.tall, 1)
   beam.material.uniforms.uStrength.value = staging.beam.strength

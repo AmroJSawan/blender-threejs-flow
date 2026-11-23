@@ -529,7 +529,11 @@ def build_gateway(net, P):
         held = m("MINIMUM", m("DIVIDE", along, SEATED), 1.0)
         held = m("MULTIPLY", m("MULTIPLY", held, held), m("SUBTRACT", 3.0, m("MULTIPLY", held, 2.0)))
         pull = m("ADD", m("MULTIPLY", m("SUBTRACT", 1.0, held), m("DIVIDE", from_hub, m("MAXIMUM", reach, 0.001))), held)
-        lines = net.add("GeometryNodeSetPosition", {"Geometry": lines, "Position": net.vector(m("MULTIPLY", x, pull), m("MULTIPLY", y, pull), 0.0)}).outputs[0]
+        seated = net.vector(m("MULTIPLY", x, pull), m("MULTIPLY", y, pull), 0.0)
+        # For the page: how far each point ends up from the middle of its bundle ("_off"), so the page can gather the lines into one strand.
+        middle = net.add("ShaderNodeVectorMath", {0: net.vector(x, y, 0.0), 1: offset}, operation="SUBTRACT").outputs[0]
+        lines = net.stored(lines, "_off", net.add("ShaderNodeVectorMath", {0: seated, 1: middle}, operation="SUBTRACT").outputs[0])
+        lines = net.add("GeometryNodeSetPosition", {"Geometry": lines, "Position": seated}).outputs[0]
         lines = net.stored(lines, "_flow", net.vector(along, which, 0.0))   # for the page: how far along its line a point is, and which line
 
         wires = net.material(net.tube(lines, P["Wire"], sides=8), "Wire")
@@ -600,6 +604,8 @@ SCENES = [
         "variants": [
             {"name": "flow", "title": "Flow", "set": {}},
             {"name": "calm", "title": "Calm", "set": {"Lines": 5, "Gap": 0.11, "Weave": 0.0, "Loosen": 1.0, "Arc": 0.12, "Dashes": 14, "Title": "Three sources,", "Title Two": "one answer"}},
+            # "wire" picks how the page draws the lines: as glass tubes (the default), or gathered into one silk strand that fans out at each end.
+            {"name": "silk", "title": "Silk", "wire": "silk", "set": {"Lines": 7, "Gap": 0.1, "Weave": 0.0, "Loosen": 1.0, "Arc": 0.14, "Title": "Many threads,", "Title Two": "one strand"}},
             {"name": "dense", "title": "Dense", "set": {"Lines": 15, "Gap": 0.06, "Weave": 0.32, "Loosen": 2.2, "Arc": 0.34, "Hub Radius": 1.8, "Span": 1.06, "Title": "All traffic,", "Title Two": "one protocol"}},
         ],
     },
@@ -860,7 +866,7 @@ def make(scene):
         bpy.context.view_layer.objects.active = shown
         unwrapped(shown)
         file = out / f"{variant['name']}.glb"
-        # export_attributes carries the "_card", "_shape" and "_flow" numbers to the page.
+        # export_attributes carries the "_card", "_shape", "_flow" and "_off" numbers to the page.
         bpy.ops.export_scene.gltf(filepath=str(file), use_selection=True, export_apply=False, export_yup=True, export_materials="EXPORT", export_attributes=True)
         print(f"{scene['name']}/{variant['name']}: {len(baked.vertices)} points, {len(baked.polygons)} faces, {file.stat().st_size // 1024} KB, attributes {[a.name for a in baked.attributes if a.name.startswith('_')]}")
         parts = light_on_parts(shown, out / f"{variant['name']}-parts.webp")
@@ -869,6 +875,7 @@ def make(scene):
         listed.append({
             "name": variant["name"],
             "title": variant["title"],
+            "wire": variant.get("wire", "tubes"),
             "version": hashlib.md5(file.read_bytes() + (out / f"{variant['name']}.webp").read_bytes() + (out / f"{variant['name']}-parts.webp").read_bytes()).hexdigest()[:8],
             "ground": lit,
             "parts": parts,

@@ -105,6 +105,7 @@
       {
         "name": "wide",
         "title": "Wide",
+        "wire": "tubes",
         "version": "61bb4382",
         "ground": {
           "span": 18.0,
@@ -149,6 +150,7 @@
       {
         "name": "tall",
         "title": "Tall",
+        "wire": "tubes",
         "version": "5ffc356a",
         "ground": {
           "span": 18.0,
@@ -193,6 +195,7 @@
       {
         "name": "quiet",
         "title": "Quiet",
+        "wire": "tubes",
         "version": "78c36e8b",
         "ground": {
           "span": 18.0,
@@ -370,7 +373,8 @@
       {
         "name": "flow",
         "title": "Flow",
-        "version": "e6308d38",
+        "wire": "tubes",
+        "version": "c642c725",
         "ground": {
           "span": 28.0,
           "stored": 3.0,
@@ -421,7 +425,8 @@
       {
         "name": "calm",
         "title": "Calm",
-        "version": "11ae11e5",
+        "wire": "tubes",
+        "version": "0ffa9d5d",
         "ground": {
           "span": 28.0,
           "stored": 3.0,
@@ -470,9 +475,62 @@
         }
       },
       {
+        "name": "silk",
+        "title": "Silk",
+        "wire": "silk",
+        "version": "25152e2e",
+        "ground": {
+          "span": 28.0,
+          "stored": 3.0,
+          "edge": [
+            0.078,
+            0.078,
+            0.078
+          ]
+        },
+        "parts": {
+          "stored": 3.0,
+          "open": 1.0909
+        },
+        "values": {
+          "Hub Radius": 1.6,
+          "Ring": 0.026,
+          "Arc": 0.14,
+          "Dashes": 22,
+          "Lines": 7,
+          "Gap": 0.1,
+          "Loosen": 1.0,
+          "Weave": 0.0,
+          "Wire": 0.011,
+          "Span": 1.0,
+          "Dot Pitch": 0.34,
+          "Dot Size": 0.014,
+          "Ground": 70.0,
+          "Resolution": 64,
+          "Title": "Many threads,",
+          "Title Two": "one strand",
+          "Tag": "Live",
+          "One Title": "Inbound",
+          "One Line": "Mail, forms, chat",
+          "One Figure": "1,284",
+          "One Caption": "signals today",
+          "Two Title": "Routed",
+          "Two Line": "To the right team",
+          "Two Figure": "98%",
+          "Two Caption": "match confidence",
+          "Three Title": "Scored",
+          "Three Line": "By one model",
+          "Three Figure": "2.4 s",
+          "Three Caption": "median time",
+          "Tile Label": "Archive",
+          "Node Label": "Gateway"
+        }
+      },
+      {
         "name": "dense",
         "title": "Dense",
-        "version": "0930fb60",
+        "wire": "tubes",
+        "version": "2ded85bf",
         "ground": {
           "span": 28.0,
           "stored": 3.0,
