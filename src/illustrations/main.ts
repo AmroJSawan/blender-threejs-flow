@@ -55,8 +55,10 @@ const settings = {
    * `light` is the moving light and `lead` the colour it shifts toward at its front; `bright` above 1 makes it glow.
    * `seconds` is how long a light takes to run a line, `apart` how many line-lengths separate one light from the next,
    * `length` how much of that gap the light's bright core fills (0–1), and `haze` how strong the wide soft light round the core is.
+   * Lights in neighbouring lines follow one another: `step` is how far each next line's lights trail the last one's (in gaps),
+   * and `loose` how much each line strays from that order (0 = a perfect sweep across the bundle … 1 = no order at all).
    */
-  wire: { glass: '#9fb3a8', rest: 0.13, rim: 1.4, light: '#63f5a2', lead: '#8fe9ff', bright: 1.25, seconds: 7, apart: 1.5, length: 0.16, haze: 0.34 },
+  wire: { glass: '#9fb3a8', rest: 0.13, rim: 1.4, light: '#63f5a2', lead: '#8fe9ff', bright: 1.25, seconds: 2.6, apart: 0.62, length: 0.2, haze: 0.28, step: 0.11, loose: 0.16 },
   /** Plain parts: colour, and how solid (1 = opaque). `bright` above 1 makes a part glow; `flat` marks parts with no thickness. */
   parts: {
     Outline: { colour: '#2c3b33' },
@@ -290,7 +292,7 @@ const plateMaterial = new THREE.ShaderMaterial({
 materials.set('Plate', plateMaterial)
 /**
  * The thin lines: glass tubes with light moving inside. Each point says how far along its line it is (_flow.x, 0 at the hub … 1 at
- * the far end) and which line of its bundle it is on (_flow.y), so each line's light is out of step with its neighbours'.
+ * the far end) and which line of its bundle it is on (_flow.y), so each line's light is just behind its neighbour's and the bundle moves as one current.
  * The light has no hard front or back: a bright core inside a much wider, fainter haze, both fading smoothly to nothing.
  * Seen through the middle of the tube the light is at its strongest; toward the tube's outline it thins, while the glass itself brightens.
  */
@@ -303,6 +305,7 @@ materials.set(
       uLight: { value: new THREE.Color(settings.wire.light).multiplyScalar(settings.wire.bright) },
       uLead: { value: new THREE.Color(settings.wire.lead).multiplyScalar(settings.wire.bright) },
       uRun: { value: new THREE.Vector4(1 / settings.wire.apart, 1 / settings.wire.seconds, settings.wire.length, settings.wire.haze) },
+      uOrder: { value: new THREE.Vector2(settings.wire.step, settings.wire.loose) },
       uTime: clock,
     },
     vertexShader: /* glsl */ `
@@ -323,11 +326,13 @@ materials.set(
       varying vec3 vToEye;
       uniform vec3 uGlass, uLight, uLead;
       uniform vec4 uRun;
+      uniform vec2 uOrder;
       uniform float uRim, uTime;
       void main() {
         float facing = clamp(dot(normalize(vNormal), normalize(vToEye)), 0.0, 1.0);   // 1 through the tube's middle … 0 at its outline
         float edge = 1.0 - facing;
-        float own = fract(sin(vFlow.y * 12.9898) * 43758.5453);                        // this line's place in the rhythm
+        // This line's place in the rhythm: a little behind its neighbour, so the lights cross the bundle as one current, and a little astray.
+        float own = vFlow.y * uOrder.x + fract(sin(vFlow.y * 12.9898) * 43758.5453) * uOrder.y;
         // Where this point is within the gap between one light and the next: 0 at a light's centre, ±0.5 half way to its neighbours.
         float from = fract(vFlow.x * uRun.x + uTime * uRun.y * uRun.x + own) - 0.5;
         float core = exp(-pow(from / (uRun.z * 0.5), 2.0));

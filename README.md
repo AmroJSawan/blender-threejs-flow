@@ -317,7 +317,7 @@ npm run illustration
 - `chip`: a chip's colour in full light.
 - `ground`: the ground's and dots' colours in full light, and `light`, which scales the light Blender worked out.
 - `plate`: the hub's plate and its faint grid, in full light.
-- `wire`: the thin lines, drawn as glass tubes, and the light that moves inside them: the glass and its brighter outline, the light's two colours, how fast it runs, how far apart the lights are, how long the bright core is and how strong the soft haze round it.
+- `wire`: the thin lines, drawn as glass tubes, and the light that moves inside them: the glass and its brighter outline, the light's two colours, how fast it runs, how far apart the lights are, how long the bright core is, how strong the soft haze round it, and how closely each line's lights follow its neighbour's (`step`, `loose`), which is what makes a bundle read as one current.
 - `parts`: the plain parts. A `bright` above 1 makes a part glow (the line); `opacity` makes it see-through (the panel, the tile, the dim text).
 - `look`: how far the camera leans toward the pointer.
 - `bloom`: the small glow round the brightest parts. `samples`: how finely edges are smoothed.
