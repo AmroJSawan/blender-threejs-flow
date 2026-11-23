@@ -34,24 +34,37 @@ const settings = {
    */
   drum: { face: 0.8, angle: 34 },
   /**
-   * The modelled thumbwheels. `fits` is how much of the model's plate is kept in view; `nudge` how far the barrel shifts along its axle
+   * The modelled thumbwheels. `nudge` how far the barrel shifts along its axle
    * while a sideways notch is building (it springs back as the notch lands); `sinks` how far it gives under a finger.
    * The colours are the parts' own; `rough` and `metal` (0–1) say how each takes the light.
    */
   wheels: {
-    file: 'car/wheel.glb',
+    /**
+     * The controls a roller can mimic (chosen with the button, or car.html?control=ball). Each has its model, how much of it is
+     * kept in view (width, height, in the model's own units), the parts that move, and the angle (degrees) they turn per notch.
+     * A wheel only rolls up and down and is nudged sideways; a ball rolls every way. `plain` draws the plate round it in the
+     * roller's own flat colour, so only the control stands out.
+     */
+    kinds: {
+      wheel: { name: 'Thumbwheel', file: 'car/wheel.glb', view: [5.7, 3.1], moving: ['Barrel', 'Caps'], notch: 10, rolls: false, plain: false },
+      ball: { name: 'Trackball', file: 'car/ball.glb', view: [4.4, 3.7], moving: ['Ball', 'Dots'], notch: 15, rolls: true, plain: true },
+    },
+    start: (new URLSearchParams(location.search).get('control') === 'ball' ? 'ball' : 'wheel') as 'wheel' | 'ball',
     lens: 24,
-    fits: [0.86, 0.8], // how much of the plate's width and height is kept in view
     nudge: 0.62,
     sinks: 0.05,
     parts: {
       Barrel: { colour: '#3a4047', rough: 0.36, metal: 0.9 },
       Caps: { colour: '#cfd6dc', rough: 0.3, metal: 1 },
       Axle: { colour: '#8d949b', rough: 0.3, metal: 1 },
-      Housing: { colour: '#15181b', rough: 0.9, metal: 0 },
+      Housing: { colour: '#08090a', rough: 1, metal: 0 },
       Marks: { colour: '#6f777f', rough: 0.6, metal: 0 },
+      Ball: { colour: '#1d2126', rough: 0.2, metal: 0.25 },
+      Dots: { colour: '#b9c1c8', rough: 0.35, metal: 1 },
+      Ring: { colour: '#8d949b', rough: 0.3, metal: 1 },
     } as Record<string, { colour: string; rough: number; metal: number }>,
     light: 1.15,
+    plate: '#0b0d0f', // the roller's own colour (as in car.css)
   },
   /** Which side the driver sits: 'left' or 'right'. The driver's climate is on that side. */
   driver: 'left' as 'left' | 'right',
@@ -365,17 +378,23 @@ function draw(now: number) {
       })
       continue
     }
-    // Its thumbwheel: the barrel turns one ridge per notch, shifts along its axle while a sideways notch builds, and gives under a finger.
-    const wheel = wheels.get(zone)
+    // Its control. A thumbwheel's barrel turns one ridge per notch, shifts along its axle while a sideways notch builds, and gives
+    // under a finger. A trackball simply rolls the way the finger goes, a fixed angle per notch either way.
+    const wheel = wheels.get(zone)?.[kind]
     if (wheel) {
       const sideways = finger?.axis === 'across' ? slipped : 0
-      wheel.shift = toward(wheel.shift, sideways * settings.wheels.nudge * (zone.across.flipped ? -1 : 1), 22)
+      const rolled = { along: state.turned.along / zone.along().px, across: state.turned.across / zone.across.px }
+      wheel.shift = toward(wheel.shift, wheel.rolls ? 0 : sideways * settings.wheels.nudge * (zone.across.flipped ? -1 : 1), 22)
       wheel.sink = toward(wheel.sink, held ? settings.wheels.sinks : 0, 18)
-      for (const part of wheel.turning) {
-        part.rotation.x = (-state.turned.along / zone.along().px) * ridge
+      for (const part of wheel.moving) {
+        if (wheel.rolls) {
+          part.rotateOnWorldAxis(X, -(rolled.along - wheel.rolled.along) * wheel.notch)
+          part.rotateOnWorldAxis(Y, (rolled.across - wheel.rolled.across) * wheel.notch)
+        } else part.rotation.x = -rolled.along * wheel.notch
         part.position.x = wheel.shift
         part.position.z = wheel.home - wheel.sink
       }
+      wheel.rolled = rolled
     }
     const counter = made.querySelector<HTMLElement>('.counter')!
     for (const axis of ['along', 'across'] as const) {
@@ -400,31 +419,54 @@ function draw(now: number) {
 // ---- The thumbwheels: one model, shown once in each roller, lit softly from above -----------------------------------
 const renderer = new THREE.WebGLRenderer({ canvas: wheelsCanvas, antialias: true, alpha: true })
 renderer.toneMapping = THREE.ACESFilmicToneMapping
+renderer.autoClear = false // the page clears once a frame, then draws each roller's control and its veil in turn
 renderer.toneMappingExposure = settings.wheels.light
 const room = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture
 const lens = new THREE.PerspectiveCamera(settings.wheels.lens, 1, 0.1, 100)
-type Wheel = { scene: THREE.Scene; turning: THREE.Object3D[]; size: THREE.Vector3; shift: number; sink: number; home: number }
-const wheels = new Map<Zone, Wheel>()
-let ridge = (Math.PI * 2) / 36 // the angle of one notch; the model says how many ridges it has
-new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}${settings.wheels.file}`).then((file) => {
-  file.scene.traverse((child) => {
-    if (!(child instanceof THREE.Mesh)) return
-    const look = settings.wheels.parts[child.name] ?? settings.wheels.parts.Housing
-    child.material = new THREE.MeshStandardMaterial({ color: look.colour, roughness: look.rough, metalness: look.metal, flatShading: child.name === 'Barrel', side: THREE.DoubleSide })
+type Kind = keyof typeof settings.wheels.kinds
+type Wheel = { scene: THREE.Scene; moving: THREE.Object3D[]; view: number[]; notch: number; rolls: boolean; rolled: { along: number; across: number }; shift: number; sink: number; home: number }
+const wheels = new Map<Zone, Partial<Record<Kind, Wheel>>>(rollers.map((zone) => [zone, {}]))
+const X = new THREE.Vector3(1, 0, 0)
+const Y = new THREE.Vector3(0, 1, 0)
+let kind: Kind = settings.wheels.start
+for (const [name, about] of Object.entries(settings.wheels.kinds) as [Kind, (typeof settings.wheels.kinds)[Kind]][]) {
+  new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}${about.file}`).then((file) => {
+    file.scene.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return
+      const look = settings.wheels.parts[child.name] ?? settings.wheels.parts.Housing
+      child.material =
+        about.plain && child.name === 'Housing'
+          ? new THREE.MeshBasicMaterial({ color: settings.wheels.plate, side: THREE.DoubleSide, toneMapped: false })
+          : new THREE.MeshStandardMaterial({ color: look.colour, roughness: look.rough, metalness: look.metal, flatShading: child.name === 'Barrel', side: THREE.DoubleSide })
+    })
+    for (const zone of rollers) {
+      const scene = new THREE.Scene()
+      const model = file.scene.clone(true)
+      scene.environment = room
+      scene.add(model)
+      const lamp = new THREE.DirectionalLight('#ffffff', 1.4) // a wide soft lamp above and a little in front
+      lamp.position.set(-1.5, 5, 4)
+      scene.add(lamp)
+      const moving = about.moving.map((part) => model.getObjectByName(part)!).filter(Boolean)
+      const state = drawn.get(zone)!
+      const rolled = { along: state.turned.along / zone.along().px, across: state.turned.across / zone.across.px }
+      wheels.get(zone)![name] = { scene, moving, view: about.view, notch: (about.notch * Math.PI) / 180, rolls: about.rolls, rolled, shift: 0, sink: 0, home: moving[0]?.position.z ?? 0 }
+    }
   })
-  const size = new THREE.Box3().setFromObject(file.scene).getSize(new THREE.Vector3())
-  for (const zone of rollers) {
-    const scene = new THREE.Scene()
-    const model = file.scene.clone(true)
-    scene.environment = room
-    scene.add(model)
-    const lamp = new THREE.DirectionalLight('#ffffff', 1.4) // a wide soft lamp above and a little in front
-    lamp.position.set(-1.5, 5, 4)
-    scene.add(lamp)
-    const turning = ['Barrel', 'Caps'].map((name) => model.getObjectByName(name)!).filter(Boolean)
-    wheels.set(zone, { scene, turning, size, shift: 0, sink: 0, home: turning[0]?.position.z ?? 0 })
-  }
+}
+// A button to change what the rollers mimic, for comparing the two.
+const swap = document.createElement('button')
+swap.type = 'button'
+swap.textContent = settings.wheels.kinds[kind].name
+swap.addEventListener('click', () => {
+  kind = kind === 'wheel' ? 'ball' : 'wheel'
+  swap.textContent = settings.wheels.kinds[kind].name
 })
+document.querySelector('#modes')!.prepend(swap)
+const veil = new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0, depthTest: false })
+const shade = new THREE.Scene().add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), veil))
+const flat = new THREE.Camera()
+const shades = new Map<Zone, number>()
 function paint() {
   const ratio = Math.min(devicePixelRatio, 2)
   const wide = car.clientWidth
@@ -436,7 +478,9 @@ function paint() {
   renderer.setScissorTest(false)
   renderer.clear()
   renderer.setScissorTest(true)
-  for (const [zone, wheel] of wheels) {
+  for (const [zone, both] of wheels) {
+    const wheel = both[kind]
+    if (!wheel) continue
     // Each wheel is drawn where its roller keeps a seat for it, wherever the roller is and however it has grown.
     const seat = zone.made.querySelector('.seat')!.getBoundingClientRect()
     if (seat.width < 4 || seat.height < 4) continue
@@ -444,12 +488,17 @@ function paint() {
     renderer.setScissor(seat.left, tall - seat.bottom, seat.width, seat.height)
     lens.aspect = seat.width / seat.height
     const half = Math.tan((settings.wheels.lens * Math.PI) / 360)
-    // Fitted to the opening the barrel sits in, not to the whole plate: the plate runs on past the seat's edges.
-    const back = Math.max((wheel.size.y * settings.wheels.fits[1]) / 2 / half, (wheel.size.x * settings.wheels.fits[0]) / 2 / (half * lens.aspect))
+    // Fitted to the control and its opening, not to the whole plate: the plate runs on past the seat's edges.
+    const back = Math.max(wheel.view[1] / 2 / half, wheel.view[0] / 2 / (half * lens.aspect))
     lens.position.set(0, back * 0.2, back * 0.98) // seen from a little above, as from the seat
     lens.lookAt(0, 0, 0)
     lens.updateProjectionMatrix()
     renderer.render(wheel.scene, lens)
+    // Step back with the rest of its roller while another zone is being changed.
+    const dimmed = car.classList.contains('busy') && !zone.made.classList.contains('busy')
+    shades.set(zone, (shades.get(zone) ?? 0) + ((dimmed ? 0.5 : 0) - (shades.get(zone) ?? 0)) * 0.16)
+    veil.opacity = shades.get(zone)!
+    if (veil.opacity > 0.01) renderer.render(shade, flat)
   }
 }
 requestAnimationFrame(draw)

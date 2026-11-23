@@ -7,7 +7,8 @@ dashboards, so its shape says how it moves before it is touched.
   cut into the plate at each side: "I also nudge left and right".
 
 Run:  npm run wheel      (Blender, no window)
-Writes public/car/wheel.glb. The page lights it itself, so nothing is baked here.
+Writes public/car/wheel.glb, and public/car/ball.glb: the same idea as a trackball, a dotted ball in a round socket with an
+arrow on each of its four sides. The page lights them itself, so nothing is baked here.
 
 Seen from the front: x is across, z is up, and −y is toward the viewer (the page sees that as x, y and toward-the-camera z).
 The parts are separate objects named Barrel, Caps, Axle, Housing and Marks, each with a material of the same name;
@@ -139,14 +140,82 @@ def marks():
     return made("Marks", bm)
 
 
-def main():
+BALL = {
+    "radius": 1.0,
+    "sunk": 0.3,          # how far behind the plate's face the ball's middle is
+    "dots": 3,            # how finely the dots are spread (an icosphere's subdivisions): 2 gives 42 dots, 3 gives 162
+    "dot": 0.05,          # radius of one dot
+    "gap": 0.1,           # space between the ball and the rim of its socket
+    "plate": 5.0,         # radius of the plate round the socket: wider than the page ever shows
+    "arrows": 1.5,        # how far from the middle the four arrows stand
+}
+
+
+def ball():
+    """A polished ball. Its dots are what shows it turning, whichever way it rolls."""
+    b = BALL
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=64, v_segments=32, radius=b["radius"])
+    return made("Ball", bm, smooth=True, at=(0.0, b["sunk"], 0.0))
+
+
+def dots():
+    """Small flat dots let into the ball, evenly over all of it."""
+    b = BALL
+    spread = bmesh.new()
+    bmesh.ops.create_icosphere(spread, subdivisions=b["dots"], radius=1.0)
+    places = [vert.co.normalized() for vert in spread.verts]
+    spread.free()
+    bm = bmesh.new()
+    for out in places:
+        turn = Vector((0.0, 0.0, 1.0)).rotation_difference(out).to_matrix().to_4x4()
+        bmesh.ops.create_circle(bm, cap_ends=True, segments=12, radius=b["dot"], matrix=Matrix.Translation(out * (b["radius"] + 0.004)) @ turn)
+    return made("Dots", bm, at=(0.0, b["sunk"], 0.0))
+
+
+def socket():
+    """The plate with a round opening, the wall of the cup behind it, and a raised rim round the opening."""
+    b = BALL
+    hole = b["radius"] + b["gap"]
+    count = 72
+    bm = bmesh.new()
+    rings = [[bm.verts.new((math.cos(index * math.tau / count) * radius, y, math.sin(index * math.tau / count) * radius)) for index in range(count)] for radius, y in ((b["plate"], 0.0), (hole, 0.0), (hole, b["sunk"] + 0.9))]
+    for near, far in zip(rings, rings[1:]):
+        for index in range(count):
+            bm.faces.new((near[index], near[(index + 1) % count], far[(index + 1) % count], far[index]))
+    bm.faces.new(rings[-1])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    plate = made("Housing", bm, smooth=False)
+    rim = bmesh.new()
+    turn = Matrix.Rotation(math.radians(90), 4, "X")  # a ring made lying flat, stood up to face the viewer
+    bmesh.ops.create_cone(rim, cap_ends=False, segments=count, radius1=hole + 0.09, radius2=hole + 0.01, depth=0.07, matrix=Matrix.Translation((0.0, -0.035, 0.0)) @ turn)
+    return plate, made("Ring", rim, smooth=True)
+
+
+def arrows():
+    """Four arrows on the plate, up, down, left and right: the ball rolls each of these ways."""
+    b = BALL
+    bm = bmesh.new()
+    for quarter in range(4):
+        turn = Matrix.Rotation(quarter * math.tau / 4, 4, "Y")
+        tip, back, wide = b["arrows"] + 0.13, b["arrows"] - 0.11, 0.22
+        bm.faces.new([bm.verts.new(turn @ Vector((x, -0.02, z))) for x, z in ((tip, 0.0), (back, -wide), (back, wide))])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return made("Marks", bm)
+
+
+def wrote(name, parts):
+    """One model: its parts, saved for the page."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    for part in (barrel, caps, axle, housing, marks):
-        part().select_set(True)
-    target = ROOT / "public" / "car" / "wheel.glb"
+    for part in parts:
+        built = part()
+        for thing in built if isinstance(built, tuple) else (built,):
+            thing.select_set(True)
+    target = ROOT / "public" / "car" / f"{name}.glb"
     target.parent.mkdir(parents=True, exist_ok=True)
     bpy.ops.export_scene.gltf(filepath=str(target), use_selection=True, export_apply=True, export_yup=True, export_materials="EXPORT")
-    print(f"wrote {target} ({target.stat().st_size // 1024} KB), {WHEEL['ridges']} ridges")
+    print(f"wrote {target} ({target.stat().st_size // 1024} KB)")
 
 
-main()
+wrote("wheel", (barrel, caps, axle, housing, marks))
+wrote("ball", (ball, dots, socket, arrows))

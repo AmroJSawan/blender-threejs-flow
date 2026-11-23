@@ -159,7 +159,7 @@
 .car-page #modes button { border: 0; padding: 6px 12px; border-radius: 999px; font: inherit; font-size: 12px; color: rgba(255, 255, 255, 0.7); background: none; cursor: pointer; }
 .car-page #modes button[aria-pressed='true'] { background: #f2f2f4; color: #111; }
 .car-page.dark #modes { opacity: 0.45; }
-#car .status { padding-right: 190px; }
+#car .status { padding-right: 290px; }
 
 /* An upright phone: the same screen, with less on it. */
 @media (orientation: portrait) {
