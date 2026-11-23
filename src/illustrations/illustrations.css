@@ -6,6 +6,9 @@
 .illustrations-page #note,
 .illustrations-page #values,
 .illustrations-page .styles { z-index: 1; }
+/* Two rows of buttons: the scenes above, the chosen scene's variants below. The note moves up to make room. */
+.illustrations-page .styles.scenes { bottom: 70px; }
+.illustrations-page #note { bottom: 130px; }
 /* The numbers the shown variant was made from: the node network's inputs. Changed ones are brighter. */
 .illustrations-page #values {
   position: fixed;

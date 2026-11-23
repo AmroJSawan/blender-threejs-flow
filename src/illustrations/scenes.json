@@ -105,7 +105,7 @@
       {
         "name": "wide",
         "title": "Wide",
-        "version": "05e84550",
+        "version": "dfde9c18",
         "values": {
           "Card Width": 3.7,
           "Card Depth": 2.9,
@@ -131,12 +131,26 @@
           "Mark": "+12%",
           "Chip One": "Scored",
           "Chip Two": "Received"
-        }
+        },
+        "lights": [
+          {
+            "kind": "card",
+            "at": [
+              0,
+              0
+            ],
+            "half": [
+              1.85,
+              1.45
+            ],
+            "round": 0.42
+          }
+        ]
       },
       {
         "name": "tall",
         "title": "Tall",
-        "version": "26002ebe",
+        "version": "86c60125",
         "values": {
           "Card Width": 2.9,
           "Card Depth": 3.7,
@@ -162,12 +176,26 @@
           "Mark": "live",
           "Chip One": "Model",
           "Chip Two": "Prompt"
-        }
+        },
+        "lights": [
+          {
+            "kind": "card",
+            "at": [
+              0,
+              0
+            ],
+            "half": [
+              1.45,
+              1.85
+            ],
+            "round": 0.5
+          }
+        ]
       },
       {
         "name": "quiet",
         "title": "Quiet",
-        "version": "8fe1c6cd",
+        "version": "4fb972e6",
         "values": {
           "Card Width": 4.4,
           "Card Depth": 2.9,
@@ -193,7 +221,427 @@
           "Mark": "+21%",
           "Chip One": "Scored",
           "Chip Two": "Received"
-        }
+        },
+        "lights": [
+          {
+            "kind": "card",
+            "at": [
+              0,
+              0
+            ],
+            "half": [
+              2.2,
+              1.45
+            ],
+            "round": 0.7
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "gateway",
+    "title": "Gateway",
+    "note": "The same card, chip, tile and dotted ground, set round a hub. Bundles of thin lines carry light in from the cards to the ring.",
+    "parameters": [
+      {
+        "name": "Hub Radius",
+        "about": "Radius of the round hub in the middle"
+      },
+      {
+        "name": "Ring",
+        "about": "Thickness of the hub's bright ring"
+      },
+      {
+        "name": "Arc",
+        "about": "How much of the ring is coloured: 0 none, 1 all of it"
+      },
+      {
+        "name": "Dashes",
+        "about": "Dashes in the inner ring"
+      },
+      {
+        "name": "Lines",
+        "about": "Lines in each bundle"
+      },
+      {
+        "name": "Gap",
+        "about": "Space between the lines where they leave the hub"
+      },
+      {
+        "name": "Loosen",
+        "about": "How many times wider the bundle is by its far end"
+      },
+      {
+        "name": "Weave",
+        "about": "How far the lines wander across each other on the way"
+      },
+      {
+        "name": "Wire",
+        "about": "Radius of one line"
+      },
+      {
+        "name": "Span",
+        "about": "How far out everything round the hub stands"
+      },
+      {
+        "name": "Dot Pitch",
+        "about": "Spacing of the dots on the ground"
+      },
+      {
+        "name": "Dot Size",
+        "about": "Radius of a dot"
+      },
+      {
+        "name": "Ground",
+        "about": "Across the dotted ground"
+      },
+      {
+        "name": "Resolution",
+        "about": "Segments round anything curved"
+      },
+      {
+        "name": "Title",
+        "about": "First line on the hub"
+      },
+      {
+        "name": "Title Two",
+        "about": "Second line on the hub"
+      },
+      {
+        "name": "Tag",
+        "about": "The chip beside the hub"
+      },
+      {
+        "name": "One Title",
+        "about": "Near-left card: title"
+      },
+      {
+        "name": "One Line",
+        "about": "Near-left card: line under the title"
+      },
+      {
+        "name": "One Figure",
+        "about": "Near-left card: figure"
+      },
+      {
+        "name": "One Caption",
+        "about": "Near-left card: line under the figure"
+      },
+      {
+        "name": "Two Title",
+        "about": "Far-right card: title"
+      },
+      {
+        "name": "Two Line",
+        "about": "Far-right card: line under the title"
+      },
+      {
+        "name": "Two Figure",
+        "about": "Far-right card: figure"
+      },
+      {
+        "name": "Two Caption",
+        "about": "Far-right card: line under the figure"
+      },
+      {
+        "name": "Three Title",
+        "about": "Far-left card: title"
+      },
+      {
+        "name": "Three Line",
+        "about": "Far-left card: line under the title"
+      },
+      {
+        "name": "Three Figure",
+        "about": "Far-left card: figure"
+      },
+      {
+        "name": "Three Caption",
+        "about": "Far-left card: line under the figure"
+      },
+      {
+        "name": "Tile Label",
+        "about": "The chip beside the lone tile"
+      },
+      {
+        "name": "Node Label",
+        "about": "The word on the leader line"
+      }
+    ],
+    "variants": [
+      {
+        "name": "flow",
+        "title": "Flow",
+        "version": "bb7c19c7",
+        "values": {
+          "Hub Radius": 1.6,
+          "Ring": 0.026,
+          "Arc": 0.2,
+          "Dashes": 22,
+          "Lines": 9,
+          "Gap": 0.085,
+          "Loosen": 1.5,
+          "Weave": 0.2,
+          "Wire": 0.008,
+          "Span": 1.0,
+          "Dot Pitch": 0.34,
+          "Dot Size": 0.014,
+          "Ground": 70.0,
+          "Resolution": 64,
+          "Title": "Every signal,",
+          "Title Two": "one gateway",
+          "Tag": "Live",
+          "One Title": "Inbound",
+          "One Line": "Mail, forms, chat",
+          "One Figure": "1,284",
+          "One Caption": "signals today",
+          "Two Title": "Routed",
+          "Two Line": "To the right team",
+          "Two Figure": "98%",
+          "Two Caption": "match confidence",
+          "Three Title": "Scored",
+          "Three Line": "By one model",
+          "Three Figure": "2.4 s",
+          "Three Caption": "median time",
+          "Tile Label": "Archive",
+          "Node Label": "Gateway"
+        },
+        "lights": [
+          {
+            "kind": "hub",
+            "at": [
+              0,
+              0
+            ],
+            "half": [
+              1.6,
+              1.6
+            ],
+            "round": 1.6
+          },
+          {
+            "kind": "card",
+            "at": [
+              -5.6,
+              3.0
+            ],
+            "half": [
+              0.9520000000000001,
+              0.7000000000000001
+            ],
+            "round": 0.23520000000000002,
+            "scale": 0.56
+          },
+          {
+            "kind": "card",
+            "at": [
+              6.0,
+              -3.6
+            ],
+            "half": [
+              0.85,
+              0.625
+            ],
+            "round": 0.21,
+            "scale": 0.5
+          },
+          {
+            "kind": "card",
+            "at": [
+              -6.0,
+              -3.2
+            ],
+            "half": [
+              0.748,
+              0.55
+            ],
+            "round": 0.1848,
+            "scale": 0.44
+          }
+        ]
+      },
+      {
+        "name": "calm",
+        "title": "Calm",
+        "version": "c8593fa8",
+        "values": {
+          "Hub Radius": 1.6,
+          "Ring": 0.026,
+          "Arc": 0.12,
+          "Dashes": 14,
+          "Lines": 5,
+          "Gap": 0.11,
+          "Loosen": 1.0,
+          "Weave": 0.0,
+          "Wire": 0.008,
+          "Span": 1.0,
+          "Dot Pitch": 0.34,
+          "Dot Size": 0.014,
+          "Ground": 70.0,
+          "Resolution": 64,
+          "Title": "Three sources,",
+          "Title Two": "one answer",
+          "Tag": "Live",
+          "One Title": "Inbound",
+          "One Line": "Mail, forms, chat",
+          "One Figure": "1,284",
+          "One Caption": "signals today",
+          "Two Title": "Routed",
+          "Two Line": "To the right team",
+          "Two Figure": "98%",
+          "Two Caption": "match confidence",
+          "Three Title": "Scored",
+          "Three Line": "By one model",
+          "Three Figure": "2.4 s",
+          "Three Caption": "median time",
+          "Tile Label": "Archive",
+          "Node Label": "Gateway"
+        },
+        "lights": [
+          {
+            "kind": "hub",
+            "at": [
+              0,
+              0
+            ],
+            "half": [
+              1.6,
+              1.6
+            ],
+            "round": 1.6
+          },
+          {
+            "kind": "card",
+            "at": [
+              -5.6,
+              3.0
+            ],
+            "half": [
+              0.9520000000000001,
+              0.7000000000000001
+            ],
+            "round": 0.23520000000000002,
+            "scale": 0.56
+          },
+          {
+            "kind": "card",
+            "at": [
+              6.0,
+              -3.6
+            ],
+            "half": [
+              0.85,
+              0.625
+            ],
+            "round": 0.21,
+            "scale": 0.5
+          },
+          {
+            "kind": "card",
+            "at": [
+              -6.0,
+              -3.2
+            ],
+            "half": [
+              0.748,
+              0.55
+            ],
+            "round": 0.1848,
+            "scale": 0.44
+          }
+        ]
+      },
+      {
+        "name": "dense",
+        "title": "Dense",
+        "version": "dbed75a0",
+        "values": {
+          "Hub Radius": 1.8,
+          "Ring": 0.026,
+          "Arc": 0.34,
+          "Dashes": 22,
+          "Lines": 15,
+          "Gap": 0.06,
+          "Loosen": 2.2,
+          "Weave": 0.32,
+          "Wire": 0.008,
+          "Span": 1.06,
+          "Dot Pitch": 0.34,
+          "Dot Size": 0.014,
+          "Ground": 70.0,
+          "Resolution": 64,
+          "Title": "All traffic,",
+          "Title Two": "one protocol",
+          "Tag": "Live",
+          "One Title": "Inbound",
+          "One Line": "Mail, forms, chat",
+          "One Figure": "1,284",
+          "One Caption": "signals today",
+          "Two Title": "Routed",
+          "Two Line": "To the right team",
+          "Two Figure": "98%",
+          "Two Caption": "match confidence",
+          "Three Title": "Scored",
+          "Three Line": "By one model",
+          "Three Figure": "2.4 s",
+          "Three Caption": "median time",
+          "Tile Label": "Archive",
+          "Node Label": "Gateway"
+        },
+        "lights": [
+          {
+            "kind": "hub",
+            "at": [
+              0,
+              0
+            ],
+            "half": [
+              1.8,
+              1.8
+            ],
+            "round": 1.8
+          },
+          {
+            "kind": "card",
+            "at": [
+              -5.936,
+              3.18
+            ],
+            "half": [
+              0.9520000000000001,
+              0.7000000000000001
+            ],
+            "round": 0.23520000000000002,
+            "scale": 0.56
+          },
+          {
+            "kind": "card",
+            "at": [
+              6.36,
+              -3.8160000000000003
+            ],
+            "half": [
+              0.85,
+              0.625
+            ],
+            "round": 0.21,
+            "scale": 0.5
+          },
+          {
+            "kind": "card",
+            "at": [
+              -6.36,
+              -3.3920000000000003
+            ],
+            "half": [
+              0.748,
+              0.55
+            ],
+            "round": 0.1848,
+            "scale": 0.44
+          }
+        ]
       }
     ]
   }

@@ -286,33 +286,45 @@ With the system's reduced-motion setting on, the expressions play at `settings.c
 
 ## Illustrations page
 
-`illustrations.html` shows marketing stills: sparse, abstract pictures of a product moment rather than diagrams. The first, **Signal**, is one thick rounded card floating over a dotted ground, with a single glowing line curving away from it through one or two small chips.
+`illustrations.html` shows marketing stills: sparse, abstract pictures of a product moment rather than diagrams. There are two scenes, chosen with the upper row of buttons; the lower row holds the chosen scene's variants.
+
+- **Signal** is one thick rounded card floating over a dotted ground, with a single glowing line curving away from it through one or two small chips.
+- **Gateway** is a bigger scene made from the same parts: a round hub in the middle with a bright ring, and bundles of thin lines running out of it, left and right, to three small cards, a tile and a label. Lights travel along the lines toward the hub.
 
 The picture is made in two halves.
 
-**Shape, in Blender.** Nothing is modelled by hand. `blender/make_illustration.py` writes one Geometry Nodes group and the whole scene comes out of it:
+**Shape, in Blender.** Nothing is modelled by hand. `blender/make_illustration.py` writes one Geometry Nodes group per scene and the whole scene comes out of it:
 
 ```bash
 npm run illustration
 ```
 
-- **The parameters** are the node group's inputs, listed as `PARAMETERS` at the top of the script: the card's size, thickness and corner radius, how high it floats, the line's reach, drift and bend, the number of chips, the dot spacing, and every word on the card. Open `blender/illustrations/signal.blend` and they are on the object's modifier; change one and every part follows.
+- **The parts are shared.** The card, the chip, the tile with its ring and the dotted ground are each one function under `PARTS` in the script, and both scenes are put together from them. A change to the card changes it everywhere.
+- **The parameters** are each node group's inputs, listed in the script as `SIGNAL_PARAMETERS` and `GATEWAY_PARAMETERS`. For Signal: the card's size, thickness and corner radius, how high it floats, the line's reach, drift and bend, the number of chips, the dot spacing, and every word on the card. For Gateway: the hub's radius, its ring and how much of it is coloured, the dashes inside, how many lines are in a bundle, their spacing, how much they loosen and weave, how far out everything stands (`Span`), and every word. Open `blender/illustrations/signal.blend` or `gateway.blend` and they are on the object's modifier; change one and every part follows.
+- **Where things stand in Gateway** (the three cards, the tile, the label, and where each bundle leaves the hub and ends) is a short list of positions above `GATEWAY_PARAMETERS`: `CARDS`, `TILE_AT`, `NODE_AT`, `BUNDLES`.
+- **The ground's dots** are shapes in the `.blend`, but are left out of the files made for the page (they would be most of each file). The page draws them itself from the same `Dot Pitch`, `Dot Size` and `Ground`.
+- **Extra numbers for the page** travel with the shape: every point of a card knows where on its card it is, and every point of a thin line knows how far along it is. That is how one card surface serves cards of any size anywhere, and how the lights run along the lines.
 - **The words are geometry** made by the same network, so they stay sharp at any size. They are set in Inter (`blender/fonts`, SIL Open Font License; `FONTS` in the script names the two weights). To change the typeface, put another font there and point `FONTS` at it; use one whose outlines do not overlap, or letters such as 4 and + come out with holes. The card's layout follows its size: the panel fills the space between the head and foot strips, and right-hand items stay on the right edge.
-- **Variants** are the same network with different numbers and words (`VARIANTS` in the script). Each is exported to `public/illustrations/signal/<name>.glb`; the page lists them and shows what each was made from, with the changed values marked.
+- **Variants** are the same network with different numbers and words (each scene's `variants` in `SCENES` at the end of the script). Each is exported to `public/illustrations/<scene>/<name>.glb`; the page lists them and shows what each was made from, with the changed values marked.
 - **Round things** take their segment count from `Resolution`.
 
 **Look, on the page.** `src/illustrations/main.ts` colours each part by its Blender material name and adds everything that is light rather than shape. All of it is in `settings` at the top:
 
-- `card`: the gradient across the card (far left, middle, near right), how dark its sides are, the bright line round its top edge, and the soft streak of light across it.
+- `scenes`: per scene, the camera (`view`), the shallow focus, the window shape it was composed for, and the shaft of light over the middle (`beam`, Gateway only).
+- `card`: the gradient across a card (far left, middle, near right), how dark its sides are, the bright line round its top edge, and the soft streak of light across it.
 - `chip`: a chip's top and side colours.
-- `spill`: the coloured light the card throws on the ground.
+- `spill`, `hubSpill`: the light a card, and the hub, throw on the ground.
+- `ground`, `plate`: the ground and its dots; the hub's plate and its faint grid.
+- `wire`: the thin lines and the lights that run along them: colour, how many, how fast, how long a tail.
 - `parts`: the plain parts. A `bright` above 1 makes a part glow (the line); `opacity` makes it see-through (the panel, the tile, the dim text).
-- `view`, `look`: the camera, and how far it leans toward the pointer.
-- `bloom`, `focus`: the glow round bright parts, and the shallow focus that keeps the card sharp and softens the distance.
+- `look`: how far the camera leans toward the pointer.
+- `bloom`: the glow round bright parts.
 
 The darker corners and the film grain over the picture are plain CSS, in `src/illustrations/illustrations.css`.
 
-`?variant=tall` links to a variant. `?keep` lets a still be saved from the canvas and adds `drawNow()` for drawing on request.
+`?scene=gateway&variant=calm` links to a scene and a variant. `?keep` lets a still be saved from the canvas and adds `drawNow(seconds)` for drawing on request, with the moving lights at that moment.
+
+With the system's reduced-motion setting on, the lights on the lines stand still.
 
 An earlier, denser isometric scene ("Network": plates, towers, routed lines, label cards) was retired when the direction changed; it is in the git history before this change.
 
@@ -353,7 +365,7 @@ Set `config.cards.enabled = false` to show the scroll scene on every screen.
 | `npm run demo` | Rebuild the demo scene from `blender/make_demo.py` |
 | `npm run switch` | Rebuild the 3D switches and bake their light (`blender/make_switch.py`) |
 | `npm run switch-css` | Render the knurled switch as pictures for the CSS-only page (`blender/render_switch_css.py`) |
-| `npm run illustration` | Build the illustration from its node network and export every variant (`blender/make_illustration.py`) |
+| `npm run illustration` | Build each illustration scene from its node network and export every variant (`blender/make_illustration.py`) |
 | `npm run optimize` | Compress `public/scene.glb` (Meshopt + WebP) before shipping |
 
 `export` and `demo` assume Blender at `/Applications/Blender.app`; edit `package.json` if yours is elsewhere.
