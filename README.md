@@ -284,6 +284,24 @@ The size on the page is fixed by `UNIT` in the script (CSS pixels per Blender un
 
 With the system's reduced-motion setting on, the expressions play at `settings.calm` of full speed. `expressions.html?expression=orbit&at=2.2` freezes an expression at that many seconds, for checking a pose; choosing another expression lets go of it.
 
+## Illustrations page
+
+`illustrations.html` shows isometric scenes that mix solid objects with technical diagrams. The first, **Network**, is a field of plates carrying towers, tilted panels and tanks, wired to a hub by routed lines, with a wire-frame volume marking one plate.
+
+Nothing in it is modelled by hand. `blender/make_illustration.py` writes one Geometry Nodes group and the whole scene comes out of it:
+
+```bash
+npm run illustration
+```
+
+- **The parameters** are the node group's inputs, listed as `PARAMETERS` at the top of the script: columns, rows, the cell size, tower count and height, line radius, bend radius, and so on. Open `blender/illustrations/network.blend` and they are on the object's modifier; change one and every part follows.
+- **One module.** Everything is measured in cells. Plates are a whole number of cells wide and apart, the hub and the line channels sit at cell centres, and the ground's rules fall on plate edges. Keep `Pitch` even and `Plate` odd.
+- **Variants** are the same network with different numbers (`VARIANTS` in the script). Each is exported to `public/illustrations/network/<name>.glb`; the page lists them and shows the numbers each was made from, with the changed ones marked.
+- **Round things** take their segment count from `Resolution`, so detail is a number, not a property of the model.
+- **The page** (`src/illustrations/main.ts`) draws the scene in true isometric with plain colours per part (`settings.parts`, keyed by the Blender material names Ground, Rule, Plate, Solid, Line, Accent). **Wire** draws every edge of the plates and solids to show how they are built. `?variant=dense&view=wire` links to a view; `?keep` lets a still be saved from the canvas.
+
+This is a first pass: proportions, topology and alignment, with no surface finish yet.
+
 ## Lab canvas (the entry page)
 
 `index.html` is the way in: one open canvas, like a design tool's board, with the eight studies laid out on it as frames in three groups (Scenes, Cards, Switches) beside a short brief.
@@ -321,6 +339,7 @@ Set `config.cards.enabled = false` to show the scroll scene on every screen.
 | `npm run demo` | Rebuild the demo scene from `blender/make_demo.py` |
 | `npm run switch` | Rebuild the 3D switches and bake their light (`blender/make_switch.py`) |
 | `npm run switch-css` | Render the knurled switch as pictures for the CSS-only page (`blender/render_switch_css.py`) |
+| `npm run illustration` | Build the isometric scene from its node network and export every variant (`blender/make_illustration.py`) |
 | `npm run optimize` | Compress `public/scene.glb` (Meshopt + WebP) before shipping |
 
 `export` and `demo` assume Blender at `/Applications/Blender.app`; edit `package.json` if yours is elsewhere.

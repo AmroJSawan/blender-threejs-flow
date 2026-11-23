@@ -1,0 +1,154 @@
+[
+  {
+    "name": "network",
+    "title": "Network",
+    "note": "A field of plates carrying towers, panels and tanks, wired to a hub. One node network makes all of it from a handful of numbers.",
+    "parameters": [
+      {
+        "name": "Columns",
+        "about": "Plates across"
+      },
+      {
+        "name": "Rows",
+        "about": "Plates deep"
+      },
+      {
+        "name": "Cell",
+        "about": "The module everything is measured in, metres"
+      },
+      {
+        "name": "Pitch",
+        "about": "Cells from one plate's centre to the next (keep even)"
+      },
+      {
+        "name": "Plate",
+        "about": "Cells across one plate (keep odd)"
+      },
+      {
+        "name": "Plate Height",
+        "about": "Thickness of a plate"
+      },
+      {
+        "name": "Towers",
+        "about": "Towers along one side of a tower plate"
+      },
+      {
+        "name": "Tower Height",
+        "about": "Height of the tallest tower"
+      },
+      {
+        "name": "Variation",
+        "about": "How much shorter the shortest tower may be, 0 to 1"
+      },
+      {
+        "name": "Seed",
+        "about": "Which shuffle of tower heights"
+      },
+      {
+        "name": "Panel Tilt",
+        "about": "Tilt of the panels, degrees"
+      },
+      {
+        "name": "Tank Height",
+        "about": "Height of a tank"
+      },
+      {
+        "name": "Hub Radius",
+        "about": "Radius of the hub's base"
+      },
+      {
+        "name": "Line",
+        "about": "Radius of a diagram line"
+      },
+      {
+        "name": "Bend",
+        "about": "Radius of a line's corners"
+      },
+      {
+        "name": "Marked",
+        "about": "Which plate the wire-frame volume stands on"
+      },
+      {
+        "name": "Resolution",
+        "about": "Segments round anything circular"
+      }
+    ],
+    "variants": [
+      {
+        "name": "plan",
+        "title": "Plan",
+        "faces": 3183,
+        "version": "1c53ea17",
+        "values": {
+          "Columns": 3,
+          "Rows": 2,
+          "Cell": 0.8,
+          "Pitch": 4,
+          "Plate": 3,
+          "Plate Height": 0.14,
+          "Towers": 4,
+          "Tower Height": 1.5,
+          "Variation": 0.65,
+          "Seed": 3,
+          "Panel Tilt": 28.0,
+          "Tank Height": 0.9,
+          "Hub Radius": 0.62,
+          "Line": 0.035,
+          "Bend": 0.3,
+          "Marked": 4,
+          "Resolution": 48
+        }
+      },
+      {
+        "name": "dense",
+        "title": "Dense",
+        "faces": 5725,
+        "version": "8ba8b954",
+        "values": {
+          "Columns": 4,
+          "Rows": 3,
+          "Cell": 0.8,
+          "Pitch": 4,
+          "Plate": 3,
+          "Plate Height": 0.14,
+          "Towers": 6,
+          "Tower Height": 1.1,
+          "Variation": 0.65,
+          "Seed": 8,
+          "Panel Tilt": 28.0,
+          "Tank Height": 0.9,
+          "Hub Radius": 0.62,
+          "Line": 0.035,
+          "Bend": 0.3,
+          "Marked": 6,
+          "Resolution": 48
+        }
+      },
+      {
+        "name": "tall",
+        "title": "Tall",
+        "faces": 2649,
+        "version": "4e255c26",
+        "values": {
+          "Columns": 2,
+          "Rows": 2,
+          "Cell": 0.8,
+          "Pitch": 6,
+          "Plate": 5,
+          "Plate Height": 0.14,
+          "Towers": 5,
+          "Tower Height": 3.4,
+          "Variation": 0.8,
+          "Seed": 3,
+          "Panel Tilt": 28.0,
+          "Tank Height": 1.8,
+          "Hub Radius": 0.62,
+          "Line": 0.035,
+          "Bend": 0.3,
+          "Marked": 0,
+          "Resolution": 48
+        }
+      }
+    ]
+  }
+]
