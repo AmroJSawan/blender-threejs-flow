@@ -8,7 +8,7 @@ listed in PARAMETERS; they are the group's inputs, so in Blender they appear on 
 and can be changed there, and every part follows. Open blender/illustrations/signal.blend to do that.
 
 The scene: one thick rounded card floating over a dotted ground, with a thin outline round it on the
-ground. On the card: a small tile with a ring, a title and a line under it, a sunk panel holding one
+ground. On the card: a small tile with a ring, a title and a line under it, a tick, a sunk panel holding one
 large figure, and a footer. A single glowing line leaves the card's far edge and curves away into the
 distance through one or two small chips.
 
@@ -231,12 +231,25 @@ def build_network():
     tile = net.slab(net.rounded(TILE, TILE, 0.15, corners), 0.02)
     ring = net.add("GeometryNodeCurvePrimitiveCircle", {"Resolution": P["Resolution"], "Radius": 0.11})
     ring = net.material(net.moved(net.tube(net.out(ring, "Curve"), 0.016, sides=8), (0.0, 0.0, 0.036)), "Ink")
+    core = net.add("GeometryNodeMeshCircle", {"Vertices": 24, "Radius": 0.042})
+    net.choose(core, "fill_type", "NGON", label="N-Gon")
+    core = net.material(net.moved(core.outputs[0], (0.0, 0.0, 0.026)), "Ink")
+    ring = net.join(ring, core)
     tile = net.moved(net.join(net.material(tile, "Tile"), ring), net.vector(m("ADD", left, TILE / 2), m("SUBTRACT", back, TILE / 2)))
 
     # Title and subtitle, beside the tile.
     words_at = m("ADD", left, TILE + 0.18)
     title = net.moved(net.written(P["Title"], 0.27, "Ink"), net.vector(words_at, m("SUBTRACT", back, 0.24), 0.004))
     subtitle = net.moved(net.written(P["Subtitle"], 0.155, "Dim"), net.vector(words_at, m("SUBTRACT", back, 0.47), 0.004))
+
+    # A tick at the top right.
+    def stroke(a, b):
+        line = net.add("GeometryNodeCurvePrimitiveLine", {"Start": a, "End": b})
+        return net.tube(net.out(line, "Curve"), 0.017, sides=8)
+
+    tick = net.join(stroke((-0.12, 0.0, 0.0), (-0.035, -0.085, 0.0)), stroke((-0.035, -0.085, 0.0), (0.12, 0.09, 0.0)))
+    tick = net.only_if(m("GREATER_THAN", wide, 3.4), tick)   # a narrow card has no room for it beside the title
+    tick = net.moved(net.material(tick, "Accent"), net.vector(m("SUBTRACT", right, 0.14), m("SUBTRACT", back, 0.25), 0.02))
 
     # The panel: fills the card between the head strip and the foot strip.
     panel_wide = m("SUBTRACT", wide, INSET * 2)
@@ -254,7 +267,7 @@ def build_network():
     footer = net.moved(net.written(P["Footer"], 0.155, "Dim"), net.vector(left, foot_at, 0.004))
     mark = net.moved(net.written(P["Mark"], 0.155, "Accent", align="RIGHT"), net.vector(right, foot_at, 0.004))
 
-    contents = net.moved(net.join(tile, title, subtitle, panel, figure, aside, caption, footer, mark), net.vector(0, 0, face))
+    contents = net.moved(net.join(tile, title, subtitle, tick, panel, figure, aside, caption, footer, mark), net.vector(0, 0, face))
 
     # ---- The line: from the card's far edge, curving away, with a bright node where it meets the card ----
     start = net.vector(m("MULTIPLY", wide, 0.16), half(deep), face)

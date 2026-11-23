@@ -17,10 +17,15 @@ const settings = {
   /** Shown first, unless the address says ?variant=name. */
   start: 'wide',
   backdrop: '#050706',
-  /** The card's surface: its colour at the far left, in the middle and at the near right, and how dark its sides are. */
-  card: { far: '#4ff08c', middle: '#16a558', near: '#1b9fbd', sides: 0.42, sheen: 0.2 },
+  /**
+   * The card's surface: its colour at the far left, in the middle and at the near right, and how dark its sides are.
+   * `edge` is the bright line round the top face (how strong, how wide in metres); `band` is the soft diagonal streak of light across it.
+   */
+  card: { far: '#4ff08c', middle: '#16a558', near: '#1b9fbd', sides: 0.42, sheen: 0.13, edge: 0.32, edgeWidth: 0.022, band: 0.045 },
   /** The light the card spills on the ground: its two colours, how strong, and how far it spreads (metres). */
-  spill: { left: '#1fd16a', right: '#1a9fb5', strength: 0.36, spread: 1.4 },
+  spill: { left: '#1fd16a', right: '#1a9fb5', strength: 0.3, spread: 1.05 },
+  /** A chip's top and sides. */
+  chip: { top: '#25302b', side: '#0d1210' },
   /** Plain parts: colour, and how solid (1 = opaque). `bright` above 1 makes a part glow; `flat` marks parts with no thickness. */
   parts: {
     Ground: { colour: '#060908' },
@@ -32,7 +37,6 @@ const settings = {
     Dim: { colour: '#f3fff7', opacity: 0.62, flat: true },
     Accent: { colour: '#9dffbf', flat: true },
     Glow: { colour: '#46f58a', bright: 2.4 },
-    Chip: { colour: '#1d2622' },
   } as Record<string, { colour: string; opacity?: number; bright?: number; flat?: boolean }>,
   /** The camera, in the scene's own metres (x right, y up, z toward the viewer): where it stands, what it looks at, its lens angle. */
   view: { from: [4.4, 7.1, 7.6] as [number, number, number], at: [0, 0.2, -0.8] as [number, number, number], lens: 30 },
@@ -79,6 +83,9 @@ const cardMaterial = new THREE.ShaderMaterial({
     uNear: { value: new THREE.Color(settings.card.near) },
     uSides: { value: settings.card.sides },
     uSheen: { value: settings.card.sheen },
+    uRound: { value: 0.4 },
+    uEdge: { value: new THREE.Vector2(settings.card.edge, settings.card.edgeWidth) },
+    uBand: { value: settings.card.band },
   },
   vertexShader: /* glsl */ `
     varying vec3 vPlace;
@@ -93,7 +100,8 @@ const cardMaterial = new THREE.ShaderMaterial({
     varying vec3 vFacing;
     uniform vec2 uSize, uHeights;
     uniform vec3 uFar, uMiddle, uNear;
-    uniform float uSides, uSheen;
+    uniform float uSides, uSheen, uRound, uBand;
+    uniform vec2 uEdge;
     void main() {
       float across = vPlace.x / uSize.x + 0.5;            // 0 at the left edge … 1 at the right
       float toward = vPlace.z / uSize.y + 0.5;            // 0 at the far edge … 1 at the near edge
@@ -102,13 +110,38 @@ const cardMaterial = new THREE.ShaderMaterial({
       colour = mix(colour, uNear, smoothstep(0.5, 1.05, along) * 0.85);
       colour += uSheen * exp(-pow(distance(vec2(across, toward), vec2(0.18, 0.1)) * 2.4, 2.0)); // light falling on the far left
       float top = smoothstep(0.5, 0.9, vFacing.y);
+      vec2 q = abs(vPlace.xz) - uSize * 0.5 + uRound;
+      float inside = -(length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - uRound);                 // metres in from the card's outline
+      vec3 face = colour * (0.9 + 0.1 * smoothstep(0.0, 0.6, inside));                          // the top: a little deeper toward the rim,
+      face += uBand * exp(-pow((across - toward * 0.7 - 0.3) * 6.0, 2.0));                      // a streak of light lying diagonally across it,
+      face += uEdge.x * smoothstep(uEdge.y, 0.0, inside) * mix(0.3, 1.0, 1.0 - toward);         // and a bright edge, strongest along the far side
       float height = clamp((vPlace.y - uHeights.x) / (uHeights.y - uHeights.x), 0.0, 1.0);
       vec3 side = colour * uSides * (0.55 + 0.75 * height * height);
-      gl_FragColor = vec4(mix(side, colour, top), 1.0);
+      gl_FragColor = vec4(mix(side, face, top), 1.0);
       #include <colorspace_fragment>
     }`,
 })
 materials.set('Card', cardMaterial)
+/** A chip: a dark plate with a lighter top than sides, so it reads as solid. */
+materials.set(
+  'Chip',
+  new THREE.ShaderMaterial({
+    uniforms: { uTop: { value: new THREE.Color(settings.chip.top) }, uSide: { value: new THREE.Color(settings.chip.side) } },
+    vertexShader: /* glsl */ `
+      varying float vUp;
+      void main() {
+        vUp = normalize(mat3(modelMatrix) * normal).y;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: /* glsl */ `
+      varying float vUp;
+      uniform vec3 uTop, uSide;
+      void main() {
+        gl_FragColor = vec4(mix(uSide, uTop, smoothstep(0.5, 0.9, vUp)), 1.0);
+        #include <colorspace_fragment>
+      }`,
+  }),
+)
 
 /** The light the card spills on the ground: brightest under its edge, fading with distance from it. */
 const spill = new THREE.Mesh(
@@ -192,6 +225,7 @@ function fit(variant: Variant) {
   const [wide, deep, thick, lift, round] = ['Card Width', 'Card Depth', 'Card Thick', 'Float', 'Corner'].map((key) => Number(set[key]))
   cardMaterial.uniforms.uSize.value.set(wide, deep)
   cardMaterial.uniforms.uHeights.value.set(lift, lift + thick)
+  cardMaterial.uniforms.uRound.value = Math.min(round, wide / 2, deep / 2)
   const reach = settings.spill.spread * 2.5
   spill.scale.set(wide + reach * 2, 1, deep + reach * 2)
   const glow = spill.material.uniforms

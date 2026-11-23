@@ -24,3 +24,17 @@
 .illustrations-page #values dd { text-align: right; }
 .illustrations-page #values .changed { color: #7dffad; }
 @media (max-width: 1100px) { .illustrations-page #values { display: none; } }
+/* Over the picture: darker corners so the eye stays on the card, and a trace of film grain. */
+.illustrations-page::before,
+.illustrations-page::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+.illustrations-page::before { background: radial-gradient(ellipse at 50% 55%, rgba(0, 0, 0, 0) 45%, rgba(0, 0, 0, 0.5) 100%); }
+.illustrations-page::after {
+  mix-blend-mode: overlay; /* the grain lightens and darkens equally, so it never lifts the blacks */
+  opacity: 0.5;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}

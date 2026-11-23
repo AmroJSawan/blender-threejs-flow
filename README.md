@@ -303,11 +303,14 @@ npm run illustration
 
 **Look, on the page.** `src/illustrations/main.ts` colours each part by its Blender material name and adds everything that is light rather than shape. All of it is in `settings` at the top:
 
-- `card`: the gradient across the card (far left, middle, near right) and how dark its sides are.
+- `card`: the gradient across the card (far left, middle, near right), how dark its sides are, the bright line round its top edge, and the soft streak of light across it.
+- `chip`: a chip's top and side colours.
 - `spill`: the coloured light the card throws on the ground.
 - `parts`: the plain parts. A `bright` above 1 makes a part glow (the line); `opacity` makes it see-through (the panel, the tile, the dim text).
 - `view`, `look`: the camera, and how far it leans toward the pointer.
 - `bloom`, `focus`: the glow round bright parts, and the shallow focus that keeps the card sharp and softens the distance.
+
+The darker corners and the film grain over the picture are plain CSS, in `src/illustrations/illustrations.css`.
 
 `?variant=tall` links to a variant. `?keep` lets a still be saved from the canvas and adds `drawNow()` for drawing on request.
 
