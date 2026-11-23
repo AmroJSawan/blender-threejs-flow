@@ -182,18 +182,26 @@ const flipper = document.createElement('label')
 flipper.className = 'quiet'
 flipper.innerHTML = '<input type="checkbox" switch />'
 document.body.append(flipper)
+/**
+ * What the finger just met, handed to whatever can make it felt. Inside the iPhone app (ios/Groove) that is the app, which plays
+ * a shaped click on the Taptic Engine; `part` is how high the value is in its range. In a browser it is a vibration of the given length.
+ */
+type Met = 'land' | 'notch' | 'heavy' | 'stop' | 'on' | 'off'
+const app = (window as unknown as { webkit?: { messageHandlers?: { groove?: { postMessage(said: object): void } } } }).webkit?.messageHandlers?.groove
 const vibrates = 'vibrate' in navigator
-function buzz(pattern: number | number[]) {
+function buzz(kind: Met, part = 0.5) {
+  if (app) return app.postMessage({ kind, part })
+  const pattern = kind === 'on' || kind === 'off' ? settings.pulse.turn : settings.pulse[kind]
   if (vibrates) navigator.vibrate(pattern)
   else flipper.click()
 }
 // Say plainly when this browser gives a page no vibration, so silence under the finger is not taken for a fault.
-if (!vibrates) document.querySelector('#note')!.append(' This browser gives web pages no vibration (iPhones do not): here it is sound only.')
+if (!app && !vibrates) document.querySelector('#note')!.append(' This browser gives web pages no vibration (iPhones do not): here it is sound only.')
 let lastTick = 0
 const feel = {
   land() {
     tone(190, 0.04, 0.16, 'sine', 140)
-    buzz(settings.pulse.land)
+    buzz('land')
   },
   /** One notch: where in the range it is (0–1) sets the pitch, so the height of the value can be heard. */
   notch(setting: Setting, part: number, heavy: boolean) {
@@ -203,17 +211,17 @@ const feel = {
     snap(3200, 0.006, heavy ? 0.5 : 0.34)
     tone(setting.lowest * (setting.highest / setting.lowest) ** part, heavy ? 0.05 : 0.028, heavy ? 0.3 : 0.22, heavy ? 'triangle' : 'sine')
     if (heavy) tone(150, 0.05, 0.3)
-    buzz(heavy ? settings.pulse.heavy : settings.pulse.notch)
+    buzz(heavy ? 'heavy' : 'notch', part)
   },
   stop() {
     snap(420, 0.03, 0.5, 'lowpass')
     tone(170, 0.06, 0.5, 'sine', 110)
-    buzz(settings.pulse.stop)
+    buzz('stop')
   },
   turn(on: boolean) {
     tone(on ? 520 : 780, 0.05, 0.26, 'triangle')
     tone(on ? 780 : 520, 0.07, 0.26, 'triangle', undefined, 0.075)
-    buzz(settings.pulse.turn)
+    buzz(on ? 'on' : 'off')
   },
 }
 function say(words: string) {
