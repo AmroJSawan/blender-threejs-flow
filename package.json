@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "demo": "/Applications/Blender.app/Contents/MacOS/Blender --background --python blender/make_demo.py",
     "switch": "/Applications/Blender.app/Contents/MacOS/Blender --background --python blender/make_switch.py",
+    "wheel": "/Applications/Blender.app/Contents/MacOS/Blender --background --python blender/make_wheel.py",
     "illustration": "/Applications/Blender.app/Contents/MacOS/Blender --background --python blender/make_illustration.py",
     "switch-css": "/Applications/Blender.app/Contents/MacOS/Blender --background --python blender/render_switch_css.py",
     "export": "/Applications/Blender.app/Contents/MacOS/Blender --background blender/demo.blend --python blender/threejs_bridge.py -- --export public/scene.glb",

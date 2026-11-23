@@ -41,12 +41,16 @@
 #car.busy .zone:not(.busy) { filter: brightness(0.5) saturate(0.7); }
 
 /* ---- The stage: four scenes on the sides of a block that turns ---- */
-#car .stage { perspective: 2200px; background: #07090b; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+#car .stage { perspective: 1700px; background: #040506; }
+#car .pager { position: absolute; left: 0; right: 0; bottom: 10px; z-index: 2; margin: 0; padding: 0; list-style: none; display: flex; justify-content: center; gap: 18px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--quiet); pointer-events: none; }
+#car .pager li.chosen { color: #fff; }
 #car .prism { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
-#car .scene { position: absolute; inset: 0; overflow: hidden; backface-visibility: hidden; background: #0b0e11; transition: filter 0.4s ease; }
+#car .scene { position: absolute; top: 0; bottom: 0; left: 10%; width: 80%; overflow: hidden; backface-visibility: hidden; border-radius: 22px; background: #0b0e11; transition: filter 0.4s ease; }
+/* A scene that is not the current one steps back into the dark, but stays in view at the stage's edge. */
+#car .scene::after { content: ''; position: absolute; inset: 0; background: #040506; opacity: calc(var(--away, 0) * 0.62); pointer-events: none; }
 #car .scene.off { filter: saturate(0.35) brightness(0.8); }
 #car .stage.held:not(.busy) .prism { filter: brightness(1.08); }
-#car .tag { position: absolute; left: 34px; bottom: 26px; z-index: 2; display: grid; gap: 2px; transform-origin: left bottom; transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); pointer-events: none; text-shadow: 0 1px 12px rgba(0, 0, 0, 0.7); }
+#car .tag { position: absolute; left: calc(10% + 30px); bottom: 34px; z-index: 2; display: grid; gap: 2px; transform-origin: left bottom; transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); pointer-events: none; text-shadow: 0 1px 12px rgba(0, 0, 0, 0.7); }
 #car .tag b { font-size: 26px; font-weight: 600; color: #fff; letter-spacing: -0.02em; }
 #car .tag span { font-size: 14px; color: var(--ink); }
 #car .stage.busy .tag { transform: scale(1.5); }
@@ -109,38 +113,31 @@
 #car .row { display: grid; grid-template-columns: 1fr 1.15fr 1fr; gap: var(--gap); min-height: 0; }
 #car .roller {
   display: grid;
-  grid-template-rows: auto auto auto;
-  align-content: center;
+  grid-template-rows: auto auto 1fr auto;
   justify-items: center;
-  gap: 10px;
+  gap: 8px;
+  padding: 14px 0 12px;
   transform-origin: center bottom;
-  /* Satin under long soft lamps: a bright band above the middle, shade where it sinks into the dashboard. */
-  background: linear-gradient(180deg, #0c0f12 0%, #232a31 14%, #2d353d 30%, #20262c 52%, #14181c 78%, #08090b 100%);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 -30px 50px rgba(0, 0, 0, 0.5), inset 0 26px 40px rgba(0, 0, 0, 0.35);
+  background: #0b0d0f;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
-#car .roller.driver, #car .roller.passenger { background-image: linear-gradient(180deg, #0d0f12 0%, #2a2a2e 14%, #37322f 30%, #27231f 52%, #171513 78%, #09090a 100%); }
+/* The seat is where the page draws this roller's thumbwheel (on the canvas behind). */
+#car .seat { width: 100%; min-height: 0; align-self: stretch; }
+#car .wheels { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
 #car .roller.held { filter: brightness(1.12); }
-#car .roller.busy { transform: scale(1.04, 1.16); z-index: 4; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09), inset 0 -30px 50px rgba(0, 0, 0, 0.5), inset 0 26px 40px rgba(0, 0, 0, 0.35), 0 -18px 50px rgba(0, 0, 0, 0.6); }
+#car .roller.busy { transform: scale(1.05); z-index: 4; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 -18px 50px rgba(0, 0, 0, 0.6); }
 #car .roller.off .counter { filter: saturate(0) brightness(0.55); }
-#car .roller.stopped { box-shadow: inset 0 0 0 1px rgba(255, 120, 90, 0.5), inset 0 -30px 50px rgba(0, 0, 0, 0.5), inset 0 26px 40px rgba(0, 0, 0, 0.35); }
-/* The knurled ridges: one per notch, moving with the finger. Fine and dark, with a thin lit edge. */
-#car .ridges { position: absolute; inset: 0; pointer-events: none; transition: opacity 0.3s ease; }
-#car .ridges.a { opacity: 0.55; background: repeating-linear-gradient(180deg, transparent 0 calc(var(--pa) - 3px), rgba(0, 0, 0, 0.5) calc(var(--pa) - 3px) calc(var(--pa) - 1px), rgba(255, 255, 255, 0.07) calc(var(--pa) - 1px) var(--pa)) 0 var(--a); }
-#car .ridges.b { opacity: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(var(--pb) - 3px), rgba(0, 0, 0, 0.5) calc(var(--pb) - 3px) calc(var(--pb) - 1px), rgba(255, 255, 255, 0.07) calc(var(--pb) - 1px) var(--pb)) var(--b) 0; }
-#car .roller.busy .ridges.a { opacity: 1; }
-#car .roller.sideways .ridges.a { opacity: 0; }
-#car .roller.sideways .ridges.b { opacity: 0.55; }
-#car .roller.sideways.busy .ridges.b { opacity: 1; }
+#car .roller.stopped { box-shadow: inset 0 0 0 1px rgba(255, 120, 90, 0.5); }
 #car .roller .label, #car .roller .second { position: relative; z-index: 1; text-align: center; padding: 0 10px; }
 #car .roller .label { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); }
-#car .roller .second { font-size: 14px; color: var(--ink); font-variant-numeric: tabular-nums; }
+#car .roller .second { font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; white-space: pre; }
 
 /* The counter: a wheel of values behind glass, like an odometer's. */
 #car .counter {
   position: relative;
   z-index: 1;
   width: min(74%, 300px);
-  height: clamp(64px, 13vh, 118px);
+  height: clamp(44px, 8.4vh, 78px);
   border-radius: 18px;
   overflow: hidden;
   perspective: 700px;
@@ -148,15 +145,15 @@
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 10px 22px rgba(0, 0, 0, 0.8), inset 0 -10px 22px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.06);
   transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-#car .roller.busy .counter { transform: scale(1.22); }
+#car .roller.busy .counter { transform: scale(1.3); }
 #car .roller .label, #car .roller .second { transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
 #car .roller.busy .label { transform: translateY(-9px); }
 #car .roller.busy .second { transform: translateY(9px); }
 #car .wheel { position: absolute; inset: 0; transform-style: preserve-3d; }
 #car .wheel.b, #car .roller.sideways .wheel.a { visibility: hidden; }
 #car .roller.sideways .wheel.b { visibility: visible; }
-#car .wheel span { position: absolute; inset: 0; display: grid; place-items: center; backface-visibility: hidden; font-size: clamp(34px, 7.4vh, 66px); font-weight: 600; letter-spacing: -0.04em; color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; }
-#car .wheel span.long { font-size: clamp(18px, 3.4vh, 28px); letter-spacing: -0.02em; }
+#car .wheel span { position: absolute; inset: 0; display: grid; place-items: center; backface-visibility: hidden; font-size: clamp(26px, 5vh, 46px); font-weight: 600; letter-spacing: -0.04em; color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#car .wheel span.long { font-size: clamp(15px, 2.6vh, 22px); letter-spacing: -0.02em; }
 
 .car-page #modes { position: fixed; right: 16px; top: 34px; z-index: 6; display: flex; gap: 4px; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); }
 .car-page #modes button { border: 0; padding: 6px 12px; border-radius: 999px; font: inherit; font-size: 12px; color: rgba(255, 255, 255, 0.7); background: none; cursor: pointer; }
