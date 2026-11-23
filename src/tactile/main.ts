@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import './tactile.css'
+import { feel, felt, say, voice, wake } from './feel'
 
 /**
  * Groove: a touch control for a car screen that can be worked without looking.
@@ -53,14 +54,6 @@ const settings = {
   rest: 420,
   settle: 650,
   /**
-   * Feedback. Vibration lengths in ms: about 10 reads as a click, 30 or more as a buzz, so a notch is short and an end stop long.
-   * A phone's motor is slow to start, though, and many do not move at all for less than about 15 ms, so these are longer than the ideal.
-   * Ticks closer together than `apart` ms are dropped (touch cannot tell them apart, and it turns to noise).
-   */
-  pulse: { land: 14, notch: 20, heavy: 30, stop: 60, turn: [22, 70, 30] },
-  apart: 32,
-  loud: 0.5,
-  /**
    * The roller. `inset` is the gap round it (px) and `corner` its rounding; `curve` how far round the drum the zone's edge is (0 flat … 1 a full half turn);
    * `rest` how much of a drum it already is with no finger on it, and `wake` with a finger resting. `knurl` is how deep the ridges look,
    * `satin` how strong the long soft highlights are, and `grows` how much of the screen the zone being changed takes from the other (0–0.5).
@@ -76,10 +69,8 @@ const settings = {
   maxPixelRatio: 2,
 }
 
-type Setting = (typeof settings.zones)[number]['along']
 type Axis = 'along' | 'across'
 const canvas = document.querySelector<HTMLCanvasElement>('#stage')!
-const spoken = document.querySelector<HTMLElement>('#spoken')!
 
 // ---- The state of the car --------------------------------------------------------
 const zones = settings.zones.map((zone) => ({ ...zone, values: { along: zone.along.start, across: zone.across.start }, on: zone.turn.on }))
@@ -113,7 +104,7 @@ function write() {
 write()
 
 // ---- Modes -----------------------------------------------------------------------
-const modes = { dark: false, voice: true }
+const modes = { dark: false, voice: voice.on }
 const labels: Record<keyof typeof modes, string> = { dark: 'Eyes-free', voice: 'Voice' }
 for (const key of Object.keys(modes) as (keyof typeof modes)[]) {
   const button = document.createElement('button')
@@ -124,114 +115,15 @@ for (const key of Object.keys(modes) as (keyof typeof modes)[]) {
     modes[key] = !modes[key]
     button.setAttribute('aria-pressed', String(modes[key]))
     document.body.classList.toggle('dark', modes.dark)
+    voice.on = modes.voice
     if (key === 'voice' && !modes.voice) speechSynthesis?.cancel()
     if (key === 'dark') say(modes.dark ? 'Eyes free. The screen is dark.' : 'Screen on.')
   })
   document.querySelector('#modes')!.append(button)
 }
 
-// ---- Sound, vibration, voice -----------------------------------------------------
-let audio: AudioContext | undefined
-let out: GainNode
-let hiss: AudioBuffer
-function wake() {
-  if (!audio) {
-    audio = new AudioContext({ latencyHint: 'interactive' })
-    out = audio.createGain()
-    out.gain.value = settings.loud
-    out.connect(audio.destination)
-    hiss = audio.createBuffer(1, audio.sampleRate * 0.05, audio.sampleRate)
-    const samples = hiss.getChannelData(0)
-    for (let index = 0; index < samples.length; index++) samples[index] = Math.random() * 2 - 1
-  }
-  if (audio.state !== 'running') void audio.resume()
-}
-/** One short tone that dies away: `pitch` Hz (sliding to `to`), `lasts` seconds, `level` 0–1, starting `after` seconds from now. */
-function tone(pitch: number, lasts: number, level: number, shape: OscillatorType = 'sine', to = pitch, after = 0) {
-  if (!audio) return
-  const start = audio.currentTime + after
-  const voice = audio.createOscillator()
-  const loudness = audio.createGain()
-  voice.type = shape
-  voice.frequency.setValueAtTime(pitch, start)
-  voice.frequency.exponentialRampToValueAtTime(to, start + lasts)
-  loudness.gain.setValueAtTime(level, start)
-  loudness.gain.exponentialRampToValueAtTime(0.0008, start + lasts)
-  voice.connect(loudness).connect(out)
-  voice.start(start)
-  voice.stop(start + lasts + 0.01)
-}
-/** The sharp front of a click: a few milliseconds of hiss, kept to the band given. */
-function snap(band: number, lasts: number, level: number, kind: BiquadFilterType = 'bandpass') {
-  if (!audio) return
-  const source = audio.createBufferSource()
-  const filter = audio.createBiquadFilter()
-  const loudness = audio.createGain()
-  source.buffer = hiss
-  filter.type = kind
-  filter.frequency.value = band
-  filter.Q.value = 1.2
-  loudness.gain.setValueAtTime(level, audio.currentTime)
-  loudness.gain.exponentialRampToValueAtTime(0.0008, audio.currentTime + lasts)
-  source.connect(filter).connect(loudness).connect(out)
-  source.start()
-  source.stop(audio.currentTime + lasts + 0.01)
-}
-/** Phones that offer no vibration to web pages but do tick when a switch is flipped: flip a hidden one. */
-const flipper = document.createElement('label')
-flipper.className = 'quiet'
-flipper.innerHTML = '<input type="checkbox" switch />'
-document.body.append(flipper)
-/**
- * What the finger just met, handed to whatever can make it felt. Inside the iPhone app (ios/Groove) that is the app, which plays
- * a shaped click on the Taptic Engine; `part` is how high the value is in its range. In a browser it is a vibration of the given length.
- */
-type Met = 'land' | 'notch' | 'heavy' | 'stop' | 'on' | 'off'
-const app = (window as unknown as { webkit?: { messageHandlers?: { groove?: { postMessage(said: object): void } } } }).webkit?.messageHandlers?.groove
-const vibrates = 'vibrate' in navigator
-function buzz(kind: Met, part = 0.5) {
-  if (app) return app.postMessage({ kind, part })
-  const pattern = kind === 'on' || kind === 'off' ? settings.pulse.turn : settings.pulse[kind]
-  if (vibrates) navigator.vibrate(pattern)
-  else flipper.click()
-}
 // Say plainly when this browser gives a page no vibration, so silence under the finger is not taken for a fault.
-if (!app && !vibrates) document.querySelector('#note')!.append(' This browser gives web pages no vibration (iPhones do not): here it is sound only.')
-let lastTick = 0
-const feel = {
-  land() {
-    tone(190, 0.04, 0.16, 'sine', 140)
-    buzz('land')
-  },
-  /** One notch: where in the range it is (0–1) sets the pitch, so the height of the value can be heard. */
-  notch(setting: Setting, part: number, heavy: boolean) {
-    const now = performance.now()
-    if (now - lastTick < settings.apart) return
-    lastTick = now
-    snap(3200, 0.006, heavy ? 0.5 : 0.34)
-    tone(setting.lowest * (setting.highest / setting.lowest) ** part, heavy ? 0.05 : 0.028, heavy ? 0.3 : 0.22, heavy ? 'triangle' : 'sine')
-    if (heavy) tone(150, 0.05, 0.3)
-    buzz(heavy ? 'heavy' : 'notch', part)
-  },
-  stop() {
-    snap(420, 0.03, 0.5, 'lowpass')
-    tone(170, 0.06, 0.5, 'sine', 110)
-    buzz('stop')
-  },
-  turn(on: boolean) {
-    tone(on ? 520 : 780, 0.05, 0.26, 'triangle')
-    tone(on ? 780 : 520, 0.07, 0.26, 'triangle', undefined, 0.075)
-    buzz(on ? 'on' : 'off')
-  },
-}
-function say(words: string) {
-  spoken.textContent = words
-  if (!modes.voice || !('speechSynthesis' in window)) return
-  speechSynthesis.cancel()
-  const line = new SpeechSynthesisUtterance(words)
-  line.rate = 1.2
-  speechSynthesis.speak(line)
-}
+if (!felt) document.querySelector('#note')!.append(' This browser gives web pages no vibration (iPhones do not): here it is sound only.')
 
 // ---- Fingers ---------------------------------------------------------------------
 type Finger = {
@@ -275,7 +167,7 @@ function notch(finger: Finger, way: number) {
   finger.zone.values[axis] = next
   turned[zones.indexOf(finger.zone)][axis] += way
   finger.notches += way
-  feel.notch(setting, share(finger.zone, axis), axis === 'across')
+  feel.notch(setting.lowest, setting.highest, share(finger.zone, axis), axis === 'across')
   write()
   return true
 }

@@ -360,6 +360,27 @@ On an iPhone, `ios/Groove` is a thin app round the same page (it loads it from t
 
 What this page cannot show: a phone's motor is far cruder than a car's actuators. Android Chrome vibrates; iPhones give web pages no vibration (the page flips a hidden switch for a tick where that still works); a desktop gives sound only. And none of it has been tried by a driver: fewer glances do not by themselves mean better driving ([Christiansen et al. 2011](https://rd.springer.com/chapter/10.1007/978-3-642-23771-3_49)).
 
+## Car screen page (Groove as a whole screen)
+
+`car.html` is a full car screen built only from Groove zones (`src/car/main.ts`, `src/car/car.css`; the sound, vibration and voice are shared with the Groove page in `src/tactile/feel.ts`). There is no button on it to aim at. The screen has four zones, each found by where it is against the screen's edges:
+
+| Zone | Slide up or down | Slide sideways | Second-finger tap |
+|---|---|---|---|
+| Stage (upper part) | The scene's own setting: map zoom, playlist, drive mode, contact | The next or previous scene: Map, Media, Car, Phone. The scenes are the sides of a block that turns with the finger, slid like a page | The scene's one action: mute guidance, pause, lock, call |
+| Driver (bottom, driver's side) | Temperature | Fan | A/C |
+| Sound (bottom, middle) | Volume | Track | Mute |
+| Passenger (bottom, far side) | Temperature | Seat heat | A/C |
+
+How it is laid out, and why:
+
+- **Read above, work below.** What is only read (time, gear and speed, range, the map) is high, near the driver's line of sight; the rollers are along the bottom edge, where a resting hand falls, and each climate roller is on its own occupant's side (`settings.driver` swaps them for right-hand drive).
+- **One grammar everywhere.** Every zone is worked the same way, so it is learned once: rest (nothing changes, the zone is spoken), up/down, sideways, second finger. Nothing depends on where inside a zone the finger lands.
+- **A fixed place for everything.** No menus and no pages of settings: a function is always the same zone and the same direction, which is what lets the hand learn it.
+- **The screen shows what is changing.** The zone being changed grows and its counter with it; everything else steps back. Each bottom roller has a counter wheel behind glass that rolls to the new value.
+- **Each scene has one accent** and little on it: a turn card and arrival time on the map, one track, four numbers for the car, one contact.
+
+It is a study of the idea, not a product: the map, the tracks and the car's numbers are made up, and nothing has been tried by a driver.
+
 ## Lab canvas (the entry page)
 
 `index.html` is the way in: one open canvas, like a design tool's board, with the eight studies laid out on it as frames in three groups (Scenes, Cards, Switches) beside a short brief.

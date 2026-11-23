@@ -1,0 +1,178 @@
+/* The car screen: a stage of rolling scenes above three rollers. Dark, satin, softly lit; nothing on it is a small button. */
+.car-page {
+  --ink: rgba(255, 255, 255, 0.74);
+  --quiet: rgba(255, 255, 255, 0.42);
+  --gap: 10px;
+  --round: 26px;
+  --accent: #8fe9c0;
+  margin: 0;
+  overflow: hidden;
+  background: #040506;
+  color: var(--ink);
+  font: 500 15px/1.35 Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  letter-spacing: -0.01em;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  overscroll-behavior: none;
+}
+.car-page header { position: fixed; top: 0; left: 0; right: 0; z-index: 5; display: flex; justify-content: space-between; padding: 8px 22px; font-size: 12px; pointer-events: none; opacity: 0.55; }
+.car-page header a { color: inherit; text-decoration: none; pointer-events: auto; }
+.car-page .quiet { position: fixed; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+#car {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: 62fr 38fr;
+  gap: var(--gap);
+  padding: 30px var(--gap) var(--gap);
+  touch-action: none;
+  transition: opacity 0.4s ease;
+}
+.car-page.dark #car { opacity: 0; }
+
+/* The strip of things only read: time, gear and speed, range. */
+#car .status { position: absolute; top: 40px; left: 0; right: 0; z-index: 3; display: flex; justify-content: space-between; padding: 0 34px; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--ink); pointer-events: none; }
+#car .status .drive b { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: 6px; border-radius: 50%; background: rgba(255, 255, 255, 0.92); color: #111; font-size: 12px; }
+
+#car .zone { position: relative; border-radius: var(--round); overflow: hidden; transition: filter 0.35s ease, transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
+/* While one zone is being changed, the others step back. */
+#car.busy .zone:not(.busy) { filter: brightness(0.5) saturate(0.7); }
+
+/* ---- The stage: four scenes on the sides of a block that turns ---- */
+#car .stage { perspective: 2200px; background: #07090b; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+#car .prism { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
+#car .scene { position: absolute; inset: 0; overflow: hidden; backface-visibility: hidden; background: #0b0e11; transition: filter 0.4s ease; }
+#car .scene.off { filter: saturate(0.35) brightness(0.8); }
+#car .stage.held:not(.busy) .prism { filter: brightness(1.08); }
+#car .tag { position: absolute; left: 34px; bottom: 26px; z-index: 2; display: grid; gap: 2px; transform-origin: left bottom; transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); pointer-events: none; text-shadow: 0 1px 12px rgba(0, 0, 0, 0.7); }
+#car .tag b { font-size: 26px; font-weight: 600; color: #fff; letter-spacing: -0.02em; }
+#car .tag span { font-size: 14px; color: var(--ink); }
+#car .stage.busy .tag { transform: scale(1.5); }
+
+#car .scene .small { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--quiet); }
+#car .scene .list { position: absolute; right: 34px; top: 50%; margin: 0; padding: 0; list-style: none; transform: translateY(-50%); display: grid; gap: 4px; text-align: right; }
+#car .scene .list li { padding: 7px 14px; border-radius: 12px; font-size: 15px; color: var(--quiet); transition: all 0.25s ease; }
+#car .scene .list li.chosen { color: #fff; font-size: 20px; background: rgba(255, 255, 255, 0.08); }
+
+/* Map */
+#car .map > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+#car .map .land { transform-origin: 480px 330px; transform: scale(calc(0.6 + var(--at, 2) * 0.26)); }
+#car .map .roads path { fill: none; stroke: #1a2026; stroke-width: 14; }
+#car .map .roads .lanes { stroke: #13181d; stroke-width: 7; }
+#car .map .roads .wide { stroke: #222a31; stroke-width: 22; }
+#car .map .water { fill: #0d1820; }
+#car .map .route { fill: none; stroke: #63d7a2; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; opacity: 0.92; }
+#car .map .puck { fill: rgba(255, 255, 255, 0.16); }
+#car .map .puck-dot { fill: #fff; }
+#car .map .turn { position: absolute; left: 34px; top: 84px; display: flex; align-items: center; gap: 14px; padding: 14px 20px 14px 14px; border-radius: 20px; background: rgba(12, 15, 18, 0.82); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07); }
+#car .map .turn svg { width: 46px; height: 46px; fill: none; stroke: #63d7a2; stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; }
+#car .map .turn b, #car .map .arrive b { display: block; font-size: 26px; font-weight: 600; color: #fff; letter-spacing: -0.02em; }
+#car .map .turn span, #car .map .arrive span { font-size: 14px; color: var(--ink); }
+#car .map .arrive { position: absolute; right: 34px; bottom: 26px; text-align: right; text-shadow: 0 1px 12px rgba(0, 0, 0, 0.7); }
+#car .map.off .turn { opacity: 0.45; }
+
+/* Media */
+#car .media { background: radial-gradient(120% 140% at 20% 30%, #1d2a3c, #0b0e11 62%); }
+#car .media .art { position: absolute; left: 34px; top: 50%; height: 56%; aspect-ratio: 1; transform: translateY(-50%); border-radius: 22px; background: linear-gradient(140deg, #f2b279, #c4567c 48%, #2e3f8f); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5); transition: filter 0.4s ease; }
+#car .media[data-at='0'] .art { filter: hue-rotate(-40deg); }
+#car .media[data-at='2'] .art { filter: hue-rotate(120deg) saturate(0.7); }
+#car .media[data-at='3'] .art { filter: hue-rotate(200deg) saturate(0.6); }
+#car .playing { position: absolute; left: calc(34px + 34vh + 34px); top: 50%; transform: translateY(-50%); display: grid; gap: 4px; max-width: 34%; }
+#car .playing b { font-size: clamp(24px, 4.4vmin, 44px); font-weight: 600; color: #fff; letter-spacing: -0.03em; line-height: 1.05; }
+#car .playing .by { color: var(--ink); }
+#car .media .bar { margin-top: 16px; width: min(260px, 100%); height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.14); }
+#car .media .bar i { display: block; width: 38%; height: 100%; border-radius: 2px; background: #fff; }
+
+/* Car */
+#car .vehicle { background: radial-gradient(90% 120% at 30% 50%, #18222a, #0b0e11 66%); }
+#car .vehicle svg { position: absolute; left: 34px; top: 50%; height: 78%; transform: translateY(-50%); }
+#car .vehicle .body { fill: #2b343c; stroke: rgba(255, 255, 255, 0.16); stroke-width: 2; }
+#car .vehicle .glass { fill: #10161b; }
+#car .vehicle .wheel { fill: #05070a; }
+#car .vehicle[data-at='0'] { --accent: #7fe0a8; }
+#car .vehicle[data-at='1'] { --accent: #9ec2ff; }
+#car .vehicle[data-at='2'] { --accent: #ff9a76; }
+#car .vehicle .body { filter: drop-shadow(0 0 26px color-mix(in srgb, var(--accent) 30%, transparent)); transition: filter 0.4s ease; }
+#car .vehicle dl { position: absolute; left: 34%; top: 50%; margin: 0; transform: translateY(-50%); display: grid; grid-template-columns: auto auto; gap: 20px 44px; }
+#car .vehicle dt { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--quiet); }
+#car .vehicle dd { margin: 2px 0 0; font-size: clamp(20px, 3.4vmin, 32px); font-weight: 600; color: #fff; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+
+/* Phone */
+#car .phone { background: radial-gradient(100% 130% at 22% 40%, #1f2a22, #0b0e11 64%); }
+#car .phone .face { position: absolute; left: 34px; top: 50%; height: 44%; aspect-ratio: 1; transform: translateY(-50%); display: grid; place-items: center; border-radius: 50%; background: linear-gradient(160deg, #3a4a40, #1c2420); font-size: clamp(40px, 9vmin, 90px); font-weight: 600; color: #fff; }
+#car .phone .playing { left: calc(34px + 27vh + 34px); }
+#car .phone:not(.off) .call { color: #7fe0a8; }
+
+/* ---- The rollers ---- */
+#car .row { display: grid; grid-template-columns: 1fr 1.15fr 1fr; gap: var(--gap); min-height: 0; }
+#car .roller {
+  display: grid;
+  grid-template-rows: auto auto auto;
+  align-content: center;
+  justify-items: center;
+  gap: 10px;
+  transform-origin: center bottom;
+  /* Satin under long soft lamps: a bright band above the middle, shade where it sinks into the dashboard. */
+  background: linear-gradient(180deg, #0c0f12 0%, #232a31 14%, #2d353d 30%, #20262c 52%, #14181c 78%, #08090b 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 -30px 50px rgba(0, 0, 0, 0.5), inset 0 26px 40px rgba(0, 0, 0, 0.35);
+}
+#car .roller.driver, #car .roller.passenger { background-image: linear-gradient(180deg, #0d0f12 0%, #2a2a2e 14%, #37322f 30%, #27231f 52%, #171513 78%, #09090a 100%); }
+#car .roller.held { filter: brightness(1.12); }
+#car .roller.busy { transform: scale(1.04, 1.16); z-index: 4; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09), inset 0 -30px 50px rgba(0, 0, 0, 0.5), inset 0 26px 40px rgba(0, 0, 0, 0.35), 0 -18px 50px rgba(0, 0, 0, 0.6); }
+#car .roller.off .counter { filter: saturate(0) brightness(0.55); }
+#car .roller.stopped { box-shadow: inset 0 0 0 1px rgba(255, 120, 90, 0.5), inset 0 -30px 50px rgba(0, 0, 0, 0.5), inset 0 26px 40px rgba(0, 0, 0, 0.35); }
+/* The knurled ridges: one per notch, moving with the finger. Fine and dark, with a thin lit edge. */
+#car .ridges { position: absolute; inset: 0; pointer-events: none; transition: opacity 0.3s ease; }
+#car .ridges.a { opacity: 0.55; background: repeating-linear-gradient(180deg, transparent 0 calc(var(--pa) - 3px), rgba(0, 0, 0, 0.5) calc(var(--pa) - 3px) calc(var(--pa) - 1px), rgba(255, 255, 255, 0.07) calc(var(--pa) - 1px) var(--pa)) 0 var(--a); }
+#car .ridges.b { opacity: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(var(--pb) - 3px), rgba(0, 0, 0, 0.5) calc(var(--pb) - 3px) calc(var(--pb) - 1px), rgba(255, 255, 255, 0.07) calc(var(--pb) - 1px) var(--pb)) var(--b) 0; }
+#car .roller.busy .ridges.a { opacity: 1; }
+#car .roller.sideways .ridges.a { opacity: 0; }
+#car .roller.sideways .ridges.b { opacity: 0.55; }
+#car .roller.sideways.busy .ridges.b { opacity: 1; }
+#car .roller .label, #car .roller .second { position: relative; z-index: 1; text-align: center; padding: 0 10px; }
+#car .roller .label { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); }
+#car .roller .second { font-size: 14px; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* The counter: a wheel of values behind glass, like an odometer's. */
+#car .counter {
+  position: relative;
+  z-index: 1;
+  width: min(74%, 300px);
+  height: clamp(64px, 13vh, 118px);
+  border-radius: 18px;
+  overflow: hidden;
+  perspective: 700px;
+  background: linear-gradient(180deg, #040506, #15191d 48%, #040506);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 10px 22px rgba(0, 0, 0, 0.8), inset 0 -10px 22px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+#car .roller.busy .counter { transform: scale(1.22); }
+#car .roller .label, #car .roller .second { transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
+#car .roller.busy .label { transform: translateY(-9px); }
+#car .roller.busy .second { transform: translateY(9px); }
+#car .wheel { position: absolute; inset: 0; transform-style: preserve-3d; }
+#car .wheel.b, #car .roller.sideways .wheel.a { visibility: hidden; }
+#car .roller.sideways .wheel.b { visibility: visible; }
+#car .wheel span { position: absolute; inset: 0; display: grid; place-items: center; backface-visibility: hidden; font-size: clamp(34px, 7.4vh, 66px); font-weight: 600; letter-spacing: -0.04em; color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#car .wheel span.long { font-size: clamp(18px, 3.4vh, 28px); letter-spacing: -0.02em; }
+
+.car-page #modes { position: fixed; right: 16px; top: 34px; z-index: 6; display: flex; gap: 4px; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); }
+.car-page #modes button { border: 0; padding: 6px 12px; border-radius: 999px; font: inherit; font-size: 12px; color: rgba(255, 255, 255, 0.7); background: none; cursor: pointer; }
+.car-page #modes button[aria-pressed='true'] { background: #f2f2f4; color: #111; }
+.car-page.dark #modes { opacity: 0.45; }
+#car .status { padding-right: 190px; }
+
+/* An upright phone: the same screen, with less on it. */
+@media (orientation: portrait) {
+  #car { grid-template-rows: 50fr 50fr; }
+  #car .roller .second, #car .scene .list, #car .vehicle dl div:nth-child(n + 3) { display: none; }
+  #car .counter { width: 84%; }
+  #car .media .art { height: 34%; top: 40%; }
+  #car .playing { left: 34px; top: auto; bottom: 96px; transform: none; max-width: 80%; }
+  #car .phone .playing { left: 34px; }
+  #car .phone .face { top: 38%; height: 30%; }
+  #car .vehicle dl { left: 48%; grid-template-columns: auto; }
+  #car .status span:last-child { display: none; }
+}
