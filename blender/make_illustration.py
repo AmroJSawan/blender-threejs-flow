@@ -16,6 +16,10 @@ Everything sits on one module, the cell. Plates are a whole number of cells wide
 cells apart, the hub and the channels sit at cell centres, and the rules fall on plate edges. Keep
 "Pitch" even and "Plate" odd and that stays true.
 
+Each plate and the hub has a label card floating over its corner on a leader line. The words on a
+card are geometry too, and its figures are written from the parameters: change "Towers" and the card
+counts again.
+
 The script writes
     blender/illustrations/network.blend            the node network, to open and adjust
     public/illustrations/network/<variant>.glb     the scene, once per entry in VARIANTS
@@ -52,17 +56,20 @@ PARAMETERS = [
     ("Line", "FLOAT", 0.035, 0.002, "Radius of a diagram line"),
     ("Bend", "FLOAT", 0.3, 0.0, "Radius of a line's corners"),
     ("Marked", "INT", 4, 0, "Which plate the wire-frame volume stands on"),
+    ("Card Size", "FLOAT", 1.15, 0.0, "Size of the label cards; 0 hides them"),
+    ("Card Lift", "FLOAT", 0.55, 0.0, "How far a card floats above the top of the thing it labels"),
+    ("Card Turn", "FLOAT", -45.0, -180.0, "Which way the cards face, degrees; -45 faces the isometric view"),
     ("Resolution", "INT", 48, 8, "Segments round anything circular"),
 ]
 
 # The same network with different numbers. Each becomes one file the page can show.
 VARIANTS = [
     {"name": "plan", "title": "Plan", "set": {}},
-    {"name": "dense", "title": "Dense", "set": {"Columns": 4, "Rows": 3, "Towers": 6, "Tower Height": 1.1, "Marked": 6, "Seed": 8}},
-    {"name": "tall", "title": "Tall", "set": {"Columns": 2, "Rows": 2, "Plate": 5, "Pitch": 6, "Towers": 5, "Tower Height": 3.4, "Variation": 0.8, "Tank Height": 1.8, "Marked": 0}},
+    {"name": "dense", "title": "Dense", "set": {"Columns": 4, "Rows": 3, "Towers": 6, "Tower Height": 1.1, "Marked": 6, "Seed": 8, "Card Size": 1.0, "Card Lift": 0.45}},
+    {"name": "tall", "title": "Tall", "set": {"Columns": 2, "Rows": 2, "Plate": 5, "Pitch": 6, "Towers": 5, "Tower Height": 3.4, "Variation": 0.8, "Tank Height": 1.8, "Marked": 0, "Card Size": 1.6, "Card Lift": 0.6}},
 ]
 
-MATERIALS = ["Ground", "Rule", "Plate", "Solid", "Line", "Accent"]
+MATERIALS = ["Ground", "Rule", "Plate", "Solid", "Line", "Accent", "Card", "Ink"]
 
 
 class Net:
@@ -138,6 +145,25 @@ class Net:
         profile = self.add("GeometryNodeCurvePrimitiveCircle", {"Resolution": sides, "Radius": radius})
         mesh = self.add("GeometryNodeCurveToMesh", {"Curve": curve, "Profile Curve": self.out(profile, "Curve"), "Fill Caps": True})
         return self.add("GeometryNodeSetShadeSmooth", {0: mesh.outputs[0]}).outputs[0]
+
+    def choose(self, node, name, value, label=None):
+        """Sets a node's option, whether this Blender keeps it as a property or as an input."""
+        if hasattr(node, name):
+            setattr(node, name, value)
+        else:
+            self.socket(node, name.replace("_", " ").title()).default_value = label or value.replace("_", " ").title()
+
+    def written(self, text, size, material):
+        """Words as flat geometry lying in the XY plane, starting at the origin and reading along +X."""
+        curves = self.add("GeometryNodeStringToCurves", {"String": text, "Size": size})
+        filled = self.add("GeometryNodeFillCurve", {"Curve": self.out(curves, "Curve Instances")})
+        self.choose(filled, "mode", "NGONS", label="N-gons")
+        return self.material(filled.outputs[0], material)
+
+    def figure(self, pattern, value, decimals=0):
+        """The pattern with its # replaced by a number."""
+        number = self.add("FunctionNodeValueToString", {"Value": value, "Decimals": decimals})
+        return self.add("FunctionNodeReplaceString", {"String": pattern, "Find": "#", "Replace": number.outputs[0]}).outputs[0]
 
     def field_of_points(self, across, deep, count_x, count_y):
         """count_x × count_y points spread evenly over a rectangle, centred."""
@@ -289,7 +315,51 @@ def build_network():
     box = net.moved(net.moved(box, translation=net.vector(0, 0, m("MULTIPLY", tall, 0.5))), translation=net.out(place))
     marked = net.material(box, "Accent")
 
-    everything = net.add("GeometryNodeJoinGeometry", {0: [ground, rules, plates, solids, hub, routes, marked]})
+    # ---- Label cards: a panel on a leader line over the corner of each plate and of the hub ----
+    # A card is drawn flat (x across, y up, facing +z), then stood up, turned to face the view and lifted.
+    CARD = (1.95, 0.7, 0.03)        # across, up, thick
+    PAD = 0.16
+
+    def card(title, figures, corner, height):
+        """One card with its leader, for a thing `height` metres tall whose corner is `corner` metres out from its centre."""
+        panel = net.material(net.add("GeometryNodeMeshCube", {"Size": CARD}).outputs[0], "Card")
+        stripe = net.add("GeometryNodeMeshCube", {"Size": (0.035, CARD[1], CARD[2] + 0.004)})
+        stripe = net.material(net.moved(stripe.outputs[0], translation=(-CARD[0] / 2 + 0.0175, 0.0, 0.0)), "Accent")
+        front = CARD[2] / 2 + 0.004
+        name = net.moved(net.written(title, 0.22, "Ink"), translation=(-CARD[0] / 2 + PAD, 0.06, front))
+        value = net.moved(net.written(figures, 0.18, "Accent"), translation=(-CARD[0] / 2 + PAD, -0.2, front))
+        flat = net.add("GeometryNodeJoinGeometry", {0: [panel, stripe, name, value]}).outputs[0]
+        flat = net.moved(flat, translation=(CARD[0] / 2, 0.0, 0.0))   # like a flag: the leader runs up the card's left edge
+        size = P["Card Size"]
+        floats = m("ADD", m("ADD", top, height), P["Card Lift"])
+        stood = net.add(
+            "GeometryNodeTransform",
+            {
+                "Geometry": flat,
+                "Rotation": net.vector(math.pi / 2, 0, m("RADIANS", P["Card Turn"])),
+                "Scale": net.vector(size, size, size),
+                "Translation": net.vector(0, 0, m("ADD", floats, m("MULTIPLY", size, CARD[1] / 2))),
+            },
+        ).outputs[0]
+        leader = net.add("GeometryNodeCurvePrimitiveLine", {"Start": net.vector(0, 0, top), "End": net.vector(0, 0, m("ADD", floats, m("MULTIPLY", size, CARD[1])))})
+        leader = net.material(net.tube(net.out(leader, "Curve"), m("MULTIPLY", P["Line"], 0.35), sides=6), "Line")
+        foot = net.add("GeometryNodeMeshCylinder", {"Vertices": 16, "Radius": m("MULTIPLY", P["Line"], 1.6), "Depth": m("MULTIPLY", P["Line"], 0.8)})
+        foot = net.material(net.moved(net.out(foot, "Mesh"), translation=net.vector(0, 0, top)), "Accent")
+        whole = net.add("GeometryNodeJoinGeometry", {0: [stood, leader, foot]}).outputs[0]
+        whole = net.moved(whole, translation=net.vector(corner, m("MULTIPLY", corner, -1.0), 0))   # the corner nearest the view's right
+        shown = net.add("GeometryNodeSwitch", {"Switch": m("GREATER_THAN", size, 0.001), "True": whole}, input_type="GEOMETRY")
+        return shown.outputs[0]
+
+    corner = m("MULTIPLY", plate, 0.5)
+    cards = [
+        net.on_points(sites, card("Towers", net.figure("# units", m("MULTIPLY", P["Towers"], P["Towers"])), corner, P["Tower Height"]), selection=is_kind[0]),
+        net.on_points(sites, card("Panels", net.figure("6 units, tilt #", P["Panel Tilt"]), corner, m("MULTIPLY", lift, 2.0)), selection=is_kind[1]),
+        net.on_points(sites, card("Tanks", net.figure("4 units, # m high", P["Tank Height"], decimals=1), corner, P["Tank Height"]), selection=is_kind[2]),
+        net.moved(card("Hub", net.figure("feeds # plates", m("MULTIPLY", P["Columns"], P["Rows"])), m("MULTIPLY", P["Hub Radius"], 0.7), m("MULTIPLY", base_height, 2.0)), translation=hub_place),
+    ]
+    cards = net.add("GeometryNodeJoinGeometry", {0: cards}).outputs[0]
+
+    everything = net.add("GeometryNodeJoinGeometry", {0: [ground, rules, plates, solids, hub, routes, marked, cards]})
     result = net.realized(everything.outputs[0])
     net.add("NodeGroupOutput", {"Geometry": result})
 

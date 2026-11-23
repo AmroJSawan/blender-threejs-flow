@@ -297,8 +297,9 @@ npm run illustration
 - **The parameters** are the node group's inputs, listed as `PARAMETERS` at the top of the script: columns, rows, the cell size, tower count and height, line radius, bend radius, and so on. Open `blender/illustrations/network.blend` and they are on the object's modifier; change one and every part follows.
 - **One module.** Everything is measured in cells. Plates are a whole number of cells wide and apart, the hub and the line channels sit at cell centres, and the ground's rules fall on plate edges. Keep `Pitch` even and `Plate` odd.
 - **Variants** are the same network with different numbers (`VARIANTS` in the script). Each is exported to `public/illustrations/network/<name>.glb`; the page lists them and shows the numbers each was made from, with the changed ones marked.
+- **Label cards** hang like flags from a leader line over the corner of each plate and of the hub. Their words are geometry made by the same network, and their figures are written from the parameters (16 towers becomes 36 when `Towers` goes from 4 to 6). `Card Size` scales them (0 hides them), `Card Lift` sets how far they float above the thing they label, and `Card Turn` sets which way they face.
 - **Round things** take their segment count from `Resolution`, so detail is a number, not a property of the model.
-- **The page** (`src/illustrations/main.ts`) draws the scene in true isometric with plain colours per part (`settings.parts`, keyed by the Blender material names Ground, Rule, Plate, Solid, Line, Accent). **Wire** draws every edge of the plates and solids to show how they are built. `?variant=dense&view=wire` links to a view; `?keep` lets a still be saved from the canvas.
+- **The page** (`src/illustrations/main.ts`) draws the scene in true isometric with plain colours per part (`settings.parts`, keyed by the Blender material names Ground, Rule, Plate, Solid, Line, Accent, Card, Ink). **Wire** draws every edge of the plates and solids to show how they are built. `?variant=dense&view=wire` links to a view; `?keep` lets a still be saved from the canvas.
 
 This is a first pass: proportions, topology and alignment, with no surface finish yet.
 

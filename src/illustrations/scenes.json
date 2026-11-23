@@ -69,6 +69,18 @@
         "about": "Which plate the wire-frame volume stands on"
       },
       {
+        "name": "Card Size",
+        "about": "Size of the label cards; 0 hides them"
+      },
+      {
+        "name": "Card Lift",
+        "about": "How far a card floats above the top of the thing it labels"
+      },
+      {
+        "name": "Card Turn",
+        "about": "Which way the cards face, degrees; -45 faces the isometric view"
+      },
+      {
         "name": "Resolution",
         "about": "Segments round anything circular"
       }
@@ -77,8 +89,8 @@
       {
         "name": "plan",
         "title": "Plan",
-        "faces": 3183,
-        "version": "1c53ea17",
+        "faces": 3618,
+        "version": "48b842fc",
         "values": {
           "Columns": 3,
           "Rows": 2,
@@ -96,14 +108,17 @@
           "Line": 0.035,
           "Bend": 0.3,
           "Marked": 4,
+          "Card Size": 1.15,
+          "Card Lift": 0.55,
+          "Card Turn": -45.0,
           "Resolution": 48
         }
       },
       {
         "name": "dense",
         "title": "Dense",
-        "faces": 5725,
-        "version": "8ba8b954",
+        "faces": 6534,
+        "version": "be3ede96",
         "values": {
           "Columns": 4,
           "Rows": 3,
@@ -121,14 +136,17 @@
           "Line": 0.035,
           "Bend": 0.3,
           "Marked": 6,
+          "Card Size": 1.0,
+          "Card Lift": 0.45,
+          "Card Turn": -45.0,
           "Resolution": 48
         }
       },
       {
         "name": "tall",
         "title": "Tall",
-        "faces": 2649,
-        "version": "4e255c26",
+        "faces": 2950,
+        "version": "3cd483a0",
         "values": {
           "Columns": 2,
           "Rows": 2,
@@ -146,6 +164,9 @@
           "Line": 0.035,
           "Bend": 0.3,
           "Marked": 0,
+          "Card Size": 1.6,
+          "Card Lift": 0.6,
+          "Card Turn": -45.0,
           "Resolution": 48
         }
       }

@@ -8,7 +8,7 @@ import scenes from './scenes.json'
 const settings = {
   /** Shown first, unless the address says ?variant=name. */
   start: 'plan',
-  /** The board the scene sits on, and each part's colour by its material name in Blender. `lit: false` parts glow evenly. */
+  /** The board the scene sits on, and each part's colour by its material name in Blender. `lit: false` parts glow evenly; `opacity` lets what is behind show through. */
   backdrop: '#0b0d10',
   parts: {
     Ground: { colour: '#14171b', lit: true },
@@ -17,7 +17,9 @@ const settings = {
     Solid: { colour: '#c4cad3', lit: true },
     Line: { colour: '#66707d', lit: false },
     Accent: { colour: '#49e6c6', lit: false },
-  } as Record<string, { colour: string; lit: boolean }>,
+    Card: { colour: '#1c2229', lit: false, opacity: 0.8 },
+    Ink: { colour: '#eef1f5', lit: false },
+  } as Record<string, { colour: string; lit: boolean; opacity?: number }>,
   /** Wire view: surfaces go dark and every edge of the plates and solids is drawn, to show how they are built. */
   wire: { surface: '#101317', edge: '#aab2bd', parts: ['Plate', 'Solid'] },
   /** The view: true isometric, seen from the hub's corner. `margin` is the empty share of the window round the scene. */
@@ -53,7 +55,7 @@ scene.add(lamp, lamp.target, new THREE.HemisphereLight(0xffffff, 0x30343a, setti
 // One material per part, shared by every variant.
 const materials = new Map<string, THREE.Material>()
 for (const [name, part] of Object.entries(settings.parts)) {
-  materials.set(name, part.lit ? new THREE.MeshLambertMaterial({ color: part.colour }) : new THREE.MeshBasicMaterial({ color: part.colour }))
+  materials.set(name, part.lit ? new THREE.MeshLambertMaterial({ color: part.colour }) : new THREE.MeshBasicMaterial({ color: part.colour, side: THREE.DoubleSide, transparent: part.opacity !== undefined, opacity: part.opacity ?? 1 }))
 }
 const wireSurface = new THREE.MeshBasicMaterial({ color: settings.wire.surface, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 })
 const wireEdge = new THREE.LineBasicMaterial({ color: settings.wire.edge })
