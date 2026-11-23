@@ -333,16 +333,16 @@ An earlier, denser isometric scene ("Network": plates, towers, routed lines, lab
 
 ## Groove page (a touch control you can feel)
 
-`tactile.html` is a study of one question: what would give a car's touchscreen back what knobs had, without drawing a knob? The page is one sheet of dark material split into two zones (Climate, Sound). All of it is in `src/tactile/main.ts`; the numbers are in `settings` at the top.
+`tactile.html` is a study of one question: what would give a car's touchscreen back what knobs had, without drawing a knob? The page is split into two zones (Climate, Sound). Each zone is one wide roller set into the dashboard, drawn by a shader: almost flat when left alone, swelling under a resting finger, and a drum turning with the finger once it slides (an upright drum for a sideways slide). A window in it holds a counter drum, like an odometer's, which grows and rolls to the new value while that value is being changed; the zone itself takes a little of the screen from the other, which dims. All of it is in `src/tactile/main.ts`; the numbers are in `settings` at the top.
 
 How it is worked:
 
 | Do this | It does this | You get |
 |---|---|---|
-| Put a finger down anywhere in a zone | Nothing changes | A soft thud, a dent under the finger, and (after a moment's rest) the zone and its values spoken |
-| Slide up or down | The zone's main setting, one notch at a time, from wherever you landed | Per notch: a short pulse, a tick whose pitch rises with the value, a ridge the dent sticks in and slips over |
+| Put a finger down anywhere in a zone | Nothing changes | A soft thud, the roller swelling under the finger, and (after a moment's rest) the zone and its values spoken |
+| Slide up or down | The zone's main setting, one notch at a time, from wherever you landed | Per notch: a short pulse, a tick whose pitch rises with the value, the roller's ridges passing under the finger, one per notch, hanging back and then slipping on; the counter rolling to the next value |
 | Slide left or right | The zone's second setting | The same, heavier and lower |
-| Reach either end | Nothing more | A longer, lower thud, a wall in the groove, no more ticks |
+| Reach either end | Nothing more | A longer, lower thud, a red flush under the finger, no more ticks |
 | Tap with a second finger while the first rests (or double-tap) | Switches the zone on or off | Two pulses and two notes, rising for on, falling for off |
 
 "Eyes-free" turns the picture off so it can be tried by ear and hand alone. "Voice" turns the spoken values off.

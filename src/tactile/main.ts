@@ -14,7 +14,9 @@ import './tactile.css'
  * - It stops at its ends.               → A longer, lower thud and a wall in the groove; no more ticks.
  * - Switching is a separate act.        → A tap with a second finger while the first rests (or a double tap) switches the zone on or off.
  *
- * The picture is one sheet of dark material drawn by a shader: its dents, grooves and ridges are a height the light falls across.
+ * The picture: each zone is one wide roller set into the dashboard, drawn by a shader. At rest it lies almost flat. Under a finger it
+ * swells; once the finger slides, it becomes a drum turning with the finger, its knurled ridges passing one per notch, and the
+ * window in it (a counter drum, like an odometer's) grows and rolls to the new value. Sliding sideways turns it into an upright drum.
  */
 const settings = {
   /**
@@ -58,8 +60,17 @@ const settings = {
   pulse: { land: 14, notch: 20, heavy: 30, stop: 60, turn: [22, 70, 30] },
   apart: 32,
   loud: 0.5,
-  /** The sheet: its dent under a finger (depth and width in px), the groove, the ridges between notches, and how strongly light shows them. */
-  sheet: { dent: 20, pad: 54, groove: 12, wide: 32, ridge: 10, reach: 190, relief: 1.0, hint: 0.3 },
+  /**
+   * The roller. `inset` is the gap round it (px) and `corner` its rounding; `curve` how far round the drum the zone's edge is (0 flat … 1 a full half turn);
+   * `rest` how much of a drum it already is with no finger on it, and `wake` with a finger resting. `knurl` is how deep the ridges look,
+   * `satin` how strong the long soft highlights are, and `grows` how much of the screen the zone being changed takes from the other (0–0.5).
+   */
+  roller: { inset: 10, corner: 28, curve: 0.9, rest: 0.12, wake: 0.3, knurl: 0.9, satin: 0.1, grows: 0.07, dims: 0.3 },
+  /**
+   * The window with the value in it. `wide` and `tall` are its size as shares of the zone (with a cap in px), `up` how far above the
+   * zone's middle it sits (share of the zone's height), and `zoom` how many times bigger it is while its value is being changed.
+   */
+  window: { wide: 0.56, tall: 0.17, cap: [210, 74], up: 0.1, zoom: 1.45, corner: 18 },
   /** How much the shown finger hangs back in a notch before slipping to the next (1 = follows the finger exactly; higher = stickier). */
   stick: 2.4,
   maxPixelRatio: 2,
@@ -81,19 +92,21 @@ function worded(zone: Zone, axis: Axis) {
 }
 
 // ---- Words on the sheet ----------------------------------------------------------
+// The value itself is drawn on the counter drum by the shader; these are the quiet words round it.
 const blocks = zones.map((zone) => {
   const block = document.createElement('div')
   block.className = 'zone'
-  block.innerHTML = `<span class="name"></span><span class="figure"></span><span class="second"></span><span class="how">↕ ${zone.along.name.toLowerCase()} · ↔ ${zone.across.name.toLowerCase()} · second finger: ${zone.turn.name.toLowerCase()} on or off</span>`
+  block.innerHTML = `<span class="name"></span><span class="second"></span><span class="how">↕ ${zone.along.name.toLowerCase()} · ↔ ${zone.across.name.toLowerCase()} · second finger: ${zone.turn.name.toLowerCase()} on or off</span>`
   document.querySelector('#zones')!.append(block)
   return block
 })
+const reading = zones.map(() => 'along' as Axis) // which setting each zone's window shows
 function write() {
   zones.forEach((zone, index) => {
-    const [name, figure, second] = blocks[index].children
-    name.textContent = zone.name
-    figure.textContent = worded(zone, 'along')
-    second.textContent = `${zone.across.name} ${worded(zone, 'across')} · ${zone.turn.name} ${zone.on ? 'on' : 'off'}`
+    const [name, second] = blocks[index].children
+    const other: Axis = reading[index] === 'along' ? 'across' : 'along'
+    name.textContent = `${zone.name} · ${zone[reading[index]].name}`
+    second.textContent = `${zone[other].name} ${worded(zone, other)} · ${zone.turn.name} ${zone.on ? 'on' : 'off'}`
     blocks[index].classList.toggle('off', !zone.on)
   })
 }
@@ -228,6 +241,7 @@ type Finger = {
   down: boolean
 }
 const fingers: Finger[] = []
+const turned = zones.map(() => ({ along: 0, across: 0 })) // notches each drum has turned in all, so its ridges never jump
 const lastTap = { at: 0, zone: null as Zone | null }
 const upright = () => innerHeight > innerWidth
 const zoneAt = (x: number, y: number) => zones[(upright() ? y / innerHeight : x / innerWidth) < 0.5 ? 0 : 1]
@@ -251,6 +265,7 @@ function notch(finger: Finger, way: number) {
   }
   finger.wall = 0
   finger.zone.values[axis] = next
+  turned[zones.indexOf(finger.zone)][axis] += way
   finger.notches += way
   feel.notch(setting, share(finger.zone, axis), axis === 'across')
   write()
@@ -292,6 +307,8 @@ canvas.addEventListener('pointermove', (event) => {
     const far = { x: finger.now.x - finger.from.x, y: finger.now.y - finger.from.y }
     if (Math.hypot(far.x, far.y) < settings.slack) return
     finger.axis = Math.abs(far.y) >= Math.abs(far.x) ? 'along' : 'across'
+    reading[zones.indexOf(finger.zone)] = finger.axis
+    write()
     clearTimeout(finger.timer)
     return
   }
@@ -331,86 +348,154 @@ canvas.addEventListener('pointerup', lift)
 canvas.addEventListener('pointercancel', lift)
 canvas.addEventListener('contextmenu', (event) => event.preventDefault())
 
-// ---- The sheet -------------------------------------------------------------------
+// ---- The picture -----------------------------------------------------------------
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false })
 const view = new THREE.Camera()
 const two = <T>(make: () => T) => [make(), make()]
+
+/** A strip of every value a setting can take, one above the next, for the counter drum to show. */
+const CELL = { wide: 384, tall: 128 }
+function tape(zone: Zone, axis: Axis) {
+  const setting = zone[axis]
+  const count = Math.round((setting.most - setting.least) / setting.step) + 1
+  const strip = document.createElement('canvas')
+  strip.width = CELL.wide
+  strip.height = CELL.tall * count
+  const pen = strip.getContext('2d')!
+  pen.fillStyle = '#fff'
+  pen.textAlign = 'center'
+  pen.textBaseline = 'middle'
+  const kept = zone.values[axis]
+  for (let index = 0; index < count; index++) {
+    zone.values[axis] = setting.least + index * setting.step
+    const words = worded(zone, axis)
+    pen.font = `600 ${words.length > 5 ? 62 : 100}px Inter, system-ui, -apple-system, 'Segoe UI', sans-serif`
+    pen.fillText(words, CELL.wide / 2, CELL.tall * (index + 0.54))
+  }
+  zone.values[axis] = kept
+  const picture = new THREE.CanvasTexture(strip)
+  picture.anisotropy = 8
+  return { picture, count }
+}
+const tapes = zones.map((zone) => ({ along: tape(zone, 'along'), across: tape(zone, 'across') }))
+
 const sheet = new THREE.ShaderMaterial({
   uniforms: {
     uSize: { value: new THREE.Vector2() },
     uRatio: { value: 1 },
-    uUpright: { value: 0 },
     uDark: { value: 0 },
-    uFinger: { value: two(() => new THREE.Vector4()) }, // where it is drawn (x, y), how far pressed in, how hard against a wall
-    uGroove: { value: two(() => new THREE.Vector4()) }, // where it landed (x, y), notch spacing up/down and sideways
-    uLock: { value: two(() => new THREE.Vector4()) }, // how settled the up/down groove is, the sideways one, which way the wall is, the lit notch
-    uZone: { value: two(() => new THREE.Vector4()) }, // how full, on or off
+    uRect: { value: two(() => new THREE.Vector4()) }, // each roller: its middle (x, y) and half its size (x, y), px
+    uRoll: { value: two(() => new THREE.Vector4()) }, // how much of a drum it is for up/down and for sideways; how far each has turned, px
+    uPitch: { value: zones.map((zone) => new THREE.Vector2(zone.along.px, zone.across.px)) },
+    uWindow: { value: two(() => new THREE.Vector4()) }, // each window: its middle and half its size, px
+    uRead: { value: two(() => new THREE.Vector4()) }, // the value shown (as a place in its strip), how many values, which setting (0 up/down, 1 sideways), how lit
+    uZone: { value: two(() => new THREE.Vector4()) }, // how full, on or off, how dimmed
+    uFinger: { value: two(() => new THREE.Vector4()) }, // where a finger is (x, y), how far pressed in, how hard against the end
     uLow: { value: zones.map((zone) => new THREE.Color(zone.tint[0])) },
     uHigh: { value: zones.map((zone) => new THREE.Color(zone.tint[1])) },
     uAccent: { value: zones.map((zone) => new THREE.Color(zone.accent)) },
-    uShape: { value: new THREE.Vector4(settings.sheet.dent, settings.sheet.pad, settings.sheet.groove, settings.sheet.wide) },
-    uRidge: { value: new THREE.Vector3(settings.sheet.ridge, settings.sheet.reach, settings.sheet.relief) },
+    uLook: { value: new THREE.Vector4(settings.roller.corner, settings.roller.curve, settings.roller.knurl, settings.roller.satin) },
+    uCorner: { value: settings.window.corner },
+    uTape0a: { value: tapes[0].along.picture },
+    uTape0b: { value: tapes[0].across.picture },
+    uTape1a: { value: tapes[1].along.picture },
+    uTape1b: { value: tapes[1].across.picture },
   },
   vertexShader: /* glsl */ `void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }`,
   fragmentShader: /* glsl */ `
     precision highp float;
-    uniform vec2 uSize;
-    uniform float uRatio, uUpright, uDark;
-    uniform vec4 uFinger[2], uGroove[2], uLock[2], uZone[2], uShape;
-    uniform vec3 uLow[2], uHigh[2], uAccent[2], uRidge;
+    uniform vec2 uSize, uPitch[2];
+    uniform float uRatio, uDark, uCorner;
+    uniform vec4 uRect[2], uRoll[2], uWindow[2], uRead[2], uZone[2], uFinger[2], uLook;
+    uniform vec3 uLow[2], uHigh[2], uAccent[2];
+    uniform sampler2D uTape0a, uTape0b, uTape1a, uTape1b;
 
-    // One groove: a channel through the landing point with a ridge between each notch and the next, seen only near the finger.
-    // 'along' and 'beside' are px from the landing point; 'finger' is where the finger is along it.
-    float groove(float along, float beside, float pitch, float finger, float wall) {
-      float near = exp(-pow((along - finger) / uRidge.y, 2.0));
-      float channel = exp(-beside * beside / (2.0 * uShape.w * uShape.w));
-      float ridge = pow(0.5 - 0.5 * cos(6.2831853 * along / pitch), 4.0);
-      float stop = wall * 1.4 * exp(-pow((along - finger - sign(wall) * pitch * 0.62) / (pitch * 0.2), 2.0));
-      return near * channel * (-uShape.z + uRidge.x * (ridge + abs(stop)));
+    // How far outside (+) or inside (−) a rounded rectangle a point is, px.
+    float box(vec2 q, vec2 half_, float corner) {
+      vec2 d = abs(q) - half_ + corner;
+      return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - corner;
     }
-    // How far the sheet stands above (+) or below (−) flat, at a point in px from the top left.
-    float height(vec2 p) {
-      float fromSeam = uUpright > 0.5 ? p.y - uSize.y * 0.5 : p.x - uSize.x * 0.5;
-      float h = -2.5 * exp(-fromSeam * fromSeam / 60.0);
-      for (int i = 0; i < 2; i++) {
-        vec4 f = uFinger[i];
-        if (f.z < 0.002) continue;
-        vec2 fromFinger = p - f.xy;
-        vec2 fromLanding = p - uGroove[i].xy;
-        vec2 fingerOut = f.xy - uGroove[i].xy;
-        h -= uShape.x * f.z * exp(-dot(fromFinger, fromFinger) / (2.0 * uShape.y * uShape.y));
-        h += f.z * uLock[i].x * groove(-fromLanding.y, fromLanding.x, uGroove[i].z, -fingerOut.y, uLock[i].z * f.w);
-        h += f.z * uLock[i].y * groove(fromLanding.x, fromLanding.y, uGroove[i].w, fingerOut.x, uLock[i].z * f.w);
-      }
-      return h;
+    // One ridge and the groove beside it, per turn of 't': how deep the groove is (0–1), and which way its wall leans.
+    vec2 knurl(float t) {
+      float wave = 0.5 + 0.5 * cos(6.2831853 * t);
+      return vec2(pow(wave, 26.0), -26.0 * pow(wave, 25.0) * 3.1415927 * sin(6.2831853 * t));
     }
+    float written(int zone, float sideways, vec2 at) {
+      if (zone == 0) return sideways < 0.5 ? texture2D(uTape0a, at).a : texture2D(uTape0b, at).a;
+      return sideways < 0.5 ? texture2D(uTape1a, at).a : texture2D(uTape1b, at).a;
+    }
+    // Long soft lamps overhead, seen in a satin surface: a strong band above the middle, a faint one below.
+    float bands(vec3 n) {
+      return exp(-pow((n.y + 0.42) / 0.17, 2.0)) + 0.22 * exp(-pow((n.y - 0.56) / 0.26, 2.0)) + 0.5 * exp(-pow((n.x + 0.5) / 0.2, 2.0)) * abs(n.x);
+    }
+
     void main() {
       vec2 p = vec2(gl_FragCoord.x, uSize.y * uRatio - gl_FragCoord.y) / uRatio;
-      float h = height(p);
-      vec3 normal = normalize(vec3(h - height(p + vec2(1.5, 0.0)), h - height(p + vec2(0.0, 1.5)), 1.5 / uRidge.z));
-      vec3 lamp = normalize(vec3(-0.42, -0.56, 0.72));   // a wide soft lamp up and to the left
-      float lit = clamp(1.0 + 1.5 * (dot(normal, lamp) - lamp.z) + h * 0.01, 0.5, 1.7);
-
-      float part = uUpright > 0.5 ? p.y / uSize.y : p.x / uSize.x;
-      vec4 zone = part < 0.5 ? uZone[0] : uZone[1];
-      vec3 low = part < 0.5 ? uLow[0] : uLow[1];
-      vec3 high = part < 0.5 ? uHigh[0] : uHigh[1];
-      // The zone fills from the bottom with the value, as a wide soft edge: enough to read from the corner of the eye.
-      float level = smoothstep(-70.0, 70.0, p.y - uSize.y * (1.0 - zone.x) * (uUpright > 0.5 ? 0.5 : 1.0) - (uUpright > 0.5 && part >= 0.5 ? uSize.y * 0.5 : 0.0));
-      vec3 colour = mix(low, high, zone.x) * (0.86 + 0.34 * level);
-      colour = mix(vec3(dot(colour, vec3(0.33))) * 0.6, colour, zone.y);
-
-      // The notch the finger is in glows faintly in the zone's own colour.
+      vec3 colour = vec3(0.012, 0.014, 0.016);   // the dashboard the rollers are set into
       for (int i = 0; i < 2; i++) {
-        vec4 f = uFinger[i];
-        vec2 fromFinger = p - f.xy;
-        float glow = f.z * max(uLock[i].x, uLock[i].y) * exp(-dot(fromFinger, fromFinger) / (2.0 * 34.0 * 34.0));
-        vec3 accent = (uUpright > 0.5 ? f.y / uSize.y : f.x / uSize.x) < 0.5 ? uAccent[0] : uAccent[1];
-        colour += accent * glow * 0.16 * zone.y;
+        vec4 rect = uRect[i];
+        vec2 q = p - rect.xy;
+        float outside = box(q, rect.zw, uLook.x);
+        if (outside > 1.0) continue;
+
+        // ---- The roller: flat when left alone, a drum across the slide when turned ----
+        float upDown = uRoll[i].x, sideways = uRoll[i].y;
+        vec2 round_ = clamp(q / rect.zw * uLook.y, -0.999, 0.999);
+        vec3 n = normalize(vec3(round_.x * sideways, round_.y * upDown, sqrt(max(1.0 - round_.x * round_.x * sideways * sideways - round_.y * round_.y * upDown * upDown, 0.04))));
+        vec2 onDrum = vec2(mix(q.x, rect.z * asin(round_.x) / uLook.y, sideways), mix(q.y, rect.w * asin(round_.y) / uLook.y, upDown));
+        vec2 ridgeA = knurl((onDrum.y + uRoll[i].z) / uPitch[i].x);
+        vec2 ridgeB = knurl((onDrum.x - uRoll[i].w) / uPitch[i].y);
+        float showA = max(upDown, 0.2 * (1.0 - sideways)), showB = sideways;
+        n = normalize(n + uLook.z * 0.05 * vec3(showB * ridgeB.y, showA * ridgeA.y, 0.0));
+        float grooves = showA * ridgeA.x + showB * ridgeB.x;
+
+        vec4 zone = uZone[i];
+        vec3 body = mix(uLow[i], uHigh[i], zone.x);
+        body = mix(vec3(dot(body, vec3(0.33))) * 0.7, body, zone.y);
+        vec3 lamp = normalize(vec3(-0.12, -0.5, 0.86));
+        vec3 made = body * (0.22 + 1.0 * clamp(dot(n, lamp), 0.0, 1.0)) * (1.0 - 0.32 * grooves);
+        made += vec3(0.82, 0.88, 0.94) * bands(n) * uLook.w * (1.0 - 0.7 * grooves);
+        made *= mix(0.35, 1.0, smoothstep(0.0, 54.0, -outside));                    // darker where it sinks into the dashboard
+
+        // ---- Fingers on it: a soft press, lit faintly in the zone's colour ----
+        for (int f = 0; f < 2; f++) {
+          vec2 away = p - uFinger[f].xy;
+          float under = uFinger[f].z * exp(-dot(away, away) / (2.0 * 44.0 * 44.0));
+          made = made * (1.0 - 0.22 * under) + uAccent[i] * under * 0.07 * zone.y;
+          made += vec3(0.5, 0.12, 0.08) * uFinger[f].w * under * 0.35;                // against the end stop
+        }
+
+        // ---- The window: a counter drum behind glass ----
+        vec4 pane = uWindow[i];
+        vec2 w = p - pane.xy;
+        float beyond = box(w, pane.zw, uCorner);
+        if (beyond < 1.5) {
+          float across = uRead[i].z;
+          float along = clamp((across < 0.5 ? w.y / pane.w : w.x / pane.z) * 0.95, -0.999, 0.999);
+          float angle = asin(along);
+          float tall = pane.w * 1.02;                                                // one value's height on the drum
+          float wide = tall * 3.0;
+          // The counter turns against the roller, like two meshed wheels: higher values stand above, and to the right.
+          float cell = uRead[i].x + (across < 0.5 ? -pane.w * angle / tall : pane.z * angle / (wide * 0.62));
+          float which = floor(cell + 0.5);
+          vec2 inCell = across < 0.5 ? vec2(w.x / wide + 0.5, which - cell + 0.5) : vec2(cell - which + 0.5, w.y / tall + 0.5);
+          float ink = 0.0;
+          if (which > -0.5 && which < uRead[i].y - 0.5 && inCell.x > 0.0 && inCell.x < 1.0 && inCell.y > 0.0 && inCell.y < 1.0)
+            ink = written(i, across, vec2(inCell.x, 1.0 - (which + inCell.y) / uRead[i].y));
+          float facing = cos(angle);
+          float middle = exp(-pow(along / 0.42, 2.0));
+          vec3 drum = vec3(0.03, 0.034, 0.038) * (0.35 + 0.95 * facing);
+          drum += vec3(1.0) * ink * facing * mix(0.2, 1.0, middle) * mix(0.4, 1.0, zone.y);
+          drum += uAccent[i] * uRead[i].w * 0.05 * middle;
+          drum *= mix(0.3, 1.0, smoothstep(0.0, 20.0, -beyond));                     // the shadow of the window's edge
+          drum += 0.035 * smoothstep(0.2, -1.0, w.y / pane.w);                       // the glass, catching light near its top
+          made = mix(made, drum, smoothstep(1.0, -1.0, beyond));
+          made += 0.1 * exp(-pow((beyond - 1.0) / 1.3, 2.0));                        // its bevelled rim
+        }
+        made *= 1.0 - zone.z;
+        colour = mix(colour, made, smoothstep(1.0, -1.0, outside));
       }
-      vec2 fromMiddle = (p - uSize * 0.5) / uSize;
-      colour *= lit * (1.0 - 0.5 * dot(fromMiddle, fromMiddle));
-      colour += (fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) / 255.0;   // no banding in the soft slopes
+      colour += (fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) / 255.0;
       gl_FragColor = vec4(colour * (1.0 - uDark), 1.0);
       #include <colorspace_fragment>
     }`,
@@ -425,49 +510,90 @@ function resize() {
   renderer.setSize(innerWidth, innerHeight, false)
   sheet.uniforms.uSize.value.set(innerWidth, innerHeight)
   sheet.uniforms.uRatio.value = ratio
-  sheet.uniforms.uUpright.value = upright() ? 1 : 0
 }
 addEventListener('resize', resize)
 resize()
 
+/** What is drawn of each zone, easing toward what is so. */
+const drawn = zones.map((zone, index) => ({
+  drum: { along: settings.roller.rest, across: 0 },
+  turned: { along: 0, across: 0 },
+  place: (zone.values[reading[index]] - zone[reading[index]].least) / zone[reading[index]].step,
+  busy: 0,
+  dim: 0,
+}))
 let before = performance.now()
 let dark = 0
+let split = 0.5 // how much of the screen the first zone has
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches
 function draw(now: number) {
   const passed = Math.min((now - before) / 1000, 0.05)
   before = now
   const toward = (from: number, to: number, speed: number) => (still ? to : from + (to - from) * (1 - Math.exp(-passed * speed)))
   const u = sheet.uniforms
-  for (const slot of [0, 1]) u.uFinger.value[slot].z = 0
+
+  for (const slot of [0, 1]) u.uFinger.value[slot].set(0, 0, 0, 0)
   for (let index = fingers.length - 1; index >= 0; index--) {
     const finger = fingers[index]
     finger.shown.press = toward(finger.shown.press, finger.down ? 1 : 0, finger.down ? 22 : 9)
-    finger.shown.lock = toward(finger.shown.lock, finger.axis ? 1 : 0, 14)
-    finger.shown.wall = toward(finger.shown.wall, finger.wall && finger.down ? 0.75 : 0, 7)
-    if (!finger.down && finger.shown.press < 0.01) {
-      fingers.splice(index, 1)
-      continue
-    }
-    // Where the finger is drawn: in its notch, hanging back at first and then slipping on to the next.
-    let { x, y } = finger.now
-    const pitch = { along: finger.zone.along.px, across: finger.zone.across.px }
-    if (finger.axis) {
-      const px = pitch[finger.axis]
-      const part = finger.carried / px
-      const out = (finger.notches + Math.sign(part) * Math.abs(part) ** settings.stick) * px
-      if (finger.axis === 'along') y = finger.from.y - out
-      else x = finger.from.x + out
-    }
-    if (finger.slot < 0) continue
-    const hint = settings.sheet.hint * (1 - finger.shown.lock)
-    u.uFinger.value[finger.slot].set(x, y, finger.shown.press, finger.shown.wall)
-    u.uGroove.value[finger.slot].set(finger.from.x, finger.from.y, pitch.along, pitch.across)
-    u.uLock.value[finger.slot].set(finger.axis === 'along' ? finger.shown.lock : hint, finger.axis === 'across' ? finger.shown.lock : hint, finger.wall, 0)
+    finger.shown.wall = toward(finger.shown.wall, finger.wall && finger.down ? 1 : 0, 7)
+    if (!finger.down && finger.shown.press < 0.01) fingers.splice(index, 1)
+    else if (finger.slot >= 0) u.uFinger.value[finger.slot].set(finger.now.x, finger.now.y, finger.shown.press, finger.shown.wall)
   }
+
+  // The zone being changed takes a little of the screen from the other.
+  const sliding = zones.map((zone) => fingers.find((finger) => finger.down && finger.zone === zone && finger.axis))
+  split = toward(split, 0.5 + settings.roller.grows * ((sliding[0] ? 1 : 0) - (sliding[1] ? 1 : 0)), 7)
+  const tallWay = upright()
   zones.forEach((zone, index) => {
+    const state = drawn[index]
+    const finger = sliding[index]
+    const resting = fingers.some((each) => each.down && each.zone === zone)
+    const axis = reading[index]
+    // How far into the next notch the sliding finger is, hanging back at first and then slipping on.
+    const part = finger ? finger.carried / zone[finger.axis!].px : 0
+    const slipped = Math.sign(part) * Math.abs(part) ** settings.stick
+    for (const each of ['along', 'across'] as const) {
+      const wanted = finger?.axis === each ? 1 : each === 'along' && !finger ? (resting ? settings.roller.wake : settings.roller.rest) : 0
+      state.drum[each] = toward(state.drum[each], wanted, 9)
+      state.turned[each] = toward(state.turned[each], (turned[index][each] + (finger?.axis === each ? slipped : 0)) * zone[each].px, 30)
+    }
+    state.place = toward(state.place, (zone.values[axis] - zone[axis].least) / zone[axis].step + (finger ? slipped : 0), 26)
+    state.busy = toward(state.busy, finger ? 1 : 0, 8)
+    state.dim = toward(state.dim, !finger && sliding.some(Boolean) ? settings.roller.dims : 0, 7)
+
+    // Where the roller and its window are.
+    const from = index === 0 ? 0 : split
+    const to = index === 0 ? split : 1
+    const inset = settings.roller.inset
+    const box = tallWay
+      ? { left: 0, top: from * innerHeight, wide: innerWidth, tall: (to - from) * innerHeight }
+      : { left: from * innerWidth, top: 0, wide: (to - from) * innerWidth, tall: innerHeight }
+    const half = { x: box.wide / 2 - inset * (tallWay ? 1 : 0.75), y: box.tall / 2 - inset * (tallWay ? 0.75 : 1) }
+    const middle = { x: box.left + box.wide / 2, y: box.top + box.tall / 2 }
+    u.uRect.value[index].set(middle.x, middle.y, half.x, half.y)
+    const zoom = 1 + (settings.window.zoom - 1) * state.busy
+    const pane = {
+      x: middle.x,
+      y: middle.y - half.y * 2 * settings.window.up,
+      wide: Math.min(half.x * settings.window.wide, settings.window.cap[0]) * zoom,
+      tall: Math.min(half.y * 2 * settings.window.tall, settings.window.cap[1]) * zoom,
+    }
+    u.uWindow.value[index].set(pane.x, pane.y, pane.wide, pane.tall)
+    u.uRoll.value[index].set(state.drum.along, state.drum.across, state.turned.along, state.turned.across)
+    u.uRead.value[index].set(state.place, tapes[index][axis].count, axis === 'along' ? 0 : 1, state.busy)
     const shown = u.uZone.value[index]
-    shown.x = toward(shown.x, share(zone, 'along'), 12)
-    shown.y = toward(shown.y, zone.on ? 1 : 0, 8)
+    shown.set(toward(shown.x, share(zone, 'along'), 12), toward(shown.y, zone.on ? 1 : 0, 8), state.dim, 0)
+
+    // The words sit just above and below the window, wherever it is.
+    const block = blocks[index].style
+    block.left = `${box.left}px`
+    block.top = `${box.top}px`
+    block.width = `${box.wide}px`
+    block.height = `${box.tall}px`
+    block.setProperty('--above', `${pane.y - pane.tall - box.top}px`)
+    block.setProperty('--below', `${pane.y + pane.tall - box.top}px`)
+    block.opacity = String(1 - state.dim * 1.6)
   })
   dark = toward(dark, modes.dark ? 1 : 0, 6)
   u.uDark.value = dark

@@ -25,16 +25,14 @@
 .tactile-page header a { color: inherit; text-decoration: none; pointer-events: auto; }
 .tactile-page header span { color: #fff; }
 
-/* One block of words per zone, centred in its half of the window. */
-.tactile-page #zones { position: fixed; inset: 0; display: grid; grid-template-columns: 1fr 1fr; pointer-events: none; }
-@media (orientation: portrait) { .tactile-page #zones { grid-template-columns: none; grid-template-rows: 1fr 1fr; } }
-.tactile-page .zone { display: grid; place-content: center; justify-items: center; gap: 6px; text-align: center; transition: opacity 0.3s ease; }
-.tactile-page .zone.off { opacity: 0.38; }
-.tactile-page .zone .name { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255, 255, 255, 0.5); }
-/* Big enough to read from the corner of the eye. */
-.tactile-page .zone .figure { font-size: clamp(64px, 13vmin, 150px); font-weight: 600; line-height: 1; letter-spacing: -0.04em; color: #fff; font-variant-numeric: tabular-nums; }
-.tactile-page .zone .second { font-size: 17px; color: rgba(255, 255, 255, 0.78); font-variant-numeric: tabular-nums; }
-.tactile-page .zone .how { margin-top: 10px; font-size: 12px; color: rgba(255, 255, 255, 0.36); }
+/* The quiet words of each zone: its name just above the window with the value in it, the rest just below. The page places each block. */
+.tactile-page #zones { position: fixed; inset: 0; pointer-events: none; }
+.tactile-page .zone { position: absolute; text-align: center; }
+.tactile-page .zone span { position: absolute; left: 0; right: 0; transition: color 0.3s ease; }
+.tactile-page .zone .name { top: calc(var(--above) - 34px); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255, 255, 255, 0.55); }
+.tactile-page .zone .second { top: calc(var(--below) + 16px); font-size: 17px; color: rgba(255, 255, 255, 0.78); font-variant-numeric: tabular-nums; }
+.tactile-page .zone .how { top: calc(var(--below) + 50px); font-size: 12px; color: rgba(255, 255, 255, 0.36); padding: 0 16px; }
+.tactile-page .zone.off .second { color: rgba(255, 255, 255, 0.4); }
 
 .tactile-page #note {
   position: fixed;
