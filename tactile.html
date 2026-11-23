@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Groove · a touch control you can feel</title>
+  </head>
+  <body class="tactile-page">
+    <canvas id="stage"></canvas>
+    <div id="zones" aria-hidden="true"></div>
+    <header><a href="./">← Lab</a><span>Groove</span></header>
+    <p id="note">Put a finger down anywhere: nothing changes yet. Slide up or down, or left or right, and feel the notches. Tap with a second finger (or double-tap) to switch.</p>
+    <div id="modes"></div>
+    <p id="spoken" class="quiet" aria-live="polite"></p>
+    <script type="module" src="/src/tactile/main.ts"></script>
+  </body>
+</html>

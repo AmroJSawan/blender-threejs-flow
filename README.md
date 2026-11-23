@@ -331,6 +331,33 @@ With the system's reduced-motion setting on, the lights on the lines stand still
 
 An earlier, denser isometric scene ("Network": plates, towers, routed lines, label cards) was retired when the direction changed; it is in the git history before this change.
 
+## Groove page (a touch control you can feel)
+
+`tactile.html` is a study of one question: what would give a car's touchscreen back what knobs had, without drawing a knob? The page is one sheet of dark material split into two zones (Climate, Sound). All of it is in `src/tactile/main.ts`; the numbers are in `settings` at the top.
+
+How it is worked:
+
+| Do this | It does this | You get |
+|---|---|---|
+| Put a finger down anywhere in a zone | Nothing changes | A soft thud, a dent under the finger, and (after a moment's rest) the zone and its values spoken |
+| Slide up or down | The zone's main setting, one notch at a time, from wherever you landed | Per notch: a short pulse, a tick whose pitch rises with the value, a ridge the dent sticks in and slips over |
+| Slide left or right | The zone's second setting | The same, heavier and lower |
+| Reach either end | Nothing more | A longer, lower thud, a wall in the groove, no more ticks |
+| Tap with a second finger while the first rests (or double-tap) | Switches the zone on or off | Two pulses and two notes, rising for on, falling for off |
+
+"Eyes-free" turns the picture off so it can be tried by ear and hand alone. "Voice" turns the spoken values off.
+
+Why it is built this way (what was read, 2026-11-23):
+
+- **The problem is measured.** Four everyday tasks took 10 s in a 2005 car with buttons and up to 44.9 s on touchscreens ([Vi Bilägare 2022](https://www.vibilagare.se/english/physical-buttons-outperform-touchscreens-new-cars-test-finds)); touch use of CarPlay slowed reactions by 57%, more than texting ([TRL 2020](https://www.trl.co.uk/uploads/trl/documents/PPR948-_IAM-RoadSmart---infotainment-sim-study.pdf)). Pointing at a target is what suffers: its throughput fell 58% while driving ([Shen et al. 2025](https://faculty.washington.edu/wobbrock/pubs/uist-25.02.pdf)). So Groove has no targets.
+- **Touching must not act.** Screen readers for blind people separate exploring from activating, and activate with a second finger or a tap anywhere, never by aiming again ([VoiceOver](https://support.apple.com/guide/iphone/learn-voiceover-gestures-iph3e2e2281/ios); [Slide Rule, 2008](https://faculty.washington.edu/wobbrock/pubs/assets-08.pdf)). That is the resting finger and the second-finger tap.
+- **Direction, not position; edges, not points.** Marks made by direction can be done eyes-free ([Kurtenbach & Buxton 1994](https://billbuxton.com/MMUserLearn.html); in a car, [pieTouch 2009](https://www.medien.ifi.lmu.de/pubdb/publications/pub/ecker2009mobilehci/ecker2009mobilehci.pdf)), and blind users prefer large gestures tied to edges and corners ([Kane et al. 2011](https://faculty.washington.edu/wobbrock/pubs/chi-11.05.pdf)). Zones are halves of the screen, bounded by its real edges; a setting is a direction.
+- **A click is short.** About 10 ms of vibration reads as a click, 30 ms or more as a buzz; skin is most sensitive near 250 Hz; sound and vibration must arrive within about 24 ms of each other to feel like one event ([Adelstein et al. 2003](https://researchr.org/publication/AdelsteinBAW03); [Kaaresoja 2016](https://theses.gla.ac.uk/7075)). Hence `pulse` and `apart` in the settings.
+- **Sight can stand in for force.** Making what is shown lag and then catch up with the hand is felt as friction and bumps ([Lécuyer 2009](https://typeset.io/pdf/simulating-haptic-feedback-using-vision-a-survey-of-research-4b3p0h5i0p.pdf)); that is `stick`. Sound adds to how strong a touch feels ([Altinsoy 2020](https://www.jstage.jst.go.jp/article/ast/41/1/41_E19205/_article/-char/en)).
+- **Feedback does help drivers.** Friction feedback on a touch surface cut eyes-off-road time by 19–39% in a driving simulator ([Colgate & Peshkin 2013](https://rosap.ntl.bts.gov/view/dot/26086)); spoken and sound cues restored driving performance lost to menu use ([Jeon et al. 2009](https://sites.lafayette.edu/neesm/files/2011/10/2009AAUI-JeonDavisonNeesWilsonWalker-cameraready.pdf)).
+
+What this page cannot show: a phone's motor is far cruder than a car's actuators. Android Chrome vibrates; iPhones give web pages no vibration (the page flips a hidden switch for a tick where that still works); a desktop gives sound only. And none of it has been tried by a driver: fewer glances do not by themselves mean better driving ([Christiansen et al. 2011](https://rd.springer.com/chapter/10.1007/978-3-642-23771-3_49)).
+
 ## Lab canvas (the entry page)
 
 `index.html` is the way in: one open canvas, like a design tool's board, with the eight studies laid out on it as frames in three groups (Scenes, Cards, Switches) beside a short brief.
