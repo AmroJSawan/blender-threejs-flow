@@ -308,15 +308,15 @@ npm run illustration
 - **Variants** are the same network with different numbers and words (each scene's `variants` in `SCENES` at the end of the script). Each is exported to `public/illustrations/<scene>/<name>.glb`; the page lists them and shows what each was made from, with the changed values marked.
 - **Round things** take their segment count from `Resolution`.
 
-**Light, in Blender too.** The light on the ground is worked out by Blender's Cycles renderer, the same way the 3D switches are lit: one wide soft lamp overhead, a dim even room, and the glowing parts (cards, the line, the hub's ring, the thin lines) shining on what is round them. The result, shadows and all, is saved per variant as `public/illustrations/<scene>/<variant>.webp` and the page lays it on the ground. Everything about it is in `LIGHT` near the top of the script: the lamp's power, size and height, how brightly each kind of part shines, and the quality of the picture. Working the light out is what takes the time: about a minute per variant.
+**Light, in Blender too.** The light on the ground and on every solid part (cards, chips, the tile, the hub's plate) is worked out by Blender's Cycles renderer, the same way the 3D switches are lit: one wide soft lamp overhead, a dim even room, and the glowing parts (cards, the line, the hub's ring, the thin lines) shining on what is round them. The result, shadows and all, is saved per variant as two pictures: `<variant>.webp` for the ground and `<variant>-parts.webp` for the solid parts, each of which has its own place in that picture. The page multiplies each part's colour by its light, so a chip's lighter top and darker sides, and the green it picks up beside a glowing line, are real. Words and thin overlays cast no shadows. Everything about it is in `LIGHT` near the top of the script: the lamp's power, size and height, how brightly each kind of part shines, and the quality of the picture. Working the light out is what takes the time: about two minutes per variant.
 
 **Look, on the page.** `src/illustrations/main.ts` colours each part by its Blender material name. The picture is drawn directly, with smoothed edges and no blur or grain over it. All of it is in `settings` at the top:
 
 - `scenes`: per scene, the camera (`view`), the window shape it was composed for, and the faint shaft of light over the middle (`beam`, Gateway only).
-- `card`: the gradient across a card (far left, middle, near right), how dark its sides are, the bright line round its top edge, and the soft streak of light across it.
-- `chip`: a chip's top and side colours.
+- `card`: the gradient across a card (far left, middle, near right), how dark its sides are, the bright line round its top edge, the soft streak of light across it, and `lit`: how much the worked-out light counts on a card, which also glows by itself.
+- `chip`: a chip's colour in full light.
 - `ground`: the ground's and dots' colours in full light, and `light`, which scales the light Blender worked out.
-- `plate`: the hub's plate and its faint grid.
+- `plate`: the hub's plate and its faint grid, in full light.
 - `wire`: the thin lines, drawn as glass tubes, and the light that moves inside them: the glass and its brighter outline, the light's two colours, how fast it runs, how far apart the lights are, how long the bright core is and how strong the soft haze round it.
 - `parts`: the plain parts. A `bright` above 1 makes a part glow (the line); `opacity` makes it see-through (the panel, the tile, the dim text).
 - `look`: how far the camera leans toward the pointer.

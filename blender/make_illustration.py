@@ -16,8 +16,9 @@ The scenes share their parts (PARTS below): the card, the chip, the tile with it
 
 The words are parameters too, and are made into geometry by the same network, set in Inter
 (blender/fonts, under the SIL Open Font License).
-The light on the ground is real: Blender works out how the glowing parts and one wide soft lamp light it, shadows
-included, and saves that as a picture per variant (see LIGHT below). The colour of each part and the moving light on
+The light is real: Blender works out how the glowing parts and one wide soft lamp light the ground and the solid
+parts (cards, chips, the tile, the hub's plate), shadows included, and saves that as two pictures per variant
+(see LIGHT below). The colour of each part and the moving light on
 the lines are added by the page
 (src/illustrations/main.ts), by material name; here there is only shape. Two things are handed to the page
 with the shape, as extra numbers on each point: where a point lies on its card ("_card", "_shape"), and how
@@ -27,6 +28,7 @@ The script writes
     blender/illustrations/<scene>.blend             the node network, to open and adjust
     public/illustrations/<scene>/<variant>.glb      the scene, once per variant
     public/illustrations/<scene>/<variant>.webp     the light falling on its ground
+    public/illustrations/<scene>/<variant>-parts.webp   the light falling on its cards, chips, tile and plate
     src/illustrations/scenes.json                   what the page lists
 """
 import hashlib
@@ -34,6 +36,7 @@ import json
 import math
 from pathlib import Path
 
+import bmesh
 import bpy
 import numpy as np
 
@@ -62,11 +65,14 @@ LIGHT = {
     "ring": 0.5,        # … the hub's ring
     "wire": 0.5,        # … the thin lines
     "samples": 128,     # more = a cleaner picture, slower to make
-    "size": 1024,       # the picture's width and height, px
+    "size": 1024,       # the ground picture's width and height, px
+    "parts_size": 2048, # the same for the picture of the light on the solid parts
     "stored": 3.0,      # the brightest light the picture can hold (anything brighter is clipped)
     "quality": 92,      # how closely the saved picture keeps the result (WebP, 0-100)
 }
 # The colours the glowing parts shine with: a card's far-left and near-right corners, the line, the ring.
+RECEIVES = ("Card", "Chip", "Plate")                      # materials whose light is worked out, besides the ground
+UNSEEN = ("Ink", "Dim", "Accent", "Panel", "Tile")        # words and thin overlays: they cast no shadow and bounce no light
 SHINES = {"card_far": "#3bcf7b", "card_near": "#1b8fa9", "glow": "#46f58a", "ring": "#eefff4", "wire": "#7dffb0"}
 
 
@@ -643,7 +649,14 @@ def studio():
         return tree, glow
 
     for material in bpy.data.materials:
-        material.use_nodes = True   # everything else is left as plain matt grey: it only blocks and bounces light
+        material.use_nodes = True
+    for name in UNSEEN:
+        tree = bpy.data.materials[name].node_tree
+        tree.nodes.clear()
+        tree.links.new(tree.nodes.new("ShaderNodeBsdfTransparent").outputs[0], tree.nodes.new("ShaderNodeOutputMaterial").inputs["Surface"])
+
+    for material in bpy.data.materials:
+        material.use_nodes = True   # anything not set up below stays plain matt grey: it only blocks and bounces light
     shines("Glow", LIGHT["glow"], SHINES["glow"])
     shines("Ring", LIGHT["ring"], SHINES["ring"])
     shines("Wire", LIGHT["wire"], SHINES["wire"])
@@ -675,34 +688,107 @@ def studio():
     blend.inputs["A"].default_value = linear(SHINES["card_far"])
     blend.inputs["B"].default_value = linear(SHINES["card_near"])
     tree.links.new(blend.outputs["Result"], glow.inputs["Color"])
+    # A card is also a solid thing the lamp falls on, so that its light can be worked out like a chip's.
+    matt, both = tree.nodes.new("ShaderNodeBsdfDiffuse"), tree.nodes.new("ShaderNodeAddShader")
+    tree.links.new(matt.outputs[0], both.inputs[0])
+    tree.links.new(glow.outputs[0], both.inputs[1])
+    tree.links.new(both.outputs[0], next(n for n in tree.nodes if n.type == "OUTPUT_MATERIAL").inputs["Surface"])
 
 
-def light_on_ground(span, file):
-    """Works out the light falling on a square of ground `span` metres across, round the middle, and saves it as a picture."""
-    bpy.ops.mesh.primitive_plane_add(size=span, location=(0.0, 0.0, 0.0005))   # a hair above the scene's own ground
+def unwrapped(shown):
+    """Gives the solid parts whose light is worked out (RECEIVES) their own places in a picture; everything else gets none."""
+    mesh = shown.data
+    mesh.uv_layers.new(name="Light")
+    wanted = {index for index, material in enumerate(mesh.materials) if material and material.name in RECEIVES}
+    bpy.ops.object.select_all(action="DESELECT")
+    shown.select_set(True)
+    bpy.context.view_layer.objects.active = shown
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.context.tool_settings.mesh_select_mode = (False, False, True)
+    bpy.ops.mesh.select_all(action="DESELECT")
+    faces = bmesh.from_edit_mesh(mesh)
+    for face in faces.faces:
+        face.select = face.material_index in wanted
+    faces.select_flush(True)
+    bmesh.update_edit_mesh(mesh)
+    bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.004)
+    bpy.ops.object.mode_set(mode="OBJECT")
+    # Everything else is put at one corner of the picture, out of the way: a new layout starts with every face spread over all of it.
+    places = np.zeros(len(mesh.loops) * 2, dtype=np.float32)
+    mesh.uv_layers["Light"].data.foreach_get("uv", places)
+    places = places.reshape(-1, 2)
+    for face in mesh.polygons:
+        if face.material_index not in wanted:
+            places[face.loop_start:face.loop_start + face.loop_total] = 0.0
+    mesh.uv_layers["Light"].data.foreach_set("uv", places.ravel())
+
+
+def baked(target, size):
+    """The light falling on one object, as numbers: a square picture, three colours per point."""
+    image = bpy.data.images.new("Light", size, size, float_buffer=True)
+    for material in target.data.materials:
+        if material is None:   # an empty slot, left by parts that were given no material
+            continue
+        nodes = material.node_tree.nodes
+        node = nodes.get("Bake") or nodes.new("ShaderNodeTexImage")
+        node.name = "Bake"
+        node.image = image
+        nodes.active = node
+    bpy.ops.object.select_all(action="DESELECT")
+    target.select_set(True)
+    bpy.context.view_layer.objects.active = target
+    bpy.ops.object.bake(type="DIFFUSE", pass_filter={"DIRECT", "INDIRECT"})
+    data = np.array(image.pixels[:], dtype=np.float32).reshape(size, size, 4)
+    bpy.data.images.remove(image)
+    return data
+
+
+def saved(data, file):
+    """Writes light as a picture, with LIGHT["stored"] as its brightest value."""
+    size = data.shape[0]
+    data = data.copy()
+    data[:, :, :3] = np.clip(data[:, :, :3] / LIGHT["stored"], 0.0, 1.0)
+    data[:, :, 3] = 1.0
+    image = bpy.data.images.new("Saved", size, size, float_buffer=True)
+    image.pixels.foreach_set(data.ravel())
+    image.update()
+    image.save_render(str(file), scene=bpy.context.scene)
+    bpy.data.images.remove(image)
+
+
+def sheet_of(size, height):
+    bpy.ops.mesh.primitive_plane_add(size=size, location=(0.0, 0.0, height))
     sheet = bpy.context.active_object
     matt = bpy.data.materials.new("Sheet")
     matt.use_nodes = True
     sheet.data.materials.append(matt)
-    image = bpy.data.images.new("Ground light", LIGHT["size"], LIGHT["size"], float_buffer=True)
-    node = matt.node_tree.nodes.new("ShaderNodeTexImage")
-    node.image = image
-    matt.node_tree.nodes.active = node
-    bpy.ops.object.select_all(action="DESELECT")
-    sheet.select_set(True)
-    bpy.context.view_layer.objects.active = sheet
-    bpy.ops.object.bake(type="DIFFUSE", pass_filter={"DIRECT", "INDIRECT"})
-    data = np.array(image.pixels[:], dtype=np.float32).reshape(LIGHT["size"], LIGHT["size"], 4)
+    return sheet, matt
+
+
+def light_on_parts(shown, file):
+    """Works out the light falling on the scene's solid parts and saves it as a picture laid out by unwrapped()."""
+    bpy.context.scene.render.bake.margin = 8
+    saved(baked(shown, LIGHT["parts_size"]), file)
+    # How bright open, unshaded ground is under the middle of the lamp: the page shows a part at full colour in that much light.
+    shown.hide_render = True
+    probe, matt = sheet_of(1.0, 0.0)
+    bpy.context.scene.render.bake.margin = 0
+    open_light = float(baked(probe, 16)[:, :, :3].mean())
+    bpy.data.objects.remove(probe)
+    bpy.data.materials.remove(matt)
+    shown.hide_render = False
+    return {"stored": LIGHT["stored"], "open": round(open_light, 4)}
+
+
+def light_on_ground(span, file):
+    """Works out the light falling on a square of ground `span` metres across, round the middle, and saves it as a picture."""
+    sheet, matt = sheet_of(span, 0.0005)   # a hair above the scene's own ground
+    bpy.context.scene.render.bake.margin = 4
+    data = baked(sheet, LIGHT["size"])
     light = data[:, :, :3]
     border = np.concatenate([light[0], light[-1], light[:, 0], light[:, -1]]).mean(axis=0)   # the light out at the picture's edge
-    print(f"   ground light: edge {border.round(3).tolist()}, middle {light[LIGHT['size'] // 2, LIGHT['size'] // 2].round(3).tolist()}, most {float(light.max()):.2f}")
-    data[:, :, :3] = np.clip(light / LIGHT["stored"], 0.0, 1.0)
-    data[:, :, 3] = 1.0
-    image.pixels.foreach_set(data.ravel())
-    image.update()
-    image.save_render(str(file), scene=bpy.context.scene)
+    saved(data, file)
     bpy.data.objects.remove(sheet)
-    bpy.data.images.remove(image)
     bpy.data.materials.remove(matt)
     return {"span": span, "stored": LIGHT["stored"], "edge": [round(float(v), 4) for v in border]}
 
@@ -752,6 +838,7 @@ def make(scene):
     bpy.context.scene.collection.objects.link(scene_object)
     modifier = scene_object.modifiers.new(title, "NODES")
     modifier.node_group = tree
+    scene_object.hide_render = True   # light is worked out on each variant's finished copy, not on this live one
     sockets = {item.name: item for item in tree.interface.items_tree if item.item_type == "SOCKET" and item.in_out == "INPUT"}
     defaults = {name: default for name, _, default, *_ in scene["parameters"]}
 
@@ -771,16 +858,20 @@ def make(scene):
         bpy.ops.object.select_all(action="DESELECT")
         shown.select_set(True)
         bpy.context.view_layer.objects.active = shown
+        unwrapped(shown)
         file = out / f"{variant['name']}.glb"
         # export_attributes carries the "_card", "_shape" and "_flow" numbers to the page.
         bpy.ops.export_scene.gltf(filepath=str(file), use_selection=True, export_apply=False, export_yup=True, export_materials="EXPORT", export_attributes=True)
         print(f"{scene['name']}/{variant['name']}: {len(baked.vertices)} points, {len(baked.polygons)} faces, {file.stat().st_size // 1024} KB, attributes {[a.name for a in baked.attributes if a.name.startswith('_')]}")
+        parts = light_on_parts(shown, out / f"{variant['name']}-parts.webp")
         lit = light_on_ground(scene["span"], out / f"{variant['name']}.webp")
+        print(f"   light: open ground {parts['open']}, ground edge {lit['edge']}")
         listed.append({
             "name": variant["name"],
             "title": variant["title"],
-            "version": hashlib.md5(file.read_bytes() + (out / f"{variant['name']}.webp").read_bytes()).hexdigest()[:8],
+            "version": hashlib.md5(file.read_bytes() + (out / f"{variant['name']}.webp").read_bytes() + (out / f"{variant['name']}-parts.webp").read_bytes()).hexdigest()[:8],
             "ground": lit,
+            "parts": parts,
             "values": {name: value for name, value in values.items() if name not in PAGE_DRAWS},
         })
         bpy.data.objects.remove(shown)
@@ -789,6 +880,7 @@ def make(scene):
     # Leave the file on the first variant's numbers, ready to adjust.
     for name, value in defaults.items():
         modifier[sockets[name].identifier] = value
+    scene_object.hide_render = False
     blend = ROOT / "blender" / "illustrations" / f"{scene['name']}.blend"
     blend.parent.mkdir(parents=True, exist_ok=True)
     bpy.ops.wm.save_as_mainfile(filepath=str(blend))

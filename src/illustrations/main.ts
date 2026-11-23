@@ -37,17 +37,18 @@ const settings = {
   /**
    * A card's surface: its colour at the far left, in the middle and at the near right, and how dark its sides are.
    * `edge` is the bright line round the top face (how strong, how wide in metres); `band` is the soft diagonal streak of light across it.
+   * A card glows by itself, so the light Blender worked out for it only counts for part of its brightness: `lit` (0 = ignore it, 1 = a card in shadow goes dark).
    */
-  card: { far: '#3bcf7b', middle: '#159a54', near: '#1b8fa9', sides: 0.42, sheen: 0.06, edge: 0.2, edgeWidth: 0.022, band: 0.03 },
-  /** A chip's top and sides. */
-  chip: { top: '#25302b', side: '#0d1210' },
+  card: { far: '#3bcf7b', middle: '#159a54', near: '#1b8fa9', sides: 0.62, sheen: 0.06, edge: 0.2, edgeWidth: 0.022, band: 0.03, lit: 0.55 },
+  /** A chip's colour in full light. Its lighter top, darker sides and the colour it picks up from what glows nearby come from the light Blender worked out. */
+  chip: { colour: '#36413b' },
   /**
    * The ground: its colour and its dots' colour in full light. How much light reaches each part of it (the soft pool round the
    * middle, the shadows, the glow beside a card) was worked out in Blender and comes with each variant as a picture; `light` scales it all. `reach` is how many times further than the scene's own ground the sheet is drawn, so its edge is never seen.
    */
-  ground: { colour: '#232b27', dot: '#59695f', light: 1, reach: 8 },
-  /** The hub's plate: its colour, the faint grid on it (colour, spacing in metres), and how far in from the rim the grid has faded out (0–1). */
-  plate: { colour: '#0a110e', grid: '#22332a', pitch: 0.4, fade: 0.25 },
+  ground: { colour: '#161b18', dot: '#3b463f', light: 1, reach: 8 },
+  /** The hub's plate: its colour in full light, the faint grid on it (colour, spacing in metres), and how far in from the rim the grid has faded out (0–1). */
+  plate: { colour: '#232d28', grid: '#4d6257', pitch: 0.4, fade: 0.25 },
   /**
    * The thin lines, drawn as glass tubes with light moving inside them toward the hub.
    * `glass` is the unlit tube and `rest` how bright it is; `rim` is how much brighter its outline is than its middle.
@@ -84,6 +85,7 @@ const settings = {
 type Illustration = (typeof scenes)[number]
 type Variant = Illustration['variants'][number]
 type GroundLight = { span: number; stored: number; edge: number[] }
+type PartsLight = { stored: number; open: number }
 type Values = Record<string, number | string>
 const canvas = document.querySelector<HTMLCanvasElement>('#stage')!
 const note = document.querySelector<HTMLElement>('#note')!
@@ -98,6 +100,18 @@ const camera = new THREE.PerspectiveCamera(30, 1, 0.5, 90)
 const clock = { value: 0 } // seconds, shared by everything that moves
 
 // ---- Materials ----------------------------------------------------------------
+const noLight = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1)
+noLight.needsUpdate = true
+/**
+ * The light Blender worked out for the solid parts (cards, chips, the tile, the hub's plate): a picture in which each of them has
+ * its own place, and the number that turns the picture's values into "times the light on open ground under the lamp".
+ */
+const partsLight = { value: noLight as THREE.Texture }
+const partsScale = { value: 1 }
+const lit = /* glsl */ `
+  uniform sampler2D uParts;
+  uniform float uPartsScale;
+  vec3 lightAt(vec2 at) { return texture2D(uParts, at).rgb * uPartsScale; }`
 const materials = new Map<string, THREE.Material>()
 for (const [name, part] of Object.entries(settings.parts)) {
   // Flat words are seen from either side; solid parts only from outside, so a see-through part never shows its own underside.
@@ -121,6 +135,9 @@ materials.set(
       uSheen: { value: settings.card.sheen },
       uEdge: { value: new THREE.Vector2(settings.card.edge, settings.card.edgeWidth) },
       uBand: { value: settings.card.band },
+      uLitShare: { value: settings.card.lit },
+      uParts: partsLight,
+      uPartsScale: partsScale,
     },
     vertexShader: /* glsl */ `
       attribute vec3 _card;
@@ -128,7 +145,9 @@ materials.set(
       varying vec3 vCard;
       varying vec3 vShape;
       varying vec3 vFacing;
+      varying vec2 vUv;
       void main() {
+        vUv = uv;
         vCard = _card;
         vShape = _shape;
         vFacing = normalize(mat3(modelMatrix) * normal);
@@ -138,8 +157,10 @@ materials.set(
       varying vec3 vCard;
       varying vec3 vShape;
       varying vec3 vFacing;
+      varying vec2 vUv;
       uniform vec3 uFar, uMiddle, uNear;
-      uniform float uSides, uSheen, uBand;
+      uniform float uSides, uSheen, uBand, uLitShare;
+      ${lit}
       uniform vec2 uEdge;
       void main() {
         float across = vCard.x / (vShape.x * 2.0) + 0.5;    // 0 at the left edge … 1 at the right
@@ -157,27 +178,29 @@ materials.set(
         face += uEdge.x * smoothstep(uEdge.y, 0.0, inside) * mix(0.3, 1.0, 1.0 - toward);         // and a bright edge, strongest along the far side
         float height = clamp(vCard.z, 0.0, 1.0);
         vec3 side = colour * uSides * (0.55 + 0.75 * height * height);
-        gl_FragColor = vec4(mix(side, face, top), 1.0);
+        vec3 light = min(lightAt(vUv), vec3(1.25));                                                // what the lamp and the things round it add
+        gl_FragColor = vec4(mix(side, face, top) * mix(vec3(1.0), light, uLitShare), 1.0);
         #include <colorspace_fragment>
       }`,
   }),
 )
-/** A chip: a dark plate with a lighter top than sides, so it reads as solid. */
+/** A chip (and the lone tile): one matt colour under the light Blender worked out, which is what makes its top lighter than its sides. */
 materials.set(
   'Chip',
   new THREE.ShaderMaterial({
-    uniforms: { uTop: { value: new THREE.Color(settings.chip.top) }, uSide: { value: new THREE.Color(settings.chip.side) } },
+    uniforms: { uColour: { value: new THREE.Color(settings.chip.colour) }, uParts: partsLight, uPartsScale: partsScale },
     vertexShader: /* glsl */ `
-      varying float vUp;
+      varying vec2 vUv;
       void main() {
-        vUp = normalize(mat3(modelMatrix) * normal).y;
+        vUv = uv;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }`,
     fragmentShader: /* glsl */ `
-      varying float vUp;
-      uniform vec3 uTop, uSide;
+      varying vec2 vUv;
+      uniform vec3 uColour;
+      ${lit}
       void main() {
-        gl_FragColor = vec4(mix(uSide, uTop, smoothstep(0.5, 0.9, vUp)), 1.0);
+        gl_FragColor = vec4(uColour * lightAt(vUv), 1.0);
         #include <colorspace_fragment>
       }`,
   }),
@@ -193,8 +216,6 @@ const onGround = /* glsl */ `
  * The ground: its field of dots (the same rows and columns the Blender network makes), under the light Blender worked out for it.
  * That light comes as a picture of a square of ground round the middle; beyond the square the ground carries on at the light of its edge.
  */
-const noLight = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1)
-noLight.needsUpdate = true
 const groundMaterial = new THREE.ShaderMaterial({
   uniforms: {
     uColour: { value: new THREE.Color(settings.ground.colour) },
@@ -231,7 +252,7 @@ const groundMaterial = new THREE.ShaderMaterial({
     }`,
 })
 materials.set('Ground', groundMaterial)
-/** The hub's plate: dark, with a faint grid that fades out toward the rim. */
+/** The hub's plate: dark, with a faint grid that fades out toward the rim, under the light Blender worked out (the ring's glow along its edge). */
 const plateMaterial = new THREE.ShaderMaterial({
   uniforms: {
     uColour: { value: new THREE.Color(settings.plate.colour) },
@@ -239,18 +260,30 @@ const plateMaterial = new THREE.ShaderMaterial({
     uPitch: { value: settings.plate.pitch },
     uFade: { value: settings.plate.fade },
     uRadius: { value: 1.6 },
+    uParts: partsLight,
+    uPartsScale: partsScale,
   },
-  vertexShader: onGround,
+  vertexShader: /* glsl */ `
+    varying vec3 vPlace;
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      vec4 placed = modelMatrix * vec4(position, 1.0);
+      vPlace = placed.xyz;
+      gl_Position = projectionMatrix * viewMatrix * placed;
+    }`,
   fragmentShader: /* glsl */ `
     varying vec3 vPlace;
+    varying vec2 vUv;
     uniform vec3 uColour, uGrid;
     uniform float uPitch, uFade, uRadius;
+    ${lit}
     void main() {
       vec2 cell = abs(fract(vPlace.xz / uPitch) - 0.5) * uPitch;  // metres from the nearest grid line, each way
       vec2 soft = max(fwidth(vPlace.xz), vec2(0.0005));
       vec2 lines = 1.0 - smoothstep(soft * 0.6, soft * 1.6, cell);
       float grid = max(lines.x, lines.y) * smoothstep(1.0 - uFade, 0.35, length(vPlace.xz) / uRadius);
-      gl_FragColor = vec4(mix(uColour, uGrid, grid), 1.0);
+      gl_FragColor = vec4(mix(uColour, uGrid, grid) * lightAt(vUv), 1.0);
       #include <colorspace_fragment>
     }`,
 })
@@ -350,14 +383,14 @@ composer.addPass(new OutputPass())
 // ---- Loading a variant ----------------------------------------------------------
 const loader = new GLTFLoader()
 const pictures = new THREE.TextureLoader()
-type Shown = { model: THREE.Group; light: THREE.Texture }
+type Shown = { model: THREE.Group; light: THREE.Texture; parts: THREE.Texture }
 const loaded = new Map<string, Promise<Shown>>()
 function load(illustration: Illustration, variant: Variant): Promise<Shown> {
   const key = `${illustration.name}/${variant.name}`
   let waiting = loaded.get(key)
   if (!waiting) {
     const file = `${import.meta.env.BASE_URL}illustrations/${key}`
-    waiting = Promise.all([loader.loadAsync(`${file}.glb?v=${variant.version}`), pictures.loadAsync(`${file}.webp?v=${variant.version}`)]).then(([made, light]) => {
+    waiting = Promise.all([loader.loadAsync(`${file}.glb?v=${variant.version}`), pictures.loadAsync(`${file}.webp?v=${variant.version}`), pictures.loadAsync(`${file}-parts.webp?v=${variant.version}`)]).then(([made, light, parts]) => {
       made.scene.traverse((child) => {
         if (!(child instanceof THREE.Mesh)) return
         const part = (child.material as THREE.Material).name
@@ -366,9 +399,12 @@ function load(illustration: Illustration, variant: Variant): Promise<Shown> {
         child.renderOrder = -1
         child.scale.setScalar(settings.ground.reach) // the sheet carries on, dots and all, until its light has faded out
       })
-      light.colorSpace = THREE.SRGBColorSpace
-      light.anisotropy = 8
-      return { model: made.scene, light }
+      for (const picture of [light, parts]) {
+        picture.colorSpace = THREE.SRGBColorSpace
+        picture.anisotropy = 8
+      }
+      parts.flipY = false // laid out the way the model's own coordinates expect
+      return { model: made.scene, light, parts }
     })
     loaded.set(key, waiting)
   }
@@ -394,10 +430,16 @@ function fit() {
   camera.aspect = innerWidth / innerHeight
   camera.updateProjectionMatrix()
   groundMaterial.uniforms.uField.value.set(Number(set['Ground']), Number(set['Dot Pitch']), Number(set['Dot Size']))
-  const lit = wanted.ground as GroundLight
-  groundMaterial.uniforms.uLit.value.set(lit.span, lit.stored * settings.ground.light)
-  groundMaterial.uniforms.uEdge.value.fromArray(lit.edge).multiplyScalar(settings.ground.light)
-  if (current) groundMaterial.uniforms.uLight.value = current.light
+  const groundLit = wanted.ground as GroundLight
+  const partsLit = wanted.parts as PartsLight
+  // Both pictures are read as "times the light on open ground under the lamp", so every colour in settings is a colour in full light.
+  groundMaterial.uniforms.uLit.value.set(groundLit.span, (groundLit.stored / partsLit.open) * settings.ground.light)
+  groundMaterial.uniforms.uEdge.value.fromArray(groundLit.edge).multiplyScalar(settings.ground.light / partsLit.open)
+  partsScale.value = partsLit.stored / partsLit.open
+  if (current) {
+    groundMaterial.uniforms.uLight.value = current.light
+    partsLight.value = current.parts
+  }
   plateMaterial.uniforms.uRadius.value = Number(set['Hub Radius'] ?? 1)
   beam.visible = staging.beam.strength > 0
   beam.scale.set(staging.beam.wide * 3, staging.beam.tall, 1)

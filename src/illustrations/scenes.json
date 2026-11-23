@@ -105,15 +105,19 @@
       {
         "name": "wide",
         "title": "Wide",
-        "version": "53523cb2",
+        "version": "61bb4382",
         "ground": {
           "span": 18.0,
           "stored": 3.0,
           "edge": [
-            0.2406,
             0.2407,
-            0.2406
+            0.2409,
+            0.2408
           ]
+        },
+        "parts": {
+          "stored": 3.0,
+          "open": 1.0909
         },
         "values": {
           "Card Width": 3.7,
@@ -145,15 +149,19 @@
       {
         "name": "tall",
         "title": "Tall",
-        "version": "cf4650c2",
+        "version": "5ffc356a",
         "ground": {
           "span": 18.0,
           "stored": 3.0,
           "edge": [
-            0.2406,
-            0.2407,
-            0.2407
+            0.2408,
+            0.2409,
+            0.2408
           ]
+        },
+        "parts": {
+          "stored": 3.0,
+          "open": 1.0909
         },
         "values": {
           "Card Width": 2.9,
@@ -185,15 +193,19 @@
       {
         "name": "quiet",
         "title": "Quiet",
-        "version": "363deeca",
+        "version": "78c36e8b",
         "ground": {
           "span": 18.0,
           "stored": 3.0,
           "edge": [
             0.2407,
-            0.2409,
-            0.2407
+            0.241,
+            0.2408
           ]
+        },
+        "parts": {
+          "stored": 3.0,
+          "open": 1.0909
         },
         "values": {
           "Card Width": 4.4,
@@ -358,7 +370,7 @@
       {
         "name": "flow",
         "title": "Flow",
-        "version": "502e6492",
+        "version": "e6308d38",
         "ground": {
           "span": 28.0,
           "stored": 3.0,
@@ -367,6 +379,10 @@
             0.078,
             0.078
           ]
+        },
+        "parts": {
+          "stored": 3.0,
+          "open": 1.0909
         },
         "values": {
           "Hub Radius": 1.6,
@@ -405,7 +421,7 @@
       {
         "name": "calm",
         "title": "Calm",
-        "version": "10ad6c4c",
+        "version": "11ae11e5",
         "ground": {
           "span": 28.0,
           "stored": 3.0,
@@ -414,6 +430,10 @@
             0.078,
             0.078
           ]
+        },
+        "parts": {
+          "stored": 3.0,
+          "open": 1.0909
         },
         "values": {
           "Hub Radius": 1.6,
@@ -452,7 +472,7 @@
       {
         "name": "dense",
         "title": "Dense",
-        "version": "caacc81e",
+        "version": "0930fb60",
         "ground": {
           "span": 28.0,
           "stored": 3.0,
@@ -461,6 +481,10 @@
             0.078,
             0.078
           ]
+        },
+        "parts": {
+          "stored": 3.0,
+          "open": 1.0909
         },
         "values": {
           "Hub Radius": 1.8,
