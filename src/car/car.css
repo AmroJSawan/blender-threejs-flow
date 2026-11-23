@@ -16,8 +16,8 @@
   -webkit-touch-callout: none;
   overscroll-behavior: none;
 }
-.car-page header { position: fixed; top: 0; left: 0; right: 0; z-index: 5; display: flex; justify-content: space-between; padding: 8px 22px; font-size: 12px; pointer-events: none; opacity: 0.55; }
-.car-page header a { color: inherit; text-decoration: none; pointer-events: auto; }
+.car-page > header { position: fixed; top: 0; left: 0; right: 0; z-index: 5; display: flex; justify-content: space-between; padding: 8px 22px; font-size: 12px; pointer-events: none; opacity: 0.55; }
+.car-page > header a { color: inherit; text-decoration: none; pointer-events: auto; }
 .car-page .quiet { position: fixed; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 
 #car {
@@ -109,51 +109,41 @@
 #car .phone .playing { left: calc(34px + 27vh + 34px); }
 #car .phone:not(.off) .call { color: #7fe0a8; }
 
-/* ---- The rollers ---- */
+/* ---- The rollers: each holds two settings, drawn as the things they are about ---- */
 #car .row { display: grid; grid-template-columns: 1fr 1.15fr 1fr; gap: var(--gap); min-height: 0; }
-#car .roller {
-  display: grid;
-  grid-template-rows: auto auto 1fr auto;
-  justify-items: center;
-  gap: 8px;
-  padding: 14px 0 12px;
-  transform-origin: center bottom;
-  background: #0b0d0f;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-}
-/* The seat is where the page draws this roller's thumbwheel (on the canvas behind). */
-#car .seat { width: 100%; min-height: 0; align-self: stretch; }
-#car .wheels { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
-#car .roller.held { filter: brightness(1.12); }
-#car .roller.busy { transform: scale(1.05); z-index: 4; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 -18px 50px rgba(0, 0, 0, 0.6); }
-#car .roller.off .counter { filter: saturate(0) brightness(0.55); }
-#car .roller.stopped { box-shadow: inset 0 0 0 1px rgba(255, 120, 90, 0.5); }
-#car .roller .label, #car .roller .second { position: relative; z-index: 1; text-align: center; padding: 0 10px; }
-#car .roller .label { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); }
-#car .roller .second { font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; white-space: pre; }
+#car .roller { display: grid; grid-template-rows: auto 1fr; padding: 12px 14px 12px; transform-origin: center bottom; background: #0b0d0f; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+#car .roller.held { background: #0f1215; }
+#car .roller.busy { transform: scale(1.04); z-index: 4; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 -18px 50px rgba(0, 0, 0, 0.6); }
+#car .roller.stopped { box-shadow: inset 0 0 0 1px rgba(255, 120, 90, 0.55); }
+#car .roller header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); }
+#car .icon { width: 1.25em; height: 1.25em; flex: none; vertical-align: -0.24em; }
+/* The switch (worked with a second finger): its icon lit when on. */
+#car .switch { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 8px; border-radius: 999px; background: rgba(143, 233, 192, 0.14); color: #b9f3d8; transition: all 0.3s ease; }
+#car .switch em { font-style: normal; }
+#car .roller.off .switch { background: rgba(255, 255, 255, 0.06); color: var(--quiet); }
 
-/* The counter: a wheel of values behind glass, like an odometer's. */
-#car .counter {
-  position: relative;
-  z-index: 1;
-  width: min(74%, 300px);
-  height: clamp(44px, 8.4vh, 78px);
-  border-radius: 18px;
-  overflow: hidden;
-  perspective: 700px;
-  background: linear-gradient(180deg, #040506, #15191d 48%, #040506);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 10px 22px rgba(0, 0, 0, 0.8), inset 0 -10px 22px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.06);
-  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-#car .roller.busy .counter { transform: scale(1.3); }
-#car .roller .label, #car .roller .second { transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
-#car .roller.busy .label { transform: translateY(-9px); }
-#car .roller.busy .second { transform: translateY(9px); }
-#car .wheel { position: absolute; inset: 0; transform-style: preserve-3d; }
-#car .wheel.b, #car .roller.sideways .wheel.a { visibility: hidden; }
-#car .roller.sideways .wheel.b { visibility: visible; }
-#car .wheel span { position: absolute; inset: 0; display: grid; place-items: center; backface-visibility: hidden; font-size: clamp(26px, 5vh, 46px); font-weight: 600; letter-spacing: -0.04em; color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; }
-#car .wheel span.long { font-size: clamp(15px, 2.6vh, 22px); letter-spacing: -0.02em; }
+#car .pair { display: flex; gap: 8px; min-height: 0; }
+#car .part { position: relative; flex: 1 1 0; min-width: 0; display: grid; grid-template: 'top' 14px 'seat' 1fr 'bottom' 14px 'read' auto / 1fr; justify-items: center; transition: flex-grow 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease; }
+#car .part.across { grid-template: 'left seat right' 1fr 'read read read' auto / 14px 1fr 14px; align-items: center; }
+#car .part .seat { grid-area: seat; width: 100%; height: 100%; min-height: 0; }
+/* The setting being changed takes the room; the other one waits small beside it. */
+#car .part.busy { flex-grow: 2.4; }
+#car .roller.busy .part:not(.busy) { opacity: 0.4; }
+/* Arrows on the sides a setting is worked from: above and below, or left and right. */
+#car .way { width: 0; height: 0; border: 6px solid transparent; opacity: 0.4; transition: opacity 0.25s ease; }
+#car .part.busy .way, #car .roller.held .way { opacity: 0.95; }
+#car .part.along .way:first-child { grid-area: top; border-bottom-color: #fff; border-top-width: 0; }
+#car .part.along .way:nth-child(3) { grid-area: bottom; border-top-color: #fff; border-bottom-width: 0; }
+#car .part.across .way:first-child { grid-area: left; border-right-color: #fff; border-left-width: 0; }
+#car .part.across .way:nth-child(3) { grid-area: right; border-left-color: #fff; border-right-width: 0; }
+#car .read { grid-area: read; margin: 6px 0 0; display: flex; align-items: baseline; justify-content: center; gap: 8px; white-space: nowrap; font-size: 13px; color: var(--quiet); }
+#car .read .icon { color: var(--ink); align-self: center; width: 20px; height: 20px; }
+#car .read b { font-size: clamp(22px, 3.6vh, 34px); font-weight: 600; letter-spacing: -0.03em; color: #fff; font-variant-numeric: tabular-nums; transition: font-size 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+#car .part.busy .read b { font-size: clamp(30px, 5.4vh, 50px); }
+#car .roller.off .read b { color: var(--quiet); }
+#car .wheels { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
+
+#car .pager .icon { margin-right: 6px; }
 
 .car-page #modes { position: fixed; right: 16px; top: 34px; z-index: 6; display: flex; gap: 4px; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); }
 .car-page #modes button { border: 0; padding: 6px 12px; border-radius: 999px; font: inherit; font-size: 12px; color: rgba(255, 255, 255, 0.7); background: none; cursor: pointer; }
@@ -163,9 +153,9 @@
 
 /* An upright phone: the same screen, with less on it. */
 @media (orientation: portrait) {
-  #car { grid-template-rows: 50fr 50fr; }
-  #car .roller .second, #car .scene .list, #car .vehicle dl div:nth-child(n + 3) { display: none; }
-  #car .counter { width: 84%; }
+  #car { grid-template-rows: 46fr 54fr; }
+  #car .row { grid-template-columns: 1fr; grid-template-rows: repeat(3, 1fr); }
+  #car .scene .list, #car .vehicle dl div:nth-child(n + 3), #car .read span { display: none; }
   #car .media .art { height: 34%; top: 40%; }
   #car .playing { left: 34px; top: auto; bottom: 96px; transform: none; max-width: 80%; }
   #car .phone .playing { left: 34px; }

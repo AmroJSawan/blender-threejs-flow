@@ -1,7 +1,8 @@
 import * as THREE from 'three'
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import './car.css'
+import { icon } from './icons'
+import { things, type Kind, type Thing } from './things'
 import { feel, felt, say, voice, wake } from '../tactile/feel'
 
 /**
@@ -11,8 +12,9 @@ import { feel, felt, say, voice, wake } from '../tactile/feel'
  * - the stage, the upper part: a block of four scenes (Map, Media, Car, Phone) that rolls sideways like a drum, one scene per notch.
  *   Sliding up or down works the scene's own setting; a second-finger tap is the scene's one action.
  * - three rollers along the bottom, where a hand falls: the driver's climate by the driver, sound in the middle, the passenger's climate.
- * Each roller is a modelled thumbwheel (blender/make_wheel.py), the control drivers know from steering wheels: a knurled barrel
- * on an axle rolls up and down, and its slot, wider than the barrel, with arrows at each side, says it nudges sideways too.
+ * Each roller shows its two settings as the things they are about (see things.ts): a thermometer for temperature, a fan for its speed,
+ * a loudspeaker for volume, record sleeves for the track, a seat for its heat. Tall things are worked up and down, things that spin
+ * or flip are worked sideways, and each carries its usual icon. The one being changed grows.
  * The stage's scenes sit on a wide drum, with the next and the previous scene showing at its edges, so it is plain there is more that way.
  * In every zone: a finger put down changes nothing, up/down is one setting and sideways another, each step is a notch that is heard
  * and felt, the ends stop, and a second-finger tap (or a double tap) switches. The zone being changed grows; the rest dims.
@@ -27,53 +29,20 @@ const settings = {
   settle: 650,
   /** How much the picture hangs back in a notch before slipping to the next (1 = follows the finger exactly). */
   stick: 2.4,
-  /** Degrees between one value and the next on a counter wheel, and how many values either side of the current one are drawn. */
-  wheel: { step: 24, either: 3 },
   /**
    * The stage's drum: how much of the stage's width one scene takes (the rest shows its neighbours), and the angle between scenes.
    */
   drum: { face: 0.8, angle: 34 },
-  /**
-   * The modelled thumbwheels. `nudge` how far the barrel shifts along its axle
-   * while a sideways notch is building (it springs back as the notch lands); `sinks` how far it gives under a finger.
-   * The colours are the parts' own; `rough` and `metal` (0–1) say how each takes the light.
-   */
-  wheels: {
-    /**
-     * The controls a roller can mimic (chosen with the button, or car.html?control=ball). Each has its model, how much of it is
-     * kept in view (width, height, in the model's own units), the parts that move, and the angle (degrees) they turn per notch.
-     * A wheel only rolls up and down and is nudged sideways; a ball rolls every way. `plain` draws the plate round it in the
-     * roller's own flat colour, so only the control stands out.
-     */
-    kinds: {
-      wheel: { name: 'Thumbwheel', file: 'car/wheel.glb', view: [5.7, 3.1], moving: ['Barrel', 'Caps'], notch: 10, rolls: false, plain: false },
-      ball: { name: 'Trackball', file: 'car/ball.glb', view: [4.4, 3.7], moving: ['Ball', 'Dots'], notch: 15, rolls: true, plain: true },
-    },
-    start: (new URLSearchParams(location.search).get('control') === 'ball' ? 'ball' : 'wheel') as 'wheel' | 'ball',
-    lens: 24,
-    nudge: 0.62,
-    sinks: 0.05,
-    parts: {
-      Barrel: { colour: '#3a4047', rough: 0.36, metal: 0.9 },
-      Caps: { colour: '#cfd6dc', rough: 0.3, metal: 1 },
-      Axle: { colour: '#8d949b', rough: 0.3, metal: 1 },
-      Housing: { colour: '#08090a', rough: 1, metal: 0 },
-      Marks: { colour: '#6f777f', rough: 0.6, metal: 0 },
-      Ball: { colour: '#1d2126', rough: 0.2, metal: 0.25 },
-      Dots: { colour: '#b9c1c8', rough: 0.35, metal: 1 },
-      Ring: { colour: '#8d949b', rough: 0.3, metal: 1 },
-    } as Record<string, { colour: string; rough: number; metal: number }>,
-    light: 1.15,
-    plate: '#0b0d0f', // the roller's own colour (as in car.css)
-  },
+  /** The objects on the rollers: the camera's lens angle, how bright they are lit, how much room is left round each (1 = none), and how much of its light one keeps while something else is being changed. */
+  things: { lens: 24, light: 1.1, room: 1.1, aside: 0.3 },
   /** Which side the driver sits: 'left' or 'right'. The driver's climate is on that side. */
   driver: 'left' as 'left' | 'right',
 }
 
 // ---- What can be set ---------------------------------------------------------------
 /** One setting: either a run of numbers (least … most by step) or a list of named values. `px` is the slide for one notch. */
-type Dial = { name: string; least: number; most: number; step: number; value: number; px: number; unit: string; names?: string[]; lowest: number; highest: number; heavy?: boolean; flipped?: boolean }
-type Turn = { name: string; on: boolean; words: [string, string] }
+type Dial = { thing?: Kind; icon?: string; name: string; least: number; most: number; step: number; value: number; px: number; unit: string; names?: string[]; lowest: number; highest: number; heavy?: boolean; flipped?: boolean }
+type Turn = { name: string; on: boolean; words: [string, string]; icon?: string }
 type Axis = 'along' | 'across'
 const numbers = (name: string, least: number, most: number, step: number, value: number, px: number, unit: string, pitch: [number, number]): Dial => ({ name, least, most, step, value, px, unit, lowest: pitch[0], highest: pitch[1] })
 const named = (name: string, names: string[], value: number, px: number, pitch: [number, number]): Dial => ({ name, names, least: 0, most: names.length - 1, step: 1, value, px, unit: '', lowest: pitch[0], highest: pitch[1], heavy: true })
@@ -92,19 +61,20 @@ const scene = { ...named('Scene', scenes.map((each) => each.name), 0, 150, [240,
 
 type Zone = { key: string; name: string; along: () => Dial; across: Dial; turn: () => Turn; made: HTMLElement }
 const climate = (key: string, name: string, second: Dial): Zone => {
-  const along = numbers('Temperature', 16, 28, 0.5, key === 'driver' ? 21 : 22.5, 30, '°', [420, 840])
-  const turn: Turn = { name: 'A/C', on: true, words: ['on', 'off'] }
+  const along: Dial = { ...numbers('Temperature', 16, 28, 0.5, key === 'driver' ? 21 : 22.5, 30, '°', [420, 840]), thing: 'thermometer', icon: 'temperature' }
+  const turn: Turn = { name: 'A/C', on: true, words: ['on', 'off'], icon: 'cold' }
   return { key, name, along: () => along, across: second, turn: () => turn, made: document.createElement('section') }
 }
-const volume = numbers('Volume', 0, 30, 1, 12, 22, '', [380, 900])
-const sound: Turn = { name: 'Sound', on: true, words: ['on', 'muted'] }
+const volume: Dial = { ...numbers('Volume', 0, 30, 1, 12, 22, '', [380, 900]), thing: 'speaker', icon: 'volume' }
+const sound: Turn = { name: 'Sound', on: true, words: ['on', 'muted'], icon: 'volume' }
 const zones: Zone[] = [
   { key: 'stage', name: 'Stage', along: () => scenes[scene.value].along, across: scene, turn: () => scenes[scene.value].turn, made: document.createElement('section') },
-  climate('driver', 'Driver', numbers('Fan', 0, 7, 1, 3, 46, '', [300, 520])),
-  { key: 'sound', name: 'Sound', along: () => volume, across: named('Track', ['Low Sun', 'Glass Road', 'Night Shift', 'Open Water', 'Slow Signal'], 1, 70, [330, 560]), turn: () => sound, made: document.createElement('section') },
-  climate('passenger', 'Passenger', numbers('Seat heat', 0, 3, 1, 1, 60, '', [300, 520])),
+  climate('driver', 'Driver', { ...numbers('Fan', 0, 7, 1, 3, 46, '', [300, 520]), thing: 'fan', icon: 'fan' }),
+  { key: 'sound', name: 'Sound', along: () => volume, across: { ...named('Track', ['Low Sun', 'Glass Road', 'Night Shift', 'Open Water', 'Slow Signal'], 1, 70, [330, 560]), thing: 'records', icon: 'track' }, turn: () => sound, made: document.createElement('section') },
+  climate('passenger', 'Passenger', { ...numbers('Seat heat', 0, 3, 1, 1, 60, '', [300, 520]), thing: 'seat', icon: 'seat' }),
 ]
 const [stage, ...rollers] = zones
+const dialOf = (zone: Zone, axis: Axis) => (axis === 'along' ? zone.along() : zone.across)
 if (settings.driver === 'right') rollers.reverse()
 
 // ---- Building the screen -----------------------------------------------------------
@@ -145,7 +115,7 @@ stage.made.innerHTML = `
     </article>
   </div>
   <div class="tag"><b></b><span></span></div>
-  <ol class="pager">${scenes.map((each) => `<li>${each.name}</li>`).join('')}</ol>`
+  <ol class="pager">${scenes.map((each) => `<li>${icon({ Map: 'map', Media: 'track', Car: 'car', Phone: 'phone' }[each.name]!)}${each.name}</li>`).join('')}</ol>`
 car.append(stage.made)
 
 const wheelsCanvas = document.createElement('canvas')
@@ -155,26 +125,13 @@ const row = document.createElement('div')
 row.className = 'row'
 for (const zone of rollers) {
   zone.made.className = `zone roller ${zone.key}`
-  zone.made.innerHTML = `<span class="label"></span><div class="counter"><div class="wheel a"></div><div class="wheel b"></div></div><div class="seat"></div><span class="second"></span>`
+  // Each setting is a picture of its thing with its icon and value under it, and arrows on the sides it is worked from.
+  const half = (axis: Axis, dial: Dial) => `<div class="part ${axis}"><i class="way"></i><div class="seat"></div><i class="way"></i><p class="read">${icon(dial.icon!)}<b></b><span>${dial.name}</span></p></div>`
+  zone.made.innerHTML = `<header><span class="title">${zone.name}</span><span class="switch">${icon(zone.turn().icon!)}<em></em></span></header><div class="pair">${half('along', zone.along())}${half('across', zone.across)}</div>`
   row.append(zone.made)
 }
 car.append(row)
 
-/** Fills a counter wheel with every value of a setting, each on its own facet of the wheel. */
-function facets(wheel: HTMLElement, dial: Dial) {
-  wheel.replaceChildren(
-    ...Array.from({ length: place({ ...dial, value: dial.most }) + 1 }, (_, at) => {
-      const facet = document.createElement('span')
-      facet.textContent = word(dial, at)
-      if (facet.textContent.length > 5) facet.className = 'long'
-      return facet
-    }),
-  )
-}
-for (const zone of rollers) {
-  facets(zone.made.querySelector('.wheel.a')!, zone.along())
-  facets(zone.made.querySelector('.wheel.b')!, zone.across)
-}
 scenes.forEach((each, index) => {
   const list = stage.made.querySelectorAll('.scene')[index].querySelector('.list')
   list?.replaceChildren(...each.along.names!.map((name) => Object.assign(document.createElement('li'), { textContent: name })))
@@ -186,12 +143,8 @@ function write() {
   const now = new Date()
   status.innerHTML = `<span>${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}</span><span class="drive"><b>D</b> 86 km/h</span><span>${ranges[scenes[2].along.value]} km · 24° outside</span>`
   for (const zone of rollers) {
-    const shown = reading.get(zone)!
-    const other = shown === 'along' ? zone.across : zone.along()
-    const dial = shown === 'along' ? zone.along() : zone.across
-    zone.made.querySelector('.label')!.textContent = `${zone.name} · ${dial.name}`
-    // The other setting is written the way it is reached: sideways between arrows, up/down between a pair of them.
-    zone.made.querySelector('.second')!.textContent = `${shown === 'along' ? '‹' : '︿'} ${other.name} ${word(other)} ${shown === 'along' ? '›' : '﹀'}  ·  ${zone.turn().name} ${zone.turn().words[zone.turn().on ? 0 : 1]}`
+    for (const axis of ['along', 'across'] as const) zone.made.querySelector(`.part.${axis} .read b`)!.textContent = word(dialOf(zone, axis))
+    zone.made.querySelector('.switch em')!.textContent = `${zone.turn().name} ${zone.turn().words[zone.turn().on ? 0 : 1]}`
     zone.made.classList.toggle('off', !zone.turn().on)
   }
   const current = scenes[scene.value]
@@ -240,7 +193,6 @@ type Finger = { id: number; zone: Zone; from: { x: number; y: number; at: number
 const fingers: Finger[] = []
 const turned = new Map(zones.map((zone) => [zone, { along: 0, across: 0 }])) // notches each roller has turned in all, so its ridges never jump
 const lastTap = { at: 0, zone: null as Zone | null }
-const dialOf = (zone: Zone, axis: Axis) => (axis === 'along' ? zone.along() : zone.across)
 const zoneAt = (x: number, y: number) => zones.find((zone) => zone.made === document.elementFromPoint(x, y)?.closest('.zone'))
 
 function turn(zone: Zone) {
@@ -338,7 +290,6 @@ car.addEventListener('contextmenu', (event) => event.preventDefault())
 // ---- Drawing: the rollers' ridges, the counters and the stage's block of scenes, easing toward where they should be ----
 const drawn = new Map(zones.map((zone) => [zone, { turned: { along: 0, across: 0 }, place: { along: place(zone.along()), across: place(zone.across) } }]))
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches
-const radians = (settings.wheel.step * Math.PI) / 180
 let before = performance.now()
 function draw(now: number) {
   const passed = Math.min((now - before) / 1000, 0.05)
@@ -378,96 +329,32 @@ function draw(now: number) {
       })
       continue
     }
-    // Its control. A thumbwheel's barrel turns one ridge per notch, shifts along its axle while a sideways notch builds, and gives
-    // under a finger. A trackball simply rolls the way the finger goes, a fixed angle per notch either way.
-    const wheel = wheels.get(zone)?.[kind]
-    if (wheel) {
-      const sideways = finger?.axis === 'across' ? slipped : 0
-      const rolled = { along: state.turned.along / zone.along().px, across: state.turned.across / zone.across.px }
-      wheel.shift = toward(wheel.shift, wheel.rolls ? 0 : sideways * settings.wheels.nudge * (zone.across.flipped ? -1 : 1), 22)
-      wheel.sink = toward(wheel.sink, held ? settings.wheels.sinks : 0, 18)
-      for (const part of wheel.moving) {
-        if (wheel.rolls) {
-          part.rotateOnWorldAxis(X, -(rolled.along - wheel.rolled.along) * wheel.notch)
-          part.rotateOnWorldAxis(Y, (rolled.across - wheel.rolled.across) * wheel.notch)
-        } else part.rotation.x = -rolled.along * wheel.notch
-        part.position.x = wheel.shift
-        part.position.z = wheel.home - wheel.sink
-      }
-      wheel.rolled = rolled
-    }
-    const counter = made.querySelector<HTMLElement>('.counter')!
-    for (const axis of ['along', 'across'] as const) {
-      const wheel = made.querySelector<HTMLElement>(axis === 'along' ? '.wheel.a' : '.wheel.b')!
-      const facet = axis === 'along' ? counter.clientHeight * 0.62 : counter.clientWidth * 0.46
-      const radius = facet / (2 * Math.tan(radians / 2))
-      const spin = axis === 'along' ? 'rotateX' : 'rotateY'
-      // Higher values stand above, and to the right: the counter turns against the roller, like two meshed wheels.
-      wheel.style.transform = `translateZ(${-radius}px) ${spin}(${-state.place[axis] * settings.wheel.step}deg)`
-      Array.from(wheel.children as HTMLCollectionOf<HTMLElement>).forEach((each, at) => {
-        const away = Math.abs(at - state.place[axis])
-        each.style.display = away > settings.wheel.either ? 'none' : ''
-        each.style.transform = `${spin}(${at * settings.wheel.step}deg) translateZ(${radius}px)`
-        each.style.opacity = String(Math.max(0, 1 - away * 0.62))
-      })
-    }
+    for (const axis of ['along', 'across'] as const) made.querySelector(`.part.${axis}`)!.classList.toggle('busy', finger?.axis === axis)
   }
-  paint()
+  paint(passed, now / 1000)
   requestAnimationFrame(draw)
 }
 
-// ---- The thumbwheels: one model, shown once in each roller, lit softly from above -----------------------------------
+// ---- The objects on the rollers: each drawn where its setting keeps a seat for it, lit softly from above --------------
 const renderer = new THREE.WebGLRenderer({ canvas: wheelsCanvas, antialias: true, alpha: true })
 renderer.toneMapping = THREE.ACESFilmicToneMapping
-renderer.autoClear = false // the page clears once a frame, then draws each roller's control and its veil in turn
-renderer.toneMappingExposure = settings.wheels.light
+renderer.toneMappingExposure = settings.things.light
+renderer.autoClear = false // the page clears once a frame, then draws each object in its own place
 const room = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture
-const lens = new THREE.PerspectiveCamera(settings.wheels.lens, 1, 0.1, 100)
-type Kind = keyof typeof settings.wheels.kinds
-type Wheel = { scene: THREE.Scene; moving: THREE.Object3D[]; view: number[]; notch: number; rolls: boolean; rolled: { along: number; across: number }; shift: number; sink: number; home: number }
-const wheels = new Map<Zone, Partial<Record<Kind, Wheel>>>(rollers.map((zone) => [zone, {}]))
-const X = new THREE.Vector3(1, 0, 0)
-const Y = new THREE.Vector3(0, 1, 0)
-let kind: Kind = settings.wheels.start
-for (const [name, about] of Object.entries(settings.wheels.kinds) as [Kind, (typeof settings.wheels.kinds)[Kind]][]) {
-  new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}${about.file}`).then((file) => {
-    file.scene.traverse((child) => {
-      if (!(child instanceof THREE.Mesh)) return
-      const look = settings.wheels.parts[child.name] ?? settings.wheels.parts.Housing
-      child.material =
-        about.plain && child.name === 'Housing'
-          ? new THREE.MeshBasicMaterial({ color: settings.wheels.plate, side: THREE.DoubleSide, toneMapped: false })
-          : new THREE.MeshStandardMaterial({ color: look.colour, roughness: look.rough, metalness: look.metal, flatShading: child.name === 'Barrel', side: THREE.DoubleSide })
-    })
-    for (const zone of rollers) {
-      const scene = new THREE.Scene()
-      const model = file.scene.clone(true)
-      scene.environment = room
-      scene.add(model)
-      const lamp = new THREE.DirectionalLight('#ffffff', 1.4) // a wide soft lamp above and a little in front
-      lamp.position.set(-1.5, 5, 4)
-      scene.add(lamp)
-      const moving = about.moving.map((part) => model.getObjectByName(part)!).filter(Boolean)
-      const state = drawn.get(zone)!
-      const rolled = { along: state.turned.along / zone.along().px, across: state.turned.across / zone.across.px }
-      wheels.get(zone)![name] = { scene, moving, view: about.view, notch: (about.notch * Math.PI) / 180, rolls: about.rolls, rolled, shift: 0, sink: 0, home: moving[0]?.position.z ?? 0 }
-    }
-  })
-}
-// A button to change what the rollers mimic, for comparing the two.
-const swap = document.createElement('button')
-swap.type = 'button'
-swap.textContent = settings.wheels.kinds[kind].name
-swap.addEventListener('click', () => {
-  kind = kind === 'wheel' ? 'ball' : 'wheel'
-  swap.textContent = settings.wheels.kinds[kind].name
-})
-document.querySelector('#modes')!.prepend(swap)
-const veil = new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0, depthTest: false })
-const shade = new THREE.Scene().add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), veil))
-const flat = new THREE.Camera()
-const shades = new Map<Zone, number>()
-function paint() {
+const lens = new THREE.PerspectiveCamera(settings.things.lens, 1, 0.1, 100)
+const shown: { zone: Zone; axis: Axis; thing: Thing; scene: THREE.Scene; lamp: THREE.DirectionalLight; seat: Element; veil: number }[] = []
+for (const zone of rollers)
+  for (const axis of ['along', 'across'] as const) {
+    const dial = dialOf(zone, axis)
+    const thing = things[dial.thing!](place({ ...dial, value: dial.most }) + 1)
+    const scene = new THREE.Scene()
+    scene.environment = room
+    const lamp = new THREE.DirectionalLight('#ffffff', 1.3) // a wide soft lamp above and a little in front
+    lamp.position.set(-1.5, 5, 4)
+    scene.add(thing.made, lamp)
+    shown.push({ zone, axis, thing, scene, lamp, seat: zone.made.querySelector(`.part.${axis} .seat`)!, veil: 1 })
+  }
+function paint(passed: number, clock: number) {
   const ratio = Math.min(devicePixelRatio, 2)
   const wide = car.clientWidth
   const tall = car.clientHeight
@@ -478,27 +365,26 @@ function paint() {
   renderer.setScissorTest(false)
   renderer.clear()
   renderer.setScissorTest(true)
-  for (const [zone, both] of wheels) {
-    const wheel = both[kind]
-    if (!wheel) continue
-    // Each wheel is drawn where its roller keeps a seat for it, wherever the roller is and however it has grown.
-    const seat = zone.made.querySelector('.seat')!.getBoundingClientRect()
+  const half = Math.tan((settings.things.lens * Math.PI) / 360)
+  for (const each of shown) {
+    each.thing.set(drawn.get(each.zone)!.place[each.axis], each.zone.turn().on, passed, clock)
+    const seat = each.seat.getBoundingClientRect()
     if (seat.width < 4 || seat.height < 4) continue
     renderer.setViewport(seat.left, tall - seat.bottom, seat.width, seat.height)
     renderer.setScissor(seat.left, tall - seat.bottom, seat.width, seat.height)
     lens.aspect = seat.width / seat.height
-    const half = Math.tan((settings.wheels.lens * Math.PI) / 360)
-    // Fitted to the control and its opening, not to the whole plate: the plate runs on past the seat's edges.
-    const back = Math.max(wheel.view[1] / 2 / half, wheel.view[0] / 2 / (half * lens.aspect))
-    lens.position.set(0, back * 0.2, back * 0.98) // seen from a little above, as from the seat
+    const back = Math.max(each.thing.size[1] / 2 / half, each.thing.size[0] / 2 / (half * lens.aspect)) * settings.things.room
+    lens.position.set(0, back * 0.1, back)
     lens.lookAt(0, 0, 0)
     lens.updateProjectionMatrix()
-    renderer.render(wheel.scene, lens)
-    // Step back with the rest of its roller while another zone is being changed.
-    const dimmed = car.classList.contains('busy') && !zone.made.classList.contains('busy')
-    shades.set(zone, (shades.get(zone) ?? 0) + ((dimmed ? 0.5 : 0) - (shades.get(zone) ?? 0)) * 0.16)
-    veil.opacity = shades.get(zone)!
-    if (veil.opacity > 0.01) renderer.render(shade, flat)
+    // Step back with the rest while something else is being changed: another zone, or this zone's other setting.
+    const busy = fingers.find((finger) => finger.axis)
+    const aside = Boolean(busy) && !(busy!.zone === each.zone && busy!.axis === each.axis)
+    each.veil += ((aside ? settings.things.aside : 1) - each.veil) * 0.16
+    each.scene.environmentIntensity = each.veil
+    each.lamp.intensity = 1.3 * each.veil
+    renderer.clearDepth()
+    renderer.render(each.scene, lens)
   }
 }
 requestAnimationFrame(draw)
