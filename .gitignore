@@ -6,3 +6,5 @@ dist
 __pycache__
 recordings
 moodboard/
+blender/frames/
+blender/cache_smoke/

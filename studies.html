@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Motion studies · air and sound in metal</title>
+    <style>
+      body { margin: 0; padding: 26px 30px 80px; background: #0b0c0e; color: rgba(255, 255, 255, 0.72); font: 500 15px/1.45 Inter, system-ui, -apple-system, 'Segoe UI', sans-serif; letter-spacing: -0.01em; }
+      header { display: flex; justify-content: space-between; margin-bottom: 44px; }
+      header a { color: inherit; text-decoration: none; }
+      h1 { margin: 0 0 6px; font-size: 30px; font-weight: 600; color: #fff; letter-spacing: -0.03em; }
+      .lead { margin: 0 0 40px; max-width: 760px; color: rgba(255, 255, 255, 0.55); }
+      h2 { margin: 44px 0 16px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #fff; font-weight: 600; }
+      .studies { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+      figure { margin: 0; border-radius: 16px; overflow: hidden; background: #131518; }
+      video { display: block; width: 100%; height: auto; }
+      figcaption { padding: 14px 18px 18px; }
+      figcaption b { display: block; color: #fff; font-weight: 600; margin-bottom: 2px; }
+    </style>
+  </head>
+  <body>
+    <header><a href="./">← Lab</a><a href="car.html">Car screen →</a></header>
+    <h1>Motion studies</h1>
+    <p class="lead">Short loops made in Blender to choose from, before anything is built into the car screen's sill: three ways air could show, and three ways sound could. Each sound study stands three times, quiet, middle and loud from left to right, so "louder" can be judged at a glance.</p>
+
+    <h2>Air</h2>
+    <div class="studies">
+      <figure><video src="studies/lines.mp4" poster="studies/lines.jpg" autoplay loop muted playsinline></video><figcaption><b>Lines</b>Thin streams following the air over three bars, as smoke lines do in a wind tunnel. Drawn, not simulated, so it is exact and cheap to run live.</figcaption></figure>
+      <figure><video src="studies/smoke.mp4" poster="studies/smoke.jpg" autoplay loop muted playsinline></video><figcaption><b>Smoke</b>Real smoke from Blender's fluid solver, let out in threads and drawn past the same bars. The most natural, and the hardest to run live.</figcaption></figure>
+      <figure><video src="studies/ribbons.mp4" poster="studies/ribbons.jpg" autoplay loop muted playsinline></video><figcaption><b>Ribbons</b>Tell-tales: ribbons fixed at one end, lifted and shaken by a wind, the way a ribbon tied to a vent shows it is blowing.</figcaption></figure>
+    </div>
+
+    <h2>Sound</h2>
+    <div class="studies">
+      <figure><video src="studies/pins.mp4" poster="studies/pins.jpg" autoplay loop muted playsinline></video><figcaption><b>Pins</b>A row of machined pins that stand higher and move more the louder it is. It reads like every level meter, and its height answers a slide up or down.</figcaption></figure>
+      <figure><video src="studies/string.mp4" poster="studies/string.jpg" autoplay loop muted playsinline></video><figcaption><b>String</b>A taut wire between two posts that swings wider the louder it is: how a sound is actually made.</figcaption></figure>
+      <figure><video src="studies/liquid.mp4" poster="studies/liquid.jpg" autoplay loop muted playsinline></video><figcaption><b>Liquid</b>A pool of liquid metal whose surface ripples more the louder it is, like a glass of water on a speaker.</figcaption></figure>
+    </div>
+  </body>
+</html>

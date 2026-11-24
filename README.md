@@ -392,6 +392,18 @@ How it is laid out, and why:
 
 It is a study of the idea, not a product: the map, the tracks and the car's numbers are made up, and nothing has been tried by a driver.
 
+## Air page (wires of light)
+
+`air.html` is a study for how the car screen's fan could show: air drawn as fine wires of light. It follows a generative piece by Rey Rad ("a single circular composition with local attractors"), rebuilt to run live (`src/air/main.ts`; numbers in `settings` at the top).
+
+- A quarter of a million points (fewer on phones) each keep their place in a picture, one pixel per point, and the graphics card moves them all every frame.
+- They follow a flow with no sources or sinks (the curl of a slowly changing field with a few slow whirls in it), so they slide past one another in sheets and never simply pile up.
+- A wavering ring holds them in; held there they gather, which is what lights the outline.
+- Each point leaves a faint dot on a picture that fades slowly, so every point draws a line behind it.
+- Last, the picture is toned, a soft copy is added as glow, and red is read from a little further out than blue, which gives bright edges their fringe of colour.
+
+Dragging pushes the air by the finger's speed, capped, and a still finger adds nothing. The numbers at the bottom set the fan: higher is faster and brighter. It runs on today's WebGL; nothing here needs WebGPU.
+
 ## Lab canvas (the entry page)
 
 `index.html` is the way in: one open canvas, like a design tool's board, with the eight studies laid out on it as frames in three groups (Scenes, Cards, Switches) beside a short brief.
