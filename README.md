@@ -403,6 +403,8 @@ Blender does the work (`blender/make_air.py`, then `blender/finish_air.py`; both
 
 The page (`src/air/main.ts`) lays the films over the cabin so each shows only where it is brighter than what is under it, softens them a little, and fades a set in or out as its button is pressed. The fan sets how strongly the air shows and how fast it moves. The vents, their directions and the air's speed, reach and thickness are in `VENTS` and `AIR` at the top of `make_air.py`; add `-- --test` for a two-frame check.
 
+By themselves the films read as smoke, so the page softens them and keeps them faint, and draws a few faint live streaks from each vent over them (`src/air/strands.ts`): thin fans of lines with brighter runs travelling outward, wavering slightly, blurred. The films give the air its soft body and the streaks give it direction and speed. The streaks alone read as hair, the films alone as smoke; the mix is the middle.
+
 Because the air is rendered and not drawn live, a vent cannot be aimed by dragging. Three earlier, live versions are in the history: points wandering through a flow, crisp wires along a drawn path, and blurred plumes of wavering lines.
 
 ## Lab canvas (the entry page)

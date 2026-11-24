@@ -1,4 +1,5 @@
 import './air.css'
+import { state as streaks } from './strands'
 
 /**
  * Air in the cabin, as rendered 3D. Blender (blender/make_air.py) modelled the car's interior simply and let air out of each vent
@@ -7,7 +8,8 @@ import './air.css'
  * - the cabin by itself, softly lit (public/air/cabin.webp);
  * - for each set of vents, a looping film of its air alone on black (public/air/face.mp4, feet, screen, back).
  * This page lays the films over the cabin, each showing only where it is brighter than what is under it, and fades a set in or out
- * as it is switched. The fan sets how much air shows and how fast it moves. The driver's side blows cool, the passenger's warm.
+ * as it is switched. By themselves the films read as smoke, so they are softened and kept faint, and over them the page draws a few
+ * faint live streaks from each vent (strands.ts), which give the air its direction: soft body from the films, movement from the streaks. The fan sets how much air shows and how fast it moves. The driver's side blows cool, the passenger's warm.
  */
 const settings = {
   folder: 'air/',
@@ -21,7 +23,7 @@ const settings = {
   /** The fan: its levels, the one it starts at, how strongly air shows at the lowest and at full (0–1), and how fast the film plays at each. */
   levels: 7,
   fan: 4,
-  shows: [0.3, 0.85],
+  shows: [0.2, 0.52],
   plays: [0.5, 1.4],
   temperatures: { driver: 19.5, passenger: 24 },
 }
@@ -47,6 +49,7 @@ const films = settings.sets.map((set) => {
 })
 function show() {
   const fan = state.fan / settings.levels
+  Object.assign(streaks, { fan: state.fan, on: state.on })
   films.forEach((film, index) => {
     const on = state.on[settings.sets[index].key] && state.fan > 0
     film.style.opacity = String(on ? settings.shows[0] + (settings.shows[1] - settings.shows[0]) * fan : 0)
