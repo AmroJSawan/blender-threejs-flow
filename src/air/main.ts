@@ -23,7 +23,7 @@ const settings = {
   /** The fan: its levels, the one it starts at, how strongly air shows at the lowest and at full (0–1), and how fast the film plays at each. */
   levels: 7,
   fan: 4,
-  shows: [0.2, 0.52],
+  shows: [0.15, 0.42],
   plays: [0.5, 1.4],
   temperatures: { driver: 19.5, passenger: 24 },
 }

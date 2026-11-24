@@ -40,12 +40,12 @@ const settings = {
   /** How much of its full reach the air has with the fan at its lowest, how fast the runs travel at the lowest and at full, and the plume's slow sway. */
   least: 0.35,
   speed: [0.25, 1.1],
-  sway: 0.035,
+  sway: 0.015,
   /** How far the air wavers from its straight line by the end of its reach (as a share of that reach), and how far its edges curl outward. */
-  waver: 0.07,
-  curl: 0.06,
+  waver: 0.03,
+  curl: 0.025,
   /** Brightness of the lines; how much of the picture is left after a 60th of a second; how much of the sharp lines shows through the blur; how strong the blur is. */
-  dot: 0.5,
+  dot: 0.42,
   stays: 0.86,
   grain: 0.3,
   soft: 1.1,
@@ -144,7 +144,7 @@ const air = new THREE.ShaderMaterial({
       float drift = uTime * (0.35 + 0.9 * uFan);
       float billow = 0.62 * sin(6.2831853 * (along * 1.15 - drift * 0.5) + vent * 2.3 + lane * 1.1)
                    + 0.3 * sin(6.2831853 * (along * 2.6 - drift * 0.8) + vent * 4.1 + lane * 2.7)
-                   + 0.11 * sin(6.2831853 * (along * 4.3 - drift * 1.1) + own * 6.2831853);
+                   + 0.04 * sin(6.2831853 * (along * 4.3 - drift * 1.1) + own * 6.2831853);
       float curl = lane * abs(lane) * (0.55 + 0.45 * sin(6.2831853 * (along * 1.7 - drift * 0.6) + vent));
       p += beside * (billow * uTurn.x + curl * uTurn.y) * loose * form.x;
       gl_Position = vec4(p * uShape, 0.0, 1.0);
