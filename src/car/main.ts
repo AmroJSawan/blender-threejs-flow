@@ -1,7 +1,6 @@
-import * as THREE from 'three'
 import './car.css'
 import { icon } from './icons'
-import { field, kinds, type Crossing, type Rising } from './field'
+import { makeSill, type Bay, type Crossing, type Rising } from './sill'
 import { feel, felt, say, voice, wake } from '../tactile/feel'
 
 /**
@@ -11,10 +10,10 @@ import { feel, felt, say, voice, wake } from '../tactile/feel'
  * - the stage, the upper part: a block of four scenes (Map, Media, Car, Phone) that rolls sideways like a drum, one scene per notch.
  *   Sliding up or down works the scene's own setting; a second-finger tap is the scene's one action.
  * - three rollers along the bottom, where a hand falls: the driver's climate by the driver, sound in the middle, the passenger's climate.
- * The bottom of the screen is one continuous surface with no panels (see field.ts). Each setting shows as what it does, reduced to light:
- * temperature is a column of light that stands higher and warms, the fan is streams of air, volume is rings of sound, the track is a
- * row of points, seat heat is glowing waved lines. What stands up is worked up and down, what runs across is worked sideways, and
- * each carries its usual icon. The one being changed brightens and its number grows; the rest steps back.
+ * The bottom of the screen is the sill: one slab of dark machined metal, drawn in real 3D (see sill.ts). Its settings are shapes cut
+ * into it: a knurled roller in a slot for temperature, milled waves for the fan, turned rings for volume, a ball in a row of dimples
+ * for the track, glowing slots for seat heat. What stands up is worked up and down, what runs across is worked sideways, and each
+ * carries its usual icon. The one being changed keeps the light and its number grows; the rest of the slab falls back.
  * The stage's scenes sit on a wide drum, with the next and the previous scene showing at its edges, so it is plain there is more that way.
  * In every zone: a finger put down changes nothing, up/down is one setting and sideways another, each step is a notch that is heard
  * and felt, the ends stop, and a second-finger tap (or a double tap) switches. The zone being changed grows; the rest dims.
@@ -33,8 +32,8 @@ const settings = {
    * The stage's drum: how much of the stage's width one scene takes (the rest shows its neighbours), and the angle between scenes.
    */
   drum: { face: 0.8, angle: 34 },
-  /** The band of light along the bottom: how lit a zone is when nothing is touched, when it is the one being changed, and when another is. */
-  band: { rest: 0.8, busy: 1.15, aside: 0.3, fan: 0.42 },
+  /** How fast the fan's waves cross their bay at full speed (bays a second). */
+  air: 0.42,
   /** Which side the driver sits: 'left' or 'right'. The driver's climate is on that side. */
   driver: 'left' as 'left' | 'right',
 }
@@ -335,50 +334,44 @@ function draw(now: number) {
   requestAnimationFrame(draw)
 }
 
-// ---- The band of light along the bottom (field.ts): told each frame where the zones are and what they are set to ------
-const renderer = new THREE.WebGLRenderer({ canvas: wheelsCanvas, antialias: false, alpha: true })
-const board = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), field)
-board.frustumCulled = false
-const picture = new THREE.Scene().add(board)
-const flat = new THREE.Camera()
-const lit = new Map(rollers.map((zone) => [zone, { on: 1, light: settings.band.rest, up: 0, over: 0, flow: 0 }]))
+// ---- The sill (sill.ts): told each frame where the bays are, what they are set to, and where the fingers are --------
+const sill = makeSill(wheelsCanvas)
+const lit = new Map(rollers.map((zone) => [zone, { on: 1, up: 0, over: 0, flow: 0 }]))
+const pressed = [0, 0]
+const focus = { x: 0, y: 0, amount: 0 }
 function paint(passed: number, clock: number) {
-  const ratio = Math.min(devicePixelRatio, 2)
-  const wide = car.clientWidth
-  const tall = car.clientHeight
-  if (wheelsCanvas.width !== Math.round(wide * ratio) || wheelsCanvas.height !== Math.round(tall * ratio)) {
-    renderer.setPixelRatio(ratio)
-    renderer.setSize(wide, tall, false)
-  }
-  const u = field.uniforms
   const band = row.getBoundingClientRect()
-  u.uSize.value.set(wide, tall)
-  u.uRatio.value = ratio
-  u.uTime.value = clock
-  u.uBand.value.set(band.top, band.bottom)
-  const busy = fingers.find((finger) => finger.axis)
+  const busy = fingers.find((finger) => finger.axis && rollers.includes(finger.zone))
   const ease = (from: number, to: number, speed: number) => from + (to - from) * (1 - Math.exp(-passed * speed))
-  rollers.forEach((zone, index) => {
+  const bays: Bay[] = rollers.map((zone) => {
     const state = lit.get(zone)!
     const where = zone.made.getBoundingClientRect()
-    const at = drawn.get(zone)!.place
+    const at = drawn.get(zone)!
     const mine = busy?.zone === zone
     state.on = ease(state.on, zone.turn().on ? 1 : 0, 7)
-    state.light = ease(state.light, !busy ? settings.band.rest : mine ? settings.band.busy : settings.band.aside, 8)
     state.up = ease(state.up, mine && busy!.axis === 'along' ? 1 : 0, 9)
     state.over = ease(state.over, mine && busy!.axis === 'across' ? 1 : 0, 9)
-    state.flow += passed * settings.band.fan * at.across * state.on // air moves faster with every notch of the fan
+    state.flow += passed * settings.air * (0.12 + at.place.across / 7) * state.on // the air moves faster with every notch of the fan
     const rising = zone.along()
-    u.uZone.value[index].set(where.left, where.right, state.on, state.light)
-    u.uUp.value[index].set(THREE.MathUtils.clamp(at.along / Math.max(place({ ...rising, value: rising.most }), 1), 0, 1), kinds[rising.thing!], state.up, 0)
-    u.uOver.value[index].set(at.across, kinds[zone.across.thing!], state.over, state.flow)
+    if (mine) {
+      // The light stays on the setting being changed: a third of the way across its bay, or three quarters.
+      focus.x = where.left + where.width * (busy!.axis === 'along' ? 0.26 : 0.72)
+      focus.y = band.top + band.height * 0.46
+    }
+    return {
+      left: where.left,
+      right: where.right,
+      on: state.on,
+      rise: { kind: rising.thing as Rising, part: Math.min(Math.max(at.place.along / Math.max(place({ ...rising, value: rising.most }), 1), 0), 1), turned: at.turned.along / rising.px, busy: state.up },
+      cross: { kind: zone.across.thing as Crossing, place: at.place.across, busy: state.over, flow: state.flow },
+    }
   })
-  for (const slot of [0, 1]) {
-    const finger = fingers.filter((each) => rollers.includes(each.zone))[slot]
-    const shown = u.uFinger.value[slot]
-    shown.z = ease(shown.z, finger ? 1 : 0, finger ? 20 : 8)
-    if (finger) shown.set(finger.now.x, finger.now.y, shown.z, 0)
-  }
-  renderer.render(picture, flat)
+  focus.amount = ease(focus.amount, busy ? 1 : 0, 8)
+  const down = fingers.filter((each) => rollers.includes(each.zone)).slice(0, 2)
+  const shown = [0, 1].map((slot) => {
+    pressed[slot] = ease(pressed[slot], down[slot] ? 1 : 0, down[slot] ? 20 : 8)
+    return { x: down[slot]?.now.x ?? 0, y: down[slot]?.now.y ?? 0, press: down[slot] ? pressed[slot] : 0 }
+  })
+  sill.paint({ wide: car.clientWidth, tall: car.clientHeight, top: band.top, bottom: band.bottom, bays, fingers: shown, clock, focus })
 }
 requestAnimationFrame(draw)
