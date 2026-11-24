@@ -2,48 +2,59 @@ import * as THREE from 'three'
 import './air.css'
 
 /**
- * Air, drawn as fine wires of light. The look follows a generative piece by Rey Rad (hair-thin lines gathering into silk, with
- * a fringe of colour at bright edges), but nothing here is left to chance: the air follows a path that is drawn.
+ * Air in the cabin. The car is seen from above, and each vent is where it is in the car: two by the doors and two in the middle
+ * of the dashboard, one along the windscreen, one by each front footwell, and two for the back seats.
+ * From each vent that is on, air shows as a soft, blurred plume: it leaves the vent in the direction the vent points,
+ * spreads as it goes, and fades. It is cool blue on a cool side of the car and warm amber on a warm side.
  *
- * - The path is a curve led by a few chosen points (`settings.path`): out of the vent on the left, up, down and away to the right.
- * - The air is a ribbon of lanes laid side by side along that curve, evenly spaced, each one a single unbroken wire.
- *   It is narrow at the vent and opens as it goes.
- * - Part way along it meets a body it cannot pass through. The lanes part round it and close again behind, as air does round a wing:
- *   that is the dark eye in the ribbon.
- * - A slow swell runs down the ribbon, the same for neighbouring lanes, so it moves as one sheet.
- * - Brighter runs travel along each wire, faster with the fan. More fan also opens more lanes.
- * - A finger pushes the wires near it aside; they close again when it leaves.
- * Each frame the wires are added onto a picture that fades quickly, a soft copy is added as glow, and red is read from a little
- * further out than blue, which gives the bright edges their fringe of colour.
+ * How the plumes are made: each is a fan of fine lines from its vent, with brighter runs travelling outward along them. The lines
+ * themselves are barely shown. They are blurred several times over, and it is the blur that is seen, so the air reads as air: soft,
+ * with only a hint of its grain and movement.
+ *
+ * Touch a dashboard vent's plume and drag to aim it. The buttons choose where the air goes and how hard the fan blows.
  */
+type Group = 'face' | 'feet' | 'screen' | 'back'
+type Vent = { name: string; group: Group; side: 'driver' | 'passenger'; at: [number, number]; points: number; swing: number; reach: number; spread: number; mouth: number }
 const settings = {
-  /** The path, as points that lead the curve (x across, y up; 1 is half the shorter side of the window). It runs near them, not through them. */
-  path: [[-2.6, -0.62], [-1.7, -0.45], [-0.8, 0.34], [0.0, 0.08], [0.8, -0.42], [1.7, 0.16], [2.6, 0.5]] as [number, number][],
-  /** How many wires, and how many steps each is drawn in. */
-  lanes: 150,
-  steps: 260,
-  /** How wide the ribbon is at its widest with the fan full, and how much of that it has with the fan off. */
-  wide: 0.46,
-  least: 0.3,
-  /** The body the air parts round: where along the path it is (0–1) and how big. */
-  body: { at: 0.56, size: 0.13 },
-  /** The swell that runs down the ribbon: how far it moves the wires, and how fast. */
-  swell: 0.022,
-  /** How fast the bright runs travel at fan level 0 and how much each level adds (path lengths a second). */
-  speed: 0.05,
-  perLevel: 0.05,
+  /**
+   * The vents (x across, y up; the cabin is about 1.24 wide and 1.9 long, its middle at 0,0; the front of the car is up).
+   * `points` is the direction it blows (degrees: 0 is toward the car's right, −90 toward the back), `swing` how far it can be aimed
+   * either way, `reach` how far its air goes at full fan, `spread` how wide the plume opens (degrees), `mouth` the vent's own width.
+   */
+  vents: [
+    { name: 'Driver, door side', group: 'face', side: 'driver', at: [-0.5, 0.47], points: -82, swing: 40, reach: 0.62, spread: 26, mouth: 0.07 },
+    { name: 'Driver, middle', group: 'face', side: 'driver', at: [-0.11, 0.47], points: -112, swing: 40, reach: 0.62, spread: 26, mouth: 0.07 },
+    { name: 'Passenger, middle', group: 'face', side: 'passenger', at: [0.11, 0.47], points: -68, swing: 40, reach: 0.62, spread: 26, mouth: 0.07 },
+    { name: 'Passenger, door side', group: 'face', side: 'passenger', at: [0.5, 0.47], points: -98, swing: 40, reach: 0.62, spread: 26, mouth: 0.07 },
+    { name: 'Windscreen', group: 'screen', side: 'driver', at: [0, 0.57], points: 90, swing: 0, reach: 0.2, spread: 30, mouth: 0.82 },
+    { name: 'Driver, feet', group: 'feet', side: 'driver', at: [-0.31, 0.36], points: -90, swing: 0, reach: 0.3, spread: 62, mouth: 0.16 },
+    { name: 'Passenger, feet', group: 'feet', side: 'passenger', at: [0.31, 0.36], points: -90, swing: 0, reach: 0.3, spread: 62, mouth: 0.16 },
+    { name: 'Back, left', group: 'back', side: 'driver', at: [-0.05, -0.2], points: -112, swing: 0, reach: 0.4, spread: 34, mouth: 0.05 },
+    { name: 'Back, right', group: 'back', side: 'passenger', at: [0.05, -0.2], points: -68, swing: 0, reach: 0.4, spread: 34, mouth: 0.05 },
+  ] as Vent[],
+  /** Which sets of vents start on, the fan's level (0–7), and each side's temperature (°C). */
+  on: { face: true, feet: false, screen: false, back: true } as Record<Group, boolean>,
+  fan: 4,
   levels: 7,
-  start: 3,
-  /** A wire's brightness; how much of the picture is left after a 60th of a second (nearer 1 = softer, more smeared). */
-  dot: 0.085,
-  stays: 0.8,
-  /** Toning: how strongly the picture is brightened, the colour fringe (how much further out red is read than blue), and the glow. */
-  gain: 1.5,
-  fringe: 0.009,
-  glow: 0.36,
-  /** A finger's push: how far it reaches and how far it moves the wires. */
-  reach: 0.26,
-  push: 0.11,
+  temperatures: { driver: 19.5, passenger: 24 },
+  /** The colour of air at the coolest and the warmest setting (16 and 28 °C). */
+  cool: '#6cc4ff',
+  warm: '#ffa45c',
+  /** Lines in each plume and steps along each. */
+  lanes: 30,
+  steps: 48,
+  /** How much of its full reach the air has with the fan at its lowest, how fast the runs travel at the lowest and at full, and the plume's slow sway. */
+  least: 0.35,
+  speed: [0.25, 1.1],
+  sway: 0.035,
+  /** Brightness of the lines; how much of the picture is left after a 60th of a second; how much of the sharp lines shows through the blur; how strong the blur is. */
+  dot: 1.9,
+  stays: 0.86,
+  grain: 0.12,
+  soft: 2.4,
+  gain: 1.25,
+  /** How near a plume a touch must land to take hold of its vent (cabin units). */
+  hold: 0.2,
   maxPixelRatio: 2,
 }
 
@@ -58,98 +69,90 @@ const pass = (material: THREE.Material) => {
   return new THREE.Scene().add(mesh)
 }
 const full = /* glsl */ `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`
+const target = (wide: number, tall: number) => new THREE.WebGLRenderTarget(wide, tall, { type: THREE.HalfFloatType, format: THREE.RGBAFormat, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: false })
 
-const target = (wide: number, tall: number, type: THREE.TextureDataType, filter: THREE.MagnificationTextureFilter) =>
-  new THREE.WebGLRenderTarget(wide, tall, { type, format: THREE.RGBAFormat, minFilter: filter, magFilter: filter, depthBuffer: false })
+// ---- What the car is set to ----
+const state = {
+  on: { ...settings.on },
+  fan: settings.fan,
+  aim: settings.vents.map((vent) => vent.points), // where each vent points now
+  shown: settings.vents.map(() => 0), // how much each vent's air is showing (it eases in and out)
+}
 
-// ---- The wires: every lane is one line along the path, each of its points knowing how far along it is and which lane it is in ----
-const along = new Float32Array(settings.lanes * settings.steps)
-const lane = new Float32Array(settings.lanes * settings.steps)
+// ---- The plumes: for every vent a fan of lines, each point knowing its vent, how far out it is and which line it is on ----
+const total = settings.vents.length * settings.lanes * settings.steps
+const out = new Float32Array(total)
+const lane = new Float32Array(total)
+const which = new Float32Array(total)
 const joins: number[] = []
-for (let row = 0; row < settings.lanes; row++)
-  for (let step = 0; step < settings.steps; step++) {
-    const at = row * settings.steps + step
-    along[at] = step / (settings.steps - 1)
-    lane[at] = (row / (settings.lanes - 1)) * 2 - 1
-    if (step) joins.push(at - 1, at)
-  }
-const wires = new THREE.BufferGeometry()
-wires.setAttribute('position', new THREE.BufferAttribute(new Float32Array(settings.lanes * settings.steps * 3), 3))
-wires.setAttribute('along', new THREE.BufferAttribute(along, 1))
-wires.setAttribute('lane', new THREE.BufferAttribute(lane, 1))
-wires.setIndex(joins)
-const count = settings.path.length
-const dots = new THREE.ShaderMaterial({
+settings.vents.forEach((_, vent) => {
+  for (let row = 0; row < settings.lanes; row++)
+    for (let step = 0; step < settings.steps; step++) {
+      const at = (vent * settings.lanes + row) * settings.steps + step
+      out[at] = step / (settings.steps - 1)
+      lane[at] = (row / (settings.lanes - 1)) * 2 - 1
+      which[at] = vent
+      if (step) joins.push(at - 1, at)
+    }
+})
+const lines = new THREE.BufferGeometry()
+lines.setAttribute('position', new THREE.BufferAttribute(new Float32Array(total * 3), 3))
+lines.setAttribute('along', new THREE.BufferAttribute(out, 1))
+lines.setAttribute('lane', new THREE.BufferAttribute(lane, 1))
+lines.setAttribute('vent', new THREE.BufferAttribute(which, 1))
+lines.setIndex(joins)
+const count = settings.vents.length
+const air = new THREE.ShaderMaterial({
   blending: THREE.AdditiveBlending,
   depthTest: false,
   transparent: true,
   uniforms: {
-    uPath: { value: settings.path.map(([x, y]) => new THREE.Vector2(x, y)) },
+    uVent: { value: settings.vents.map((vent) => new THREE.Vector4(vent.at[0], vent.at[1], (vent.points * Math.PI) / 180, 0)) }, // where it is (x, y), where it points (radians), how much it shows
+    uForm: { value: settings.vents.map((vent) => new THREE.Vector4(vent.reach, (vent.spread * Math.PI) / 180, vent.mouth, 0)) }, // reach, spread, mouth
+    uColour: { value: settings.vents.map(() => new THREE.Color()) },
     uShape: { value: new THREE.Vector2(1, 1) },
-    uUpright: { value: 0 },
     uTime: { value: 0 },
-    uRun: { value: 0 }, // how far the bright runs have travelled
-    uFan: { value: settings.start / settings.levels },
-    uWide: { value: new THREE.Vector2(settings.wide, settings.least) },
-    uBody: { value: new THREE.Vector2(settings.body.at, settings.body.size) },
-    uSwell: { value: settings.swell },
-    uDot: { value: settings.dot },
-    uFinger: { value: new THREE.Vector4() }, // where it is (x, y), how hard it pushes
-    uReach: { value: new THREE.Vector2(settings.reach, settings.push) },
+    uRun: { value: 0 },
+    uFan: { value: 0 },
+    uLook: { value: new THREE.Vector3(settings.dot, settings.least, settings.sway) },
   },
   vertexShader: /* glsl */ `
-    attribute float along, lane;
-    uniform vec2 uPath[${count}], uShape, uWide, uBody, uReach;
-    uniform float uUpright, uTime, uRun, uFan, uSwell;
-    uniform vec4 uFinger;
-    varying float vLight;
-    // The drawn path: a smooth curve led by the chosen points.
-    vec2 path(float t) {
-      float f = clamp(t, 0.0, 1.0) * float(${count - 3});
-      int i = int(min(floor(f), float(${count - 4})));
-      float u = f - float(i);
-      vec2 a, b, c, d;
-      for (int k = 0; k < ${count - 3}; k++) if (k == i) { a = uPath[k]; b = uPath[k + 1]; c = uPath[k + 2]; d = uPath[k + 3]; }
-      // a curve whose bending changes smoothly too, so lanes far from the middle have no kinks where its pieces meet
-      float v = 1.0 - u;
-      return (v * v * v * a + (3.0 * u * u * u - 6.0 * u * u + 4.0) * b + (-3.0 * u * u * u + 3.0 * u * u + 3.0 * u + 1.0) * c + u * u * u * d) / 6.0;
-    }
+    attribute float along, lane, vent;
+    uniform vec4 uVent[${count}], uForm[${count}];
+    uniform vec3 uColour[${count}], uLook;
+    uniform vec2 uShape;
+    uniform float uTime, uRun, uFan;
+    varying vec3 vLight;
     void main() {
-      vec2 middle = path(along);
-      vec2 heading = normalize(path(along + 0.004) - path(along - 0.004));
-      vec2 side = vec2(-heading.y, heading.x);
-      // Narrow at the vent, opening as it goes; wider with more fan.
-      float wide = uWide.x * mix(uWide.y, 1.0, uFan) * (0.16 + 0.84 * smoothstep(0.0, 0.3, along));
-      float across = lane * wide;
-      // The body in its way: the lanes part round it and close again behind.
-      float ahead = (along - uBody.x) * 1.5;   // drawn out along the path, so the lanes part and close gently
-      across += uBody.y * uBody.y * across / (ahead * ahead + across * across + 0.006);
-      // One slow swell down the whole ribbon.
-      across += uSwell * sin(6.2831853 * (along * 1.6 - uTime * 0.06) + lane * 1.6) * smoothstep(0.08, 0.5, along);
-      vec2 p = middle + side * across;
-      // A finger pushes the wires near it aside.
-      // A finger parts the wires sideways, as another body would: those on one side of it go one way, the rest the other.
-      vec2 from = p - uFinger.xy;
-      float beside = dot(from, side);
-      p += side * (beside / (abs(beside) + 0.03)) * uFinger.z * uReach.y * exp(-dot(from, from) / (uReach.x * uReach.x));
-      if (uUpright > 0.5) p = vec2(-p.y, p.x);
+      int i = int(vent + 0.5);
+      vec4 from = uVent[i];
+      vec4 form = uForm[i];
+      // The plume sways a little, slowly, as air does; every line in it sways together.
+      float way = from.z + uLook.z * sin(uTime * 0.6 + vent * 1.7) * along;
+      // Each line leaves the vent's mouth at its own place and angle, so the plume opens as it goes.
+      float turn = way + lane * form.y * 0.5;
+      vec2 heading = vec2(cos(turn), sin(turn));
+      vec2 across = vec2(-sin(from.z), cos(from.z));
+      float far = form.x * mix(uLook.y, 1.0, uFan) * along;
+      // Air slows as it goes: the lines bend a little with distance, each its own way, so the far end is loose.
+      float own = fract(sin((lane + vent * 3.1) * 91.7) * 43758.5453);
+      vec2 p = from.xy + across * lane * form.z * 0.5 + heading * far + across * (own - 0.5) * 0.05 * along * along;
       gl_Position = vec4(p * uShape, 0.0, 1.0);
-      // Brighter runs travel along each wire; lanes further out only appear as the fan rises; the ribbon's two edges are its brightest wires.
-      float own = fract(sin(lane * 91.7) * 43758.5453);
-      float run = 0.3 + 0.7 * pow(0.5 + 0.5 * cos(6.2831853 * (along * 2.6 - uRun + own)), 3.0);
-      float open = smoothstep(0.02, -0.12, abs(lane) - (0.3 + 0.7 * uFan));
-      float rim = mix(1.0, 2.6, pow(abs(lane), 8.0));
-      vLight = run * open * rim * smoothstep(0.0, 0.05, along) * smoothstep(1.0, 0.86, along);
+      // Brighter runs travel outward; the air is strongest at the vent and gone by the end of its reach; the middle lines are strongest.
+      float run = 0.45 + 0.55 * pow(0.5 + 0.5 * cos(6.2831853 * (along * 1.6 - uRun + own)), 2.0);
+      float fade = smoothstep(0.0, 0.06, along) * pow(1.0 - along, 1.6);
+      float middle = 1.0 - 0.55 * lane * lane;
+      vLight = uColour[i] * uLook.x * run * fade * middle * from.w * (0.35 + 0.65 * uFan);
     }`,
   fragmentShader: /* glsl */ `
     precision highp float;
-    uniform float uDot;
-    varying float vLight;
-    void main() { gl_FragColor = vec4(vec3(uDot * vLight), 1.0); }`,
+    varying vec3 vLight;
+    void main() { gl_FragColor = vec4(vLight, 1.0); }`,
 })
-const lines = new THREE.LineSegments(wires, dots)
-lines.frustumCulled = false
-const drawing = new THREE.Scene().add(lines)
+const plumes = new THREE.LineSegments(lines, air)
+plumes.frustumCulled = false
+const drawing = new THREE.Scene().add(plumes)
+
 const fade = new THREE.ShaderMaterial({
   uniforms: { uBefore: { value: null as THREE.Texture | null }, uStays: { value: settings.stays } },
   vertexShader: full,
@@ -161,10 +164,6 @@ const fade = new THREE.ShaderMaterial({
     void main() { gl_FragColor = vec4(texture2D(uBefore, vUv).rgb * uStays, 1.0); }`,
 })
 const fading = pass(fade)
-let trails: THREE.WebGLRenderTarget[] = []
-let soft: THREE.WebGLRenderTarget[] = []
-
-// ---- Toning: a soft copy for the glow, then the fringe of colour ----
 const blur = new THREE.ShaderMaterial({
   uniforms: { uFrom: { value: null as THREE.Texture | null }, uWay: { value: new THREE.Vector2() } },
   vertexShader: full,
@@ -182,21 +181,17 @@ const blur = new THREE.ShaderMaterial({
 })
 const blurring = pass(blur)
 const tone = new THREE.ShaderMaterial({
-  uniforms: { uLines: { value: null as THREE.Texture | null }, uSoft: { value: null as THREE.Texture | null }, uLook: { value: new THREE.Vector3(settings.gain, settings.fringe, settings.glow) } },
+  uniforms: { uLines: { value: null as THREE.Texture | null }, uSoft: { value: null as THREE.Texture | null }, uLook: { value: new THREE.Vector3(settings.gain, settings.grain, settings.soft) } },
   vertexShader: full,
   fragmentShader: /* glsl */ `
     precision highp float;
     varying vec2 vUv;
     uniform sampler2D uLines, uSoft;
     uniform vec3 uLook;
-    float both(vec2 at) { return texture2D(uLines, at).r + texture2D(uSoft, at).r * uLook.z; }
     void main() {
-      // Red is read from a little further out than green, and blue from a little further in: bright edges split into colour.
-      vec2 out_ = vUv - 0.5;
-      vec3 light = vec3(both(0.5 + out_ * (1.0 - uLook.y)), both(vUv), both(0.5 + out_ * (1.0 + uLook.y)));
-      // The glow alone carries more of the fringe than the lines do, as in a lens.
-      vec3 halo = vec3(texture2D(uSoft, 0.5 + out_ * (1.0 - uLook.y * 2.2)).r, texture2D(uSoft, vUv).r * 0.72, texture2D(uSoft, 0.5 + out_ * (1.0 + uLook.y * 2.2)).r * 1.15) * uLook.z;
-      vec3 colour = 1.0 - exp(-(light + halo * vec3(1.15, 0.85, 1.0)) * uLook.x);
+      // What is seen is the blur; only a little of the lines themselves is let through, as the air's grain.
+      vec3 light = texture2D(uSoft, vUv).rgb * uLook.z + texture2D(uLines, vUv).rgb * uLook.y;
+      vec3 colour = 1.0 - exp(-light * uLook.x);
       colour += (fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) / 255.0;
       gl_FragColor = vec4(colour, 1.0);
       #include <colorspace_fragment>
@@ -204,8 +199,10 @@ const tone = new THREE.ShaderMaterial({
 })
 const toning = pass(tone)
 
-// ---- Size, the fan's level, a finger ----
+// ---- Size ----
 const shape = new THREE.Vector2(1, 1)
+let trails: THREE.WebGLRenderTarget[] = []
+let soft: THREE.WebGLRenderTarget[] = []
 function resize() {
   const ratio = Math.min(devicePixelRatio, settings.maxPixelRatio)
   renderer.setPixelRatio(ratio)
@@ -213,78 +210,119 @@ function resize() {
   const wide = Math.round(innerWidth * ratio)
   const tall = Math.round(innerHeight * ratio)
   for (const each of [...trails, ...soft]) each.dispose()
-  trails = [0, 1].map(() => target(wide, tall, THREE.HalfFloatType, THREE.LinearFilter))
-  soft = [0, 1].map(() => target(Math.round(wide / 4), Math.round(tall / 4), THREE.HalfFloatType, THREE.LinearFilter))
-  // The ring is as wide as the shorter side of the window, whichever that is.
+  trails = [0, 1].map(() => target(wide, tall))
+  soft = [0, 1].map(() => target(Math.round(wide / 4), Math.round(tall / 4)))
+  // One cabin unit is half the shorter side of the window, the same as the drawing of the car over it.
   shape.set(Math.min(1, innerHeight / innerWidth), Math.min(1, innerWidth / innerHeight))
-  dots.uniforms.uShape.value.copy(shape)
-  dots.uniforms.uUpright.value = innerHeight > innerWidth ? 1 : 0
+  air.uniforms.uShape.value.copy(shape)
 }
 addEventListener('resize', resize)
 resize()
 
-let level = settings.start
-const bar = document.querySelector('#levels')!
+// ---- The buttons: where the air goes, and the fan ----
+const places: [Group, string][] = [['face', 'Face'], ['feet', 'Feet'], ['screen', 'Windscreen'], ['back', 'Back seats']]
+const where = document.querySelector('#where')!
+for (const [group, words] of places) {
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.textContent = words
+  button.setAttribute('aria-pressed', String(state.on[group]))
+  button.addEventListener('click', () => {
+    state.on[group] = !state.on[group]
+    button.setAttribute('aria-pressed', String(state.on[group]))
+  })
+  where.append(button)
+}
+const levels = document.querySelector('#levels')!
 for (let each = 0; each <= settings.levels; each++) {
   const button = document.createElement('button')
   button.type = 'button'
   button.textContent = String(each)
-  button.setAttribute('aria-pressed', String(each === level))
+  button.setAttribute('aria-pressed', String(each === state.fan))
   button.addEventListener('click', () => {
-    level = each
-    bar.querySelectorAll('button').forEach((other, at) => other.setAttribute('aria-pressed', String(at === each)))
+    state.fan = each
+    levels.querySelectorAll('button').forEach((other, at) => other.setAttribute('aria-pressed', String(at === each)))
   })
-  bar.append(button)
+  levels.append(button)
 }
+document.querySelector('#driver b')!.textContent = `${settings.temperatures.driver}°`
+document.querySelector('#passenger b')!.textContent = `${settings.temperatures.passenger}°`
 
-const finger = { x: 0, y: 0, down: false, push: 0 }
-function where(event: PointerEvent) {
-  const x = ((event.clientX / innerWidth) * 2 - 1) / shape.x
-  const y = (1 - (event.clientY / innerHeight) * 2) / shape.y
-  return innerHeight > innerWidth ? { x: y, y: -x } : { x, y } // an upright window shows the path turned a quarter
-}
+// ---- Aiming a vent: take hold of its plume and drag ----
+const cabin = (event: PointerEvent) => new THREE.Vector2(((event.clientX / innerWidth) * 2 - 1) / shape.x, (1 - (event.clientY / innerHeight) * 2) / shape.y)
+let held = -1
 canvas.addEventListener('pointerdown', (event) => {
-  Object.assign(finger, where(event), { down: true })
-  canvas.setPointerCapture(event.pointerId)
+  const touch = cabin(event)
+  let nearest = settings.hold
+  settings.vents.forEach((vent, index) => {
+    if (!vent.swing || !state.on[vent.group]) return
+    // how near the touch is to the line this vent's air runs along
+    const from = touch.clone().sub(new THREE.Vector2(...vent.at))
+    const way = (state.aim[index] * Math.PI) / 180
+    const along = THREE.MathUtils.clamp(from.x * Math.cos(way) + from.y * Math.sin(way), 0, vent.reach)
+    const off = from.clone().sub(new THREE.Vector2(Math.cos(way), Math.sin(way)).multiplyScalar(along)).length()
+    if (off < nearest) {
+      nearest = off
+      held = index
+    }
+  })
+  if (held >= 0) canvas.setPointerCapture(event.pointerId)
 })
 canvas.addEventListener('pointermove', (event) => {
-  if (finger.down) Object.assign(finger, where(event))
+  if (held < 0) return
+  const vent = settings.vents[held]
+  const from = cabin(event).sub(new THREE.Vector2(...vent.at))
+  if (from.length() < 0.06) return
+  const wanted = (Math.atan2(from.y, from.x) * 180) / Math.PI
+  const turned = ((wanted - vent.points + 540) % 360) - 180 // how far from where it points by itself, −180 … 180
+  state.aim[held] = vent.points + THREE.MathUtils.clamp(turned, -vent.swing, vent.swing)
 })
-const lift = () => (finger.down = false)
-canvas.addEventListener('pointerup', lift)
-canvas.addEventListener('pointercancel', lift)
+const release = () => (held = -1)
+canvas.addEventListener('pointerup', release)
+canvas.addEventListener('pointercancel', release)
 
 // ---- Frames ----
+const cool = new THREE.Color(settings.cool)
+const warm = new THREE.Color(settings.warm)
 let before = performance.now()
-let fan = settings.start / settings.levels
+let fan = state.fan / settings.levels
 let turn = 0
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches
 function draw(now: number) {
   const passed = Math.min((now - before) / 1000, 1 / 30) * (still ? 0.25 : 1)
   before = now
-  const u = dots.uniforms
-  fan += (level / settings.levels - fan) * Math.min(passed * 2.5, 1)
-  finger.push += ((finger.down ? 1 : 0) - finger.push) * Math.min(passed * (finger.down ? 9 : 4), 1)
+  const u = air.uniforms
+  fan += (state.fan / settings.levels - fan) * Math.min(passed * 2.5, 1)
   u.uTime.value += passed
-  u.uRun.value += passed * (settings.speed + settings.perLevel * fan * settings.levels) * 2.6
+  u.uRun.value += passed * THREE.MathUtils.lerp(settings.speed[0], settings.speed[1], fan)
   u.uFan.value = fan
-  u.uFinger.value.set(finger.x, finger.y, finger.push, 0)
-  // The picture of wires: what was there, fainter, with this frame's wires on top.
+  settings.vents.forEach((vent, index) => {
+    const wanted = state.on[vent.group] && state.fan > 0 ? 1 : 0
+    state.shown[index] += (wanted - state.shown[index]) * Math.min(passed * 3, 1)
+    const shown = u.uVent.value[index]
+    shown.z += ((state.aim[index] * Math.PI) / 180 - shown.z) * Math.min(passed * 10, 1)
+    shown.w = state.shown[index]
+    u.uColour.value[index].copy(cool).lerp(warm, THREE.MathUtils.clamp((settings.temperatures[vent.side] - 16) / 12, 0, 1))
+  })
+  // The picture of lines: what was there, fainter, with this frame's lines on top.
   fade.uniforms.uBefore.value = trails[turn].texture
   fade.uniforms.uStays.value = settings.stays ** (passed * 60)
   renderer.setRenderTarget(trails[1 - turn])
   renderer.render(fading, flat)
   renderer.render(drawing, flat)
-  // A soft copy, a quarter the size, for the glow.
-  blur.uniforms.uFrom.value = trails[1 - turn].texture
-  blur.uniforms.uWay.value.set(1 / soft[0].width, 0)
-  renderer.setRenderTarget(soft[0])
-  renderer.render(blurring, flat)
-  blur.uniforms.uFrom.value = soft[0].texture
-  blur.uniforms.uWay.value.set(0, 1 / soft[0].height)
-  renderer.setRenderTarget(soft[1])
-  renderer.render(blurring, flat)
-  // And onto the screen.
+  // Blurred, a quarter the size, three times over and wider each time: this is the air that is seen.
+  let from = trails[1 - turn].texture
+  for (const wide of [1, 2.2, 4]) {
+    blur.uniforms.uFrom.value = from
+    blur.uniforms.uWay.value.set(wide / soft[0].width, 0)
+    renderer.setRenderTarget(soft[0])
+    renderer.render(blurring, flat)
+    blur.uniforms.uFrom.value = soft[0].texture
+    blur.uniforms.uWay.value.set(0, wide / soft[0].height)
+    renderer.setRenderTarget(soft[1])
+    renderer.render(blurring, flat)
+    from = soft[1].texture
+  }
   tone.uniforms.uLines.value = trails[1 - turn].texture
   tone.uniforms.uSoft.value = soft[1].texture
   renderer.setRenderTarget(null)

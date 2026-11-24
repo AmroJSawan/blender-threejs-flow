@@ -392,18 +392,17 @@ How it is laid out, and why:
 
 It is a study of the idea, not a product: the map, the tracks and the car's numbers are made up, and nothing has been tried by a driver.
 
-## Air page (wires of light)
+## Air page (where it blows in the cabin)
 
-`air.html` is a study for how the car screen's fan could show: air drawn as fine wires of light. Its look follows a generative piece by Rey Rad (hair-thin lines gathering into silk, a fringe of colour at bright edges), but nothing in it is left to chance: the air follows a path that is drawn (`src/air/main.ts`; numbers in `settings` at the top).
+`air.html` is a study for the car screen's climate: it shows where the air comes out in the cabin and which way it goes (`src/air/main.ts`; numbers in `settings` at the top; the cabin is drawn in `air.html`).
 
-- The path is a smooth curve led by a few chosen points (`settings.path`): out of the vent on the left, up, down and away to the right.
-- The air is a ribbon of 150 lanes laid side by side along that curve, evenly spaced, each one a single unbroken wire. It is narrow at the vent and opens as it goes.
-- Part way along it meets a body. The lanes part round it and close again behind, as air does round a wing: the dark eye in the ribbon.
-- A slow swell runs down the ribbon, the same for neighbouring lanes, so it moves as one sheet. Brighter runs travel along each wire.
-- The numbers at the bottom set the fan: more fan opens more lanes, widens the ribbon and speeds the runs.
-- A finger parts the wires sideways, as another body would; they close again when it lifts.
+- The car is seen from above, front up, in thin lines: dashboard, windscreen, steering wheel, seats.
+- Every vent is where it is in the car and is marked: two by the doors and two in the middle of the dashboard, one along the windscreen, one by each front footwell, two for the back seats. They are listed in `settings.vents` with where each is, which way it points, how far it can be aimed, and how far its air reaches.
+- From each vent that is on, air shows as a soft, blurred plume: it leaves in the direction the vent points, spreads as it goes, and fades. It is cool blue on a cool side of the car and warm amber on a warm one.
+- The buttons choose where the air goes (face, feet, windscreen, back seats) and how hard the fan blows; more fan reaches further and moves faster.
+- Take hold of a dashboard plume and drag to aim its vent.
 
-Each frame the wires are added onto a picture that fades quickly, a soft copy is added as glow, and red is read from a little further out than blue, which gives the bright edges their fringe of colour. It runs on today's WebGL; nothing here needs WebGPU. An earlier version let a quarter of a million points wander through a changing flow; it looked closer to the reference but its shape was never the same twice, which is wrong for a control.
+How the plumes are made: each is a fan of fine lines from its vent, with brighter runs travelling outward. The lines themselves are barely shown; they are blurred three times over, and it is the blur that is seen, so the air reads as air. It runs on today's WebGL. Two earlier versions are in the history: points wandering through a changing flow, and crisp wires along one drawn path.
 
 ## Lab canvas (the entry page)
 

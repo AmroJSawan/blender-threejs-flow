@@ -3,13 +3,40 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Air · wires of light</title>
+    <title>Air · where it blows in the cabin</title>
   </head>
   <body class="air-page">
     <canvas id="stage"></canvas>
+    <!-- The cabin from above, front of the car up. One unit is half the shorter side of the window, as for the air under it. -->
+    <svg id="cabin" viewBox="-1 -1 2 2" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <g transform="scale(1,-1)">
+        <rect class="shell" x="-0.62" y="-0.95" width="1.24" height="1.9" rx="0.3" />
+        <path class="glass" d="M-0.52 0.66Q0 0.8 0.52 0.66L0.47 0.58Q0 0.68-0.47 0.58Z" />
+        <path class="dash" d="M-0.58 0.56Q0 0.66 0.58 0.56V0.44Q0 0.5-0.58 0.44Z" />
+        <circle class="wheel" cx="-0.31" cy="0.36" r="0.105" />
+        <rect class="seat" x="-0.48" y="-0.18" width="0.34" height="0.44" rx="0.09" />
+        <rect class="seat" x="0.14" y="-0.18" width="0.34" height="0.44" rx="0.09" />
+        <rect class="rest" x="-0.42" y="-0.24" width="0.22" height="0.07" rx="0.03" />
+        <rect class="rest" x="0.2" y="-0.24" width="0.22" height="0.07" rx="0.03" />
+        <rect class="console" x="-0.09" y="-0.26" width="0.18" height="0.6" rx="0.05" />
+        <rect class="seat" x="-0.5" y="-0.78" width="1" height="0.36" rx="0.1" />
+        <g class="vents">
+          <rect x="-0.535" y="0.455" width="0.07" height="0.026" rx="0.013" />
+          <rect x="-0.145" y="0.455" width="0.07" height="0.026" rx="0.013" />
+          <rect x="0.075" y="0.455" width="0.07" height="0.026" rx="0.013" />
+          <rect x="0.465" y="0.455" width="0.07" height="0.026" rx="0.013" />
+          <rect x="-0.41" y="0.565" width="0.82" height="0.014" rx="0.007" />
+          <rect x="-0.075" y="-0.215" width="0.05" height="0.022" rx="0.011" />
+          <rect x="0.025" y="-0.215" width="0.05" height="0.022" rx="0.011" />
+        </g>
+      </g>
+    </svg>
     <header><a href="./">← Lab</a><span>Air</span></header>
-    <p id="note">Air drawn as fine wires of light along a set path, parting round a body in its way. Touch to push the wires aside; the numbers set the fan.</p>
-    <div id="levels"></div>
+    <div class="side" id="driver"><span>Driver</span><b></b></div>
+    <div class="side" id="passenger"><span>Passenger</span><b></b></div>
+    <p id="note">Where the air goes in the cabin, and which way. Drag a dashboard plume to aim its vent.</p>
+    <div class="bar" id="where"></div>
+    <div class="bar" id="levels"></div>
     <script type="module" src="/src/air/main.ts"></script>
   </body>
 </html>
