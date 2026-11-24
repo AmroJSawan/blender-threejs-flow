@@ -24,10 +24,14 @@ const settings = {
   on: { face: true, feet: false, screen: false, back: true } as Record<Group, boolean>,
   fan: 4,
   levels: 7,
-  temperatures: { driver: 19.5, passenger: 24 },
-  /** The colour of air at the coolest and the warmest setting (16 and 28 °C). */
+  temperatures: { driver: 18.5, passenger: 25 },
+  /** The lowest and highest temperature that can be set (°C), and the colour of air at the lowest, half-way and the highest. */
+  range: [16, 28],
   cool: '#52cfff',
+  mild: '#dfeaf2',
   warm: '#ffb06a',
+  /** How soon the colour leaves near-white as the temperature leaves half-way (1 = evenly … smaller = sooner). */
+  keen: 0.45,
   /** Lines in each plume and steps along each. */
   lanes: 26,
   steps: 72,
@@ -39,11 +43,11 @@ const settings = {
   waver: 0.03,
   curl: 0.025,
   /** Brightness of the lines; how much of the picture is left after a 60th of a second; how much of the sharp lines shows through the blur; how strong the blur is. */
-  dot: 0.95,
+  dot: 1.5,
   stays: 0.86,
   grain: 0.42,
   soft: 2.3,
-  gain: 1.9,
+  gain: 2.6,
   /** How much white is in the air's colour (0 = all colour … 1 = white). */
   white: 0.08,
   /** The motes: how many each vent carries, how bright, their size (px), and how fast they travel compared with the bright runs. */
@@ -70,6 +74,7 @@ const target = (wide: number, tall: number) => new THREE.WebGLRenderTarget(wide,
 export const state = {
   on: { ...settings.on },
   fan: settings.fan,
+  temperatures: { ...settings.temperatures },
   aim: settings.vents.map((vent) => vent.points), // where each vent points now
   shown: settings.vents.map(() => 0), // how much each vent's air is showing (it eases in and out)
 }
@@ -274,7 +279,14 @@ resize()
 
 // ---- Frames ----
 const cool = new THREE.Color(settings.cool)
+const mild = new THREE.Color(settings.mild)
 const warm = new THREE.Color(settings.warm)
+/** The colour of air at a temperature: cool blue at the lowest, through a clear near-white, to warm amber at the highest. */
+export function tint(degrees: number, into = new THREE.Color()) {
+  const from = THREE.MathUtils.clamp((degrees - settings.range[0]) / (settings.range[1] - settings.range[0]), 0, 1) * 2 - 1
+  // Only close to half-way is it near white: a degree or two either side already reads as cool or as warm.
+  return into.copy(mild).lerp(from < 0 ? cool : warm, Math.abs(from) ** settings.keen)
+}
 let before = performance.now()
 let fan = state.fan / settings.levels
 let turn = 0
@@ -293,7 +305,7 @@ function draw(now: number) {
     const shown = u.uVent.value[index]
     shown.z += ((state.aim[index] * Math.PI) / 180 - shown.z) * Math.min(passed * 10, 1)
     shown.w = state.shown[index]
-    u.uColour.value[index].copy(cool).lerp(warm, THREE.MathUtils.clamp((settings.temperatures[vent.side] - 16) / 12, 0, 1))
+    tint(state.temperatures[vent.side], u.uColour.value[index])
   })
   // The picture of lines: what was there, fainter, with this frame's lines on top.
   fade.uniforms.uBefore.value = trails[turn].texture

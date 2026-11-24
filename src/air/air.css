@@ -7,31 +7,43 @@
 .air-page #car img, .air-page #car video { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: contain; pointer-events: none; }
 /* A film shows only where its air is brighter than what is under it, so its black is no cover. */
 /* It is also softened a little: rendered smoke has harder edges than air should seem to. */
-.air-page #car .wash { mix-blend-mode: screen; opacity: 0; transition: opacity 0.8s ease; filter: brightness(1.7) saturate(1.25); }
+.air-page #car .wash { position: absolute; inset: 0; isolation: isolate; mix-blend-mode: screen; opacity: 0; transition: opacity 0.8s ease; pointer-events: none; }
+/* The baked light is taken as grey and given the colour of its side's temperature, so it warms and cools with the control. Each copy shows one half of the car. */
+.air-page #car .wash img { filter: grayscale(1) brightness(2.3); }
+.air-page #car .wash i { position: absolute; inset: 0; background: var(--tint, #fff); mix-blend-mode: multiply; transition: background 0.3s ease; }
+.air-page #car .wash.driver { -webkit-mask-image: linear-gradient(to right, #000 44%, transparent 56%); mask-image: linear-gradient(to right, #000 44%, transparent 56%); }
+.air-page #car .wash.passenger { -webkit-mask-image: linear-gradient(to left, #000 44%, transparent 56%); mask-image: linear-gradient(to left, #000 44%, transparent 56%); }
 .air-page #car video { mix-blend-mode: screen; opacity: 0; transition: opacity 0.7s ease; filter: blur(1.9vmin) saturate(1.6); }
 /* The live streaks, over the films: shown only where brighter, like them. */
 .air-page canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; mix-blend-mode: screen; pointer-events: none; }
 .air-page header { position: fixed; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; padding: 26px 30px; pointer-events: none; }
 .air-page header a { color: inherit; text-decoration: none; pointer-events: auto; }
 .air-page header span { color: #fff; }
-/* Each side's temperature, beside its seat. */
-.air-page .side { position: fixed; top: 50%; display: grid; gap: 2px; transform: translateY(-50%); pointer-events: none; }
-.air-page .side span { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255, 255, 255, 0.45); }
-.air-page .side b { font-size: clamp(30px, 6vmin, 56px); font-weight: 600; letter-spacing: -0.04em; color: #fff; font-variant-numeric: tabular-nums; }
-.air-page #driver { right: calc(50% + min(34vw, 34vh) + 3vmin); text-align: right; }
-.air-page #passenger { left: calc(50% + min(34vw, 34vh) + 3vmin); }
+/* The controls: laid over the car's own flat panels, the same square as its picture. Each is a slide up or down. */
+.air-page .quiet { position: fixed; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.air-page #controls { position: fixed; left: 50%; top: 50%; width: min(100vw, 100vh); aspect-ratio: 1; transform: translate(-50%, -50%); pointer-events: none; font-size: calc(min(100vw, 100vh) * 0.01); }
+.air-page .dial { position: absolute; display: grid; grid-template-rows: 1fr auto auto 1fr; justify-items: center; align-items: center; gap: 0.4em; box-sizing: border-box; padding: 0.9em 0; border-radius: 12%; color: #fff; pointer-events: auto; touch-action: none; cursor: ns-resize; outline: none; -webkit-tap-highlight-color: transparent;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--tint) 14%, rgba(0, 0, 0, 0.5)), transparent); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.3s ease; }
+/* Pressed, it comes forward a little and is the one thing lit. */
+.air-page .dial.held { transform: scale(1.14); background: radial-gradient(closest-side, color-mix(in srgb, var(--tint) 30%, rgba(0, 0, 0, 0.55)), rgba(0, 0, 0, 0.35)); }
+.air-page .dial:focus-visible { box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.6); }
+.air-page .dial .icon { width: 2.6em; height: 2.6em; color: var(--tint); }
+.air-page .dial b { font-size: 4.4em; font-weight: 600; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; text-shadow: 0 0 0.5em rgba(0, 0, 0, 0.8); }
+.air-page .dial b small { font-size: 0.5em; font-weight: 500; letter-spacing: 0; color: rgba(255, 255, 255, 0.6); }
+/* A small arrow at the top and the bottom: which way is more and which is less. */
+.air-page .dial .more, .air-page .dial .less { width: 1.3em; height: 1.3em; border: solid rgba(255, 255, 255, 0.5); border-width: 1.5px 0 0 1.5px; transform: rotate(45deg) scale(0.7); align-self: start; margin-top: 0.5em; }
+.air-page .dial .less { transform: rotate(225deg) scale(0.7); align-self: end; margin: 0 0 0.5em; }
+/* Its level, along the outer edge: a thin line filled from the bottom. */
+.air-page .dial .level { position: absolute; top: 14%; bottom: 14%; right: 7%; width: 2px; border-radius: 2px; background: rgba(255, 255, 255, 0.16); overflow: hidden; }
+.air-page .dial.left .level { right: auto; left: 7%; }
+.air-page .dial .level i { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--part) * 100%); background: var(--tint); transition: height 0.15s ease, background 0.3s ease; }
+.air-page .dial.off b, .air-page .dial.off .icon { color: rgba(255, 255, 255, 0.45); }
 .air-page #note { position: fixed; left: 30px; bottom: 30px; width: min(260px, 30vw); margin: 0; font-size: 13px; color: rgba(255, 255, 255, 0.45); pointer-events: none; }
 .air-page .bar { position: fixed; right: 26px; display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); }
-.air-page #where { bottom: 78px; }
-.air-page #levels { bottom: 26px; }
-.air-page #levels::before { content: 'Fan'; padding: 0 10px 0 12px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255, 255, 255, 0.5); }
+.air-page #where { bottom: 26px; }
 .air-page .bar button { border: 0; height: 34px; min-width: 34px; padding: 0 14px; border-radius: 999px; font: inherit; font-size: 13px; color: rgba(255, 255, 255, 0.7); background: none; cursor: pointer; }
-.air-page #levels button { padding: 0; width: 34px; }
 .air-page .bar button[aria-pressed='true'] { background: #f2f2f4; color: #111; }
 @media (orientation: portrait) {
-  .air-page .side { top: 86px; transform: none; }
-  .air-page #driver { right: auto; left: 30px; text-align: left; }
-  .air-page #passenger { left: auto; right: 30px; text-align: right; }
   .air-page #note { display: none; }
   .air-page .bar { right: 50%; transform: translateX(50%); }
 }

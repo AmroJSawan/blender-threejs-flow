@@ -406,6 +406,8 @@ It is a study of the idea, not a product: the map, the tracks and the car's numb
 
 **The page** (`src/air/main.ts`) lays them together. When a set of vents is switched on its air appears and its baked light comes up on the seats and trim it reaches, so the cabin itself shows where the cool and the warm air land. The fan sets how much of both. The vents, and how strongly the air lights the cabin, are in `VENTS` and `LOOK` at the top of `make_cabin.py`.
 
+**The controls are on the car.** Its three flat panels are the controls: the one in front of each side seat sets that side's temperature (16–28 °C in half degrees), the one behind the driver sets the fan (off to 7). Slide up or down on a panel, tap its top or bottom half for one notch, or use the arrow keys. Each notch ticks and is felt, with a stop at each end, as on the Groove pages. The air and its baked light take their colour from the temperature: cool blue, through a clear near-white half-way, to warm amber (`tint` in `src/air/strands.ts`). For that, the baked light is shown as grey and coloured on the page, once for each half of the car. Where the panels lie on the picture is in `settings.panels` in `src/air/main.ts`.
+
 Also here, switched off: looping films of air simulated with Blender's fluid solver (`blender/make_air.py`, `haze` in `main.ts`). They were made for an earlier, hand-built cabin and read as smoke. Earlier live versions are in the history.
 
 ## Lab canvas (the entry page)
