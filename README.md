@@ -394,15 +394,16 @@ It is a study of the idea, not a product: the map, the tracks and the car's numb
 
 ## Air page (where it blows in the cabin)
 
-`air.html` is a study for the car screen's climate: it shows where the air comes out in the cabin and which way it goes (`src/air/main.ts`; numbers in `settings` at the top; the cabin is drawn in `air.html`).
+`air.html` is a study for the car screen's climate: it shows where the air comes out in the cabin and which way it goes, as rendered 3D.
 
-- The car is seen from above, front up, in thin lines: dashboard, windscreen, steering wheel, seats.
-- Every vent is where it is in the car and is marked: two by the doors and two in the middle of the dashboard, one along the windscreen, one by each front footwell, two for the back seats. They are listed in `settings.vents` with where each is, which way it points, how far it can be aimed, and how far its air reaches.
-- From each vent that is on, air shows as a soft, blurred plume: it leaves in the direction the vent points, spreads as it goes, and fades. It is cool blue on a cool side of the car and warm amber on a warm one.
-- The buttons choose where the air goes (face, feet, windscreen, back seats) and how hard the fan blows; more fan reaches further and moves faster.
-- Take hold of a dashboard plume and drag to aim its vent.
+Blender does the work (`blender/make_air.py`, then `blender/finish_air.py`; both run by `npm run air`, about ten minutes for each set of vents). It models the interior simply (floor, dashboard, wheel, seats, console, bench) and lets air out of each vent as simulated smoke, so it behaves like air: a jet at the vent that slows, spreads, rolls where it meets the seats and still air, and thins out. The air gives off no light; it only scatters a soft lamp, cool on the driver's side and warm on the passenger's. From straight above, framed alike, it renders:
 
-How the plumes are made: each is a fan of fine lines from its vent, with brighter runs travelling outward. The lines are not straight: they leave the vent in order and lose it with distance, wavering from side to side in waves that travel outward with the air, neighbouring lines moving together, and the plume's edges curling outward where it meets still air (`waver` and `curl` in the settings). The lines are shown faintly over a blurred copy of themselves, so the air reads as air with its strands still showing. It runs on today's WebGL. Two earlier versions are in the history: points wandering through a changing flow, and crisp wires along one drawn path.
+- `public/air/cabin.webp`: the cabin by itself, softly lit;
+- `public/air/face.mp4`, `feet.mp4`, `screen.mp4`, `back.mp4`: for each set of vents, a looping film of its air alone on black. The last frames of each are melted into its first so it loops without a jump.
+
+The page (`src/air/main.ts`) lays the films over the cabin so each shows only where it is brighter than what is under it, softens them a little, and fades a set in or out as its button is pressed. The fan sets how strongly the air shows and how fast it moves. The vents, their directions and the air's speed, reach and thickness are in `VENTS` and `AIR` at the top of `make_air.py`; add `-- --test` for a two-frame check.
+
+Because the air is rendered and not drawn live, a vent cannot be aimed by dragging. Three earlier, live versions are in the history: points wandering through a flow, crisp wires along a drawn path, and blurred plumes of wavering lines.
 
 ## Lab canvas (the entry page)
 
