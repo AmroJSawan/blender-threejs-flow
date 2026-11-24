@@ -394,15 +394,16 @@ It is a study of the idea, not a product: the map, the tracks and the car's numb
 
 ## Air page (wires of light)
 
-`air.html` is a study for how the car screen's fan could show: air drawn as fine wires of light. It follows a generative piece by Rey Rad ("a single circular composition with local attractors"), rebuilt to run live (`src/air/main.ts`; numbers in `settings` at the top).
+`air.html` is a study for how the car screen's fan could show: air drawn as fine wires of light. Its look follows a generative piece by Rey Rad (hair-thin lines gathering into silk, a fringe of colour at bright edges), but nothing in it is left to chance: the air follows a path that is drawn (`src/air/main.ts`; numbers in `settings` at the top).
 
-- A quarter of a million points (fewer on phones) each keep their place in a picture, one pixel per point, and the graphics card moves them all every frame.
-- They follow a flow with no sources or sinks (the curl of a slowly changing field with a few slow whirls in it), so they slide past one another in sheets and never simply pile up.
-- A wavering ring holds them in; held there they gather, which is what lights the outline.
-- Each point leaves a faint dot on a picture that fades slowly, so every point draws a line behind it.
-- Last, the picture is toned, a soft copy is added as glow, and red is read from a little further out than blue, which gives bright edges their fringe of colour.
+- The path is a smooth curve led by a few chosen points (`settings.path`): out of the vent on the left, up, down and away to the right.
+- The air is a ribbon of 150 lanes laid side by side along that curve, evenly spaced, each one a single unbroken wire. It is narrow at the vent and opens as it goes.
+- Part way along it meets a body. The lanes part round it and close again behind, as air does round a wing: the dark eye in the ribbon.
+- A slow swell runs down the ribbon, the same for neighbouring lanes, so it moves as one sheet. Brighter runs travel along each wire.
+- The numbers at the bottom set the fan: more fan opens more lanes, widens the ribbon and speeds the runs.
+- A finger parts the wires sideways, as another body would; they close again when it lifts.
 
-Dragging pushes the air by the finger's speed, capped, and a still finger adds nothing. The numbers at the bottom set the fan: higher is faster and brighter. It runs on today's WebGL; nothing here needs WebGPU.
+Each frame the wires are added onto a picture that fades quickly, a soft copy is added as glow, and red is read from a little further out than blue, which gives the bright edges their fringe of colour. It runs on today's WebGL; nothing here needs WebGPU. An earlier version let a quarter of a million points wander through a changing flow; it looked closer to the reference but its shape was never the same twice, which is wrong for a control.
 
 ## Lab canvas (the entry page)
 
