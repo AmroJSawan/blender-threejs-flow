@@ -23,6 +23,8 @@ const settings = {
   /** The fan: its levels, the one it starts at, how strongly air shows at the lowest and at full (0–1), and how fast the film plays at each. */
   levels: 7,
   fan: 4,
+  /** The rendered films of simulated air read as smoke, which is the wrong feeling, so they are off (0). Raise `haze` toward 1 to bring them back under the live air. */
+  haze: 0,
   shows: [0.15, 0.42],
   plays: [0.5, 1.4],
   temperatures: { driver: 19.5, passenger: 24 },
@@ -36,7 +38,7 @@ cabin.alt = ''
 car.append(cabin)
 
 const state = { fan: settings.fan, on: Object.fromEntries(settings.sets.map((set) => [set.key, set.on])) as Record<string, boolean> }
-const films = settings.sets.map((set) => {
+const films = (settings.haze > 0 ? settings.sets : []).map((set) => {
   const film = document.createElement('video')
   film.src = `${base}${set.key}.mp4`
   film.muted = true
@@ -52,7 +54,7 @@ function show() {
   Object.assign(streaks, { fan: state.fan, on: state.on })
   films.forEach((film, index) => {
     const on = state.on[settings.sets[index].key] && state.fan > 0
-    film.style.opacity = String(on ? settings.shows[0] + (settings.shows[1] - settings.shows[0]) * fan : 0)
+    film.style.opacity = String(on ? (settings.shows[0] + (settings.shows[1] - settings.shows[0]) * fan) * settings.haze : 0)
     film.playbackRate = settings.plays[0] + (settings.plays[1] - settings.plays[0]) * fan
     if (on) void film.play().catch(() => {})
   })

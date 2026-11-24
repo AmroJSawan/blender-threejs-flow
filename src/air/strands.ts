@@ -1,11 +1,13 @@
 import * as THREE from 'three'
 
 /**
- * The air's streaks: the live half of the air page. The rendered films (see main.ts) give the air its soft body; by themselves they
- * read as smoke. These give it direction: from each vent, a thin fan of faint lines with brighter runs travelling outward, wavering
- * a little and loosening with distance, blurred so they are streaks in the air and not strands of hair. There are few of them and
- * they are faint, on purpose: just enough to see which way the air is going and how fast.
- * `state` is what the page sets: which sets of vents are on, and the fan.
+ * The air, drawn live. It is meant to feel fresh: a clear breeze, not smoke or gas. So there is no cloud in it. From each vent:
+ * - a clean, even glow in the shape of the air's path, soft at its edges, cool or warm with the side's temperature and near white
+ *   at its heart;
+ * - fine, almost straight lines of light running outward in order, with brighter runs travelling along them: the air's direction
+ *   and speed;
+ * - small bright motes carried along by it, like dust in a sunbeam, each leaving a short trail.
+ * Everything fades to nothing by the end of the air's reach. `state` is what the page sets: which sets of vents are on, and the fan.
  */
 type Group = 'face' | 'feet' | 'screen' | 'back'
 type Vent = { name: string; group: Group; side: 'driver' | 'passenger'; at: [number, number]; points: number; swing: number; reach: number; spread: number; mouth: number }
@@ -32,10 +34,10 @@ const settings = {
   levels: 7,
   temperatures: { driver: 19.5, passenger: 24 },
   /** The colour of air at the coolest and the warmest setting (16 and 28 °C). */
-  cool: '#6cc4ff',
-  warm: '#ffa45c',
+  cool: '#52cfff',
+  warm: '#ffb06a',
   /** Lines in each plume and steps along each. */
-  lanes: 12,
+  lanes: 26,
   steps: 72,
   /** How much of its full reach the air has with the fan at its lowest, how fast the runs travel at the lowest and at full, and the plume's slow sway. */
   least: 0.35,
@@ -45,11 +47,15 @@ const settings = {
   waver: 0.03,
   curl: 0.025,
   /** Brightness of the lines; how much of the picture is left after a 60th of a second; how much of the sharp lines shows through the blur; how strong the blur is. */
-  dot: 0.42,
+  dot: 0.3,
   stays: 0.86,
-  grain: 0.3,
-  soft: 1.1,
+  grain: 0.42,
+  soft: 1.7,
   gain: 1.25,
+  /** How much white is in the air's colour (0 = all colour … 1 = white). */
+  white: 0.16,
+  /** The motes: how many each vent carries, how bright, their size (px), and how fast they travel compared with the bright runs. */
+  motes: { each: 46, bright: 1.5, size: [1.2, 2.6], pace: 0.42 },
   /** How near a plume a touch must land to take hold of its vent (cabin units). */
   hold: 0.2,
   maxPixelRatio: 2,
@@ -99,6 +105,35 @@ lines.setAttribute('lane', new THREE.BufferAttribute(lane, 1))
 lines.setAttribute('vent', new THREE.BufferAttribute(which, 1))
 lines.setIndex(joins)
 const count = settings.vents.length
+/** Where a point of the air is: `along` its reach (0 at the vent … 1), in which `lane` across the plume (−1 … 1), from which vent. */
+const placing = /* glsl */ `
+    uniform vec4 uVent[${count}], uForm[${count}];
+    uniform vec3 uColour[${count}], uLook;
+    uniform vec2 uShape, uTurn;
+    uniform float uTime, uRun, uFan, uWhite;
+    vec2 placed(float along, float lane, float vent, out float own) {
+      int i = int(vent + 0.5);
+      vec4 from = uVent[i];
+      vec4 form = uForm[i];
+      // The plume sways a very little, slowly; every line in it sways together.
+      float way = from.z + uLook.z * sin(uTime * 0.6 + vent * 1.7) * along;
+      // Each line leaves the vent's mouth at its own place and angle, so the plume opens as it goes.
+      float turn = way + lane * form.y * 0.5;
+      vec2 heading = vec2(cos(turn), sin(turn));
+      vec2 across = vec2(-sin(from.z), cos(from.z));
+      float far = form.x * mix(uLook.y, 1.0, uFan) * along;
+      own = fract(sin((lane + vent * 3.1) * 91.7) * 43758.5453);
+      vec2 p = from.xy + across * lane * form.z * 0.5 + heading * far;
+      // It leaves the vent in order and loosens only a little with distance: a slow swell the lines share, and a slight opening at the edges.
+      vec2 beside = vec2(-heading.y, heading.x);
+      float loose = along * sqrt(along);
+      float drift = uTime * (0.35 + 0.9 * uFan);
+      float billow = 0.62 * sin(6.2831853 * (along * 1.15 - drift * 0.5) + vent * 2.3 + lane * 1.1)
+                   + 0.3 * sin(6.2831853 * (along * 2.6 - drift * 0.8) + vent * 4.1 + lane * 2.7)
+                   + 0.04 * sin(6.2831853 * (along * 4.3 - drift * 1.1) + own * 6.2831853);
+      float curl = lane * abs(lane) * (0.55 + 0.45 * sin(6.2831853 * (along * 1.7 - drift * 0.6) + vent));
+      return p + beside * (billow * uTurn.x + curl * uTurn.y) * loose * form.x;
+    }`
 const air = new THREE.ShaderMaterial({
   blending: THREE.AdditiveBlending,
   depthTest: false,
@@ -113,46 +148,24 @@ const air = new THREE.ShaderMaterial({
     uFan: { value: 0 },
     uLook: { value: new THREE.Vector3(settings.dot, settings.least, settings.sway) },
     uTurn: { value: new THREE.Vector2(settings.waver, settings.curl) },
+    uWhite: { value: settings.white },
+    uMote: { value: new THREE.Vector4(settings.motes.bright, settings.motes.size[0], settings.motes.size[1], settings.motes.pace) },
+    uPixels: { value: 1 },
   },
   vertexShader: /* glsl */ `
     attribute float along, lane, vent;
-    uniform vec4 uVent[${count}], uForm[${count}];
-    uniform vec3 uColour[${count}], uLook;
-    uniform vec2 uShape;
-    uniform float uTime, uRun, uFan;
-    uniform vec2 uTurn;
+    ${placing}
     varying vec3 vLight;
     void main() {
       int i = int(vent + 0.5);
-      vec4 from = uVent[i];
-      vec4 form = uForm[i];
-      // The plume sways a little, slowly, as air does; every line in it sways together.
-      float way = from.z + uLook.z * sin(uTime * 0.6 + vent * 1.7) * along;
-      // Each line leaves the vent's mouth at its own place and angle, so the plume opens as it goes.
-      float turn = way + lane * form.y * 0.5;
-      vec2 heading = vec2(cos(turn), sin(turn));
-      vec2 across = vec2(-sin(from.z), cos(from.z));
-      float far = form.x * mix(uLook.y, 1.0, uFan) * along;
-      // Air slows as it goes: the lines bend a little with distance, each its own way, so the far end is loose.
-      float own = fract(sin((lane + vent * 3.1) * 91.7) * 43758.5453);
-      vec2 p = from.xy + across * lane * form.z * 0.5 + heading * far;
-      // Air does not travel in straight lines. It leaves the vent in order and loses it with distance: the plume wavers from side
-      // to side, the waves travel outward with the air, neighbouring lines move together, and each line strays a little by itself.
-      // The edges, where it meets still air, curl outward the most.
-      vec2 beside = vec2(-heading.y, heading.x);
-      float loose = along * sqrt(along);
-      float drift = uTime * (0.35 + 0.9 * uFan);
-      float billow = 0.62 * sin(6.2831853 * (along * 1.15 - drift * 0.5) + vent * 2.3 + lane * 1.1)
-                   + 0.3 * sin(6.2831853 * (along * 2.6 - drift * 0.8) + vent * 4.1 + lane * 2.7)
-                   + 0.04 * sin(6.2831853 * (along * 4.3 - drift * 1.1) + own * 6.2831853);
-      float curl = lane * abs(lane) * (0.55 + 0.45 * sin(6.2831853 * (along * 1.7 - drift * 0.6) + vent));
-      p += beside * (billow * uTurn.x + curl * uTurn.y) * loose * form.x;
+      float own;
+      vec2 p = placed(along, lane, vent, own);
       gl_Position = vec4(p * uShape, 0.0, 1.0);
       // Brighter runs travel outward; the air is strongest at the vent and gone by the end of its reach; the middle lines are strongest.
-      float run = 0.45 + 0.55 * pow(0.5 + 0.5 * cos(6.2831853 * (along * 1.6 - uRun + own)), 2.0);
+      float run = 0.5 + 0.5 * pow(0.5 + 0.5 * cos(6.2831853 * (along * 1.6 - uRun + own)), 2.0);
       float fade = smoothstep(0.0, 0.06, along) * pow(1.0 - along, 1.6);
-      float middle = 1.0 - 0.55 * lane * lane;
-      vLight = uColour[i] * uLook.x * run * fade * middle * from.w * (0.35 + 0.65 * uFan);
+      float middle = 1.0 - 0.6 * lane * lane;
+      vLight = mix(uColour[i], vec3(1.0), uWhite) * uLook.x * run * fade * middle * uVent[i].w * (0.35 + 0.65 * uFan);
     }`,
   fragmentShader: /* glsl */ `
     precision highp float;
@@ -161,7 +174,44 @@ const air = new THREE.ShaderMaterial({
 })
 const plumes = new THREE.LineSegments(lines, air)
 plumes.frustumCulled = false
-const drawing = new THREE.Scene().add(plumes)
+// The motes: small bright points carried along the same paths, each starting somewhere else and going at its own pace.
+const many = settings.vents.length * settings.motes.each
+const seeds = new Float32Array(many * 4) // vent, lane, where it starts, its own number
+for (let index = 0; index < many; index++) seeds.set([Math.floor(index / settings.motes.each), Math.random() * 1.7 - 0.85, Math.random(), Math.random()], index * 4)
+const specks = new THREE.BufferGeometry()
+specks.setAttribute('position', new THREE.BufferAttribute(new Float32Array(many * 3), 3))
+specks.setAttribute('seed', new THREE.BufferAttribute(seeds, 4))
+const motes = new THREE.Points(
+  specks,
+  new THREE.ShaderMaterial({
+    blending: THREE.AdditiveBlending,
+    depthTest: false,
+    transparent: true,
+    uniforms: air.uniforms, // the same vents, fan and time as the lines
+    vertexShader: /* glsl */ `
+      attribute vec4 seed;
+      ${placing}
+      uniform vec4 uMote;
+      uniform float uPixels;
+      varying vec3 vLight;
+      void main() {
+        int i = int(seed.x + 0.5);
+        float along = fract(seed.z + uRun * uMote.w * (0.6 + 0.8 * seed.w));
+        float own;
+        gl_Position = vec4(placed(along, seed.y, seed.x, own) * uShape, 0.0, 1.0);
+        gl_PointSize = mix(uMote.y, uMote.z, seed.w) * uPixels;
+        float fade = smoothstep(0.0, 0.1, along) * pow(1.0 - along, 1.2);
+        float glint = 0.55 + 0.45 * sin(uTime * (2.0 + 3.0 * seed.w) + seed.w * 40.0);
+        vLight = mix(uColour[i], vec3(1.0), 0.6) * uMote.x * fade * glint * uVent[i].w * (0.35 + 0.65 * uFan);
+      }`,
+    fragmentShader: /* glsl */ `
+      precision highp float;
+      varying vec3 vLight;
+      void main() { gl_FragColor = vec4(vLight * smoothstep(0.5, 0.12, length(gl_PointCoord - 0.5)), 1.0); }`,
+  }),
+)
+motes.frustumCulled = false
+const drawing = new THREE.Scene().add(plumes, motes)
 
 const fade = new THREE.ShaderMaterial({
   uniforms: { uBefore: { value: null as THREE.Texture | null }, uStays: { value: settings.stays } },
@@ -225,6 +275,7 @@ function resize() {
   // One cabin unit is half the shorter side of the window, the same as the drawing of the car over it.
   shape.set(Math.min(1, innerHeight / innerWidth), Math.min(1, innerWidth / innerHeight))
   air.uniforms.uShape.value.copy(shape)
+  air.uniforms.uPixels.value = ratio
 }
 addEventListener('resize', resize)
 resize()
