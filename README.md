@@ -402,7 +402,7 @@ It is a study of the idea, not a product: the map, the tracks and the car's numb
 - The buttons choose where the air goes (face, feet, windscreen, back seats) and how hard the fan blows; more fan reaches further and moves faster.
 - Take hold of a dashboard plume and drag to aim its vent.
 
-How the plumes are made: each is a fan of fine lines from its vent, with brighter runs travelling outward. The lines themselves are barely shown; they are blurred three times over, and it is the blur that is seen, so the air reads as air. It runs on today's WebGL. Two earlier versions are in the history: points wandering through a changing flow, and crisp wires along one drawn path.
+How the plumes are made: each is a fan of fine lines from its vent, with brighter runs travelling outward. The lines are not straight: they leave the vent in order and lose it with distance, wavering from side to side in waves that travel outward with the air, neighbouring lines moving together, and the plume's edges curling outward where it meets still air (`waver` and `curl` in the settings). The lines are shown faintly over a blurred copy of themselves, so the air reads as air with its strands still showing. It runs on today's WebGL. Two earlier versions are in the history: points wandering through a changing flow, and crisp wires along one drawn path.
 
 ## Lab canvas (the entry page)
 

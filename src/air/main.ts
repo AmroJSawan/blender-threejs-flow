@@ -8,8 +8,9 @@ import './air.css'
  * spreads as it goes, and fades. It is cool blue on a cool side of the car and warm amber on a warm side.
  *
  * How the plumes are made: each is a fan of fine lines from its vent, with brighter runs travelling outward along them. The lines
- * themselves are barely shown. They are blurred several times over, and it is the blur that is seen, so the air reads as air: soft,
- * with only a hint of its grain and movement.
+ * leave the vent in order and lose it with distance, wavering and curling as air does when it meets still air. The lines
+ * themselves are shown only faintly. They are blurred, and it is mostly the blur that is seen, so the air reads as air: soft,
+ * with its strands and their movement still showing through.
  *
  * Touch a dashboard vent's plume and drag to aim it. The buttons choose where the air goes and how hard the fan blows.
  */
@@ -42,16 +43,19 @@ const settings = {
   warm: '#ffa45c',
   /** Lines in each plume and steps along each. */
   lanes: 30,
-  steps: 48,
+  steps: 72,
   /** How much of its full reach the air has with the fan at its lowest, how fast the runs travel at the lowest and at full, and the plume's slow sway. */
   least: 0.35,
   speed: [0.25, 1.1],
   sway: 0.035,
+  /** How far the air wavers from its straight line by the end of its reach (as a share of that reach), and how far its edges curl outward. */
+  waver: 0.13,
+  curl: 0.11,
   /** Brightness of the lines; how much of the picture is left after a 60th of a second; how much of the sharp lines shows through the blur; how strong the blur is. */
-  dot: 1.9,
+  dot: 1.55,
   stays: 0.86,
-  grain: 0.12,
-  soft: 2.4,
+  grain: 0.34,
+  soft: 1.7,
   gain: 1.25,
   /** How near a plume a touch must land to take hold of its vent (cabin units). */
   hold: 0.2,
@@ -115,6 +119,7 @@ const air = new THREE.ShaderMaterial({
     uRun: { value: 0 },
     uFan: { value: 0 },
     uLook: { value: new THREE.Vector3(settings.dot, settings.least, settings.sway) },
+    uTurn: { value: new THREE.Vector2(settings.waver, settings.curl) },
   },
   vertexShader: /* glsl */ `
     attribute float along, lane, vent;
@@ -122,6 +127,7 @@ const air = new THREE.ShaderMaterial({
     uniform vec3 uColour[${count}], uLook;
     uniform vec2 uShape;
     uniform float uTime, uRun, uFan;
+    uniform vec2 uTurn;
     varying vec3 vLight;
     void main() {
       int i = int(vent + 0.5);
@@ -136,7 +142,18 @@ const air = new THREE.ShaderMaterial({
       float far = form.x * mix(uLook.y, 1.0, uFan) * along;
       // Air slows as it goes: the lines bend a little with distance, each its own way, so the far end is loose.
       float own = fract(sin((lane + vent * 3.1) * 91.7) * 43758.5453);
-      vec2 p = from.xy + across * lane * form.z * 0.5 + heading * far + across * (own - 0.5) * 0.05 * along * along;
+      vec2 p = from.xy + across * lane * form.z * 0.5 + heading * far;
+      // Air does not travel in straight lines. It leaves the vent in order and loses it with distance: the plume wavers from side
+      // to side, the waves travel outward with the air, neighbouring lines move together, and each line strays a little by itself.
+      // The edges, where it meets still air, curl outward the most.
+      vec2 beside = vec2(-heading.y, heading.x);
+      float loose = along * sqrt(along);
+      float drift = uTime * (0.35 + 0.9 * uFan);
+      float billow = 0.62 * sin(6.2831853 * (along * 1.15 - drift * 0.5) + vent * 2.3 + lane * 1.1)
+                   + 0.3 * sin(6.2831853 * (along * 2.6 - drift * 0.8) + vent * 4.1 + lane * 2.7)
+                   + 0.11 * sin(6.2831853 * (along * 4.3 - drift * 1.1) + own * 6.2831853);
+      float curl = lane * abs(lane) * (0.55 + 0.45 * sin(6.2831853 * (along * 1.7 - drift * 0.6) + vent));
+      p += beside * (billow * uTurn.x + curl * uTurn.y) * loose * form.x;
       gl_Position = vec4(p * uShape, 0.0, 1.0);
       // Brighter runs travel outward; the air is strongest at the vent and gone by the end of its reach; the middle lines are strongest.
       float run = 0.45 + 0.55 * pow(0.5 + 0.5 * cos(6.2831853 * (along * 1.6 - uRun + own)), 2.0);
@@ -310,9 +327,9 @@ function draw(now: number) {
   renderer.setRenderTarget(trails[1 - turn])
   renderer.render(fading, flat)
   renderer.render(drawing, flat)
-  // Blurred, a quarter the size, three times over and wider each time: this is the air that is seen.
+  // Blurred, a quarter the size, twice over and wider the second time: this is most of the air that is seen.
   let from = trails[1 - turn].texture
-  for (const wide of [1, 2.2, 4]) {
+  for (const wide of [1, 2.4]) {
     blur.uniforms.uFrom.value = from
     blur.uniforms.uWay.value.set(wide / soft[0].width, 0)
     renderer.setRenderTarget(soft[0])
