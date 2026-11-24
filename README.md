@@ -394,18 +394,19 @@ It is a study of the idea, not a product: the map, the tracks and the car's numb
 
 ## Air page (where it blows in the cabin)
 
-`air.html` is a study for the car screen's climate: it shows where the air comes out in the cabin and which way it goes, as rendered 3D.
+`air.html` is a study for the car screen's climate: it shows where the air comes out in the cabin, which way it goes, and what it reaches.
 
-Blender does the work (`blender/make_air.py`, then `blender/finish_air.py`; both run by `npm run air`, about ten minutes for each set of vents). It models the interior simply (floor, dashboard, wheel, seats, console, bench) and lets air out of each vent as simulated smoke, so it behaves like air: a jet at the vent that slows, spreads, rolls where it meets the seats and still air, and thins out. The air gives off no light; it only scatters a soft lamp, cool on the driver's side and warm on the passenger's. From straight above, framed alike, it renders:
+**The cabin is baked in Blender** (`blender/make_cabin.py`, run with `npm run cabin`, a few minutes). It uses an open, high-detail car model: Khronos's ["Car Concept"](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CarConcept) sample, CC-BY 4.0, made from a public-domain design by Unity Fan. The model is not kept in this repository (download `CarConcept.glb` into `blender/models/car-concept/`), and its Khronos logos, which that licence does not cover, are left out of the picture. The car seats its driver in the middle, with a seat each side just behind and one at the back. The script takes off its roof and glass, quietens its coloured trim, and renders from straight above, front of the car up:
 
-- `public/air/cabin.webp`: the cabin by itself, softly lit;
-- `public/air/face.mp4`, `feet.mp4`, `screen.mp4`, `back.mp4`: for each set of vents, a looping film of its air alone on black. The last frames of each are melted into its first so it loops without a jump.
+- `public/air/cabin.webp`: the cabin under soft studio light (a wide lamp overhead, a long low one each side);
+- `public/air/light-face.webp`, `-feet`, `-screen`, `-back`: for each set of vents, only the light its air throws on the cabin, cool on the left and warm on the right, on black;
+- `src/air/vents.json`: where each vent is in the picture and which way it blows.
 
-The page (`src/air/main.ts`) lays the films over the cabin so each shows only where it is brighter than what is under it, softens them a little, and fades a set in or out as its button is pressed. The fan sets how strongly the air shows and how fast it moves. The vents, their directions and the air's speed, reach and thickness are in `VENTS` and `AIR` at the top of `make_air.py`; add `-- --test` for a two-frame check.
+**The air is drawn live** (`src/air/strands.ts`) from those vent positions, as a clear breeze: an even glow in the shape of the air's path, fine near-straight lines of light running outward in order, and small bright motes carried along. There is no cloud in it.
 
-The films read as smoke or gas, which is the wrong feeling for fresh air, so they are switched off (`haze: 0` in `src/air/main.ts`; raise it to bring them back) and the air that is shown is drawn live (`src/air/strands.ts`) as a clear breeze: from each vent an even glow in the shape of the air's path, cool or warm with its side and near white at its heart; fine, almost straight lines of light running outward in order with brighter runs travelling along them; and small bright motes carried along, like dust in a sunbeam. There is no cloud in it, and it fades to nothing by the end of its reach.
+**The page** (`src/air/main.ts`) lays them together. When a set of vents is switched on its air appears and its baked light comes up on the seats and trim it reaches, so the cabin itself shows where the cool and the warm air land. The fan sets how much of both. The vents, and how strongly the air lights the cabin, are in `VENTS` and `LOOK` at the top of `make_cabin.py`.
 
-Because the air is rendered and not drawn live, a vent cannot be aimed by dragging. Three earlier, live versions are in the history: points wandering through a flow, crisp wires along a drawn path, and blurred plumes of wavering lines.
+Also here, switched off: looping films of air simulated with Blender's fluid solver (`blender/make_air.py`, `haze` in `main.ts`). They were made for an earlier, hand-built cabin and read as smoke. Earlier live versions are in the history.
 
 ## Lab canvas (the entry page)
 

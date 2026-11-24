@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import listed from './vents.json'
 
 /**
  * The air, drawn live. It is meant to feel fresh: a clear breeze, not smoke or gas. So there is no cloud in it. From each vent:
@@ -9,25 +10,16 @@ import * as THREE from 'three'
  * - small bright motes carried along by it, like dust in a sunbeam, each leaving a short trail.
  * Everything fades to nothing by the end of the air's reach. `state` is what the page sets: which sets of vents are on, and the fan.
  */
+const spreads: Record<Group, number> = { face: 22, feet: 50, screen: 26, back: 26 }
 type Group = 'face' | 'feet' | 'screen' | 'back'
 type Vent = { name: string; group: Group; side: 'driver' | 'passenger'; at: [number, number]; points: number; swing: number; reach: number; spread: number; mouth: number }
 const settings = {
   /**
-   * The vents (x across, y up; the cabin is about 1.24 wide and 1.9 long, its middle at 0,0; the front of the car is up).
-   * `points` is the direction it blows (degrees: 0 is toward the car's right, −90 toward the back), `swing` how far it can be aimed
-   * either way, `reach` how far its air goes at full fan, `spread` how wide the plume opens (degrees), `mouth` the vent's own width.
+   * The vents: where each is in the cabin's picture and which way it blows comes from Blender (vents.json, written by
+   * blender/make_cabin.py from the car model, so the air here starts where the vents are in the render).
+   * `spread` is how wide each set's plume opens (degrees).
    */
-  vents: [
-    { name: 'Driver, door side', group: 'face', side: 'driver', at: [-0.5, 0.4], points: -81, swing: 40, reach: 0.62, spread: 26, mouth: 0.07 },
-    { name: 'Driver, middle', group: 'face', side: 'driver', at: [-0.11, 0.4], points: -112, swing: 40, reach: 0.62, spread: 26, mouth: 0.07 },
-    { name: 'Passenger, middle', group: 'face', side: 'passenger', at: [0.11, 0.4], points: -68, swing: 40, reach: 0.62, spread: 26, mouth: 0.07 },
-    { name: 'Passenger, door side', group: 'face', side: 'passenger', at: [0.5, 0.4], points: -99, swing: 40, reach: 0.62, spread: 26, mouth: 0.07 },
-    { name: 'Windscreen', group: 'screen', side: 'driver', at: [0, 0.57], points: 90, swing: 0, reach: 0.16, spread: 30, mouth: 0.82 },
-    { name: 'Driver, feet', group: 'feet', side: 'driver', at: [-0.31, 0.46], points: -90, swing: 0, reach: 0.42, spread: 62, mouth: 0.16 },
-    { name: 'Passenger, feet', group: 'feet', side: 'passenger', at: [0.31, 0.46], points: -90, swing: 0, reach: 0.42, spread: 62, mouth: 0.16 },
-    { name: 'Back, left', group: 'back', side: 'driver', at: [-0.05, -0.32], points: -112, swing: 0, reach: 0.4, spread: 34, mouth: 0.05 },
-    { name: 'Back, right', group: 'back', side: 'passenger', at: [0.05, -0.32], points: -68, swing: 0, reach: 0.4, spread: 34, mouth: 0.05 },
-  ] as Vent[],
+  vents: listed.map((vent) => ({ ...vent, name: vent.group, swing: 0, spread: spreads[vent.group as Group] })) as Vent[],
   /** Which sets of vents start on, the fan's level (0–7), and each side's temperature (°C). */
   on: { face: true, feet: false, screen: false, back: true } as Record<Group, boolean>,
   fan: 4,
@@ -47,13 +39,13 @@ const settings = {
   waver: 0.03,
   curl: 0.025,
   /** Brightness of the lines; how much of the picture is left after a 60th of a second; how much of the sharp lines shows through the blur; how strong the blur is. */
-  dot: 0.3,
+  dot: 0.95,
   stays: 0.86,
   grain: 0.42,
-  soft: 1.7,
-  gain: 1.25,
+  soft: 2.3,
+  gain: 1.9,
   /** How much white is in the air's colour (0 = all colour … 1 = white). */
-  white: 0.16,
+  white: 0.08,
   /** The motes: how many each vent carries, how bright, their size (px), and how fast they travel compared with the bright runs. */
   motes: { each: 46, bright: 1.5, size: [1.2, 2.6], pace: 0.42 },
   /** How near a plume a touch must land to take hold of its vent (cabin units). */

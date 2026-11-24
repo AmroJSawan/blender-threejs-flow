@@ -2,14 +2,13 @@ import './air.css'
 import { state as streaks } from './strands'
 
 /**
- * Air in the cabin, as rendered 3D. Blender (blender/make_air.py) modelled the car's interior simply and let air out of each vent
- * as simulated smoke, so it behaves like air: a jet at the vent that slows, spreads, rolls where it meets the seats and still air,
- * and thins out. It rendered two things from straight above, framed alike:
- * - the cabin by itself, softly lit (public/air/cabin.webp);
- * - for each set of vents, a looping film of its air alone on black (public/air/face.mp4, feet, screen, back).
- * This page lays the films over the cabin, each showing only where it is brighter than what is under it, and fades a set in or out
- * as it is switched. By themselves the films read as smoke, so they are softened and kept faint, and over them the page draws a few
- * faint live streaks from each vent (strands.ts), which give the air its direction: soft body from the films, movement from the streaks. The fan sets how much air shows and how fast it moves. The driver's side blows cool, the passenger's warm.
+ * Air in the cabin. Two things are laid together here:
+ * - Baked in Blender (blender/make_cabin.py), from straight above and framed alike: an open, detailed car model with its roof and
+ *   glass off, under soft studio light (public/air/cabin.webp); and, for each set of vents, only the light its air throws on the
+ *   cabin, cool on the left and warm on the right (public/air/light-face.webp, feet, screen, back).
+ * - Drawn live (strands.ts): the air itself, a clear light breeze from where each vent is in that picture.
+ * When a set of vents is switched on, its air appears and its light comes up on the seats and trim it reaches; the fan sets how
+ * much of both. There are also films of simulated air (blender/make_air.py), made for an earlier cabin and switched off.
  */
 const settings = {
   folder: 'air/',
@@ -27,6 +26,8 @@ const settings = {
   haze: 0,
   shows: [0.15, 0.42],
   plays: [0.5, 1.4],
+  /** How strongly the air's baked light shows on the cabin at the lowest fan and at full (0–1). */
+  lights: [0.35, 0.95],
   temperatures: { driver: 19.5, passenger: 24 },
 }
 
@@ -38,6 +39,15 @@ cabin.alt = ''
 car.append(cabin)
 
 const state = { fan: settings.fan, on: Object.fromEntries(settings.sets.map((set) => [set.key, set.on])) as Record<string, boolean> }
+// The light each set's air throws on the cabin: shown only where it is brighter than the picture under it.
+const washes = settings.sets.map((set) => {
+  const wash = new Image()
+  wash.src = `${base}light-${set.key}.webp`
+  wash.alt = ''
+  wash.className = 'wash'
+  car.append(wash)
+  return wash
+})
 const films = (settings.haze > 0 ? settings.sets : []).map((set) => {
   const film = document.createElement('video')
   film.src = `${base}${set.key}.mp4`
@@ -52,6 +62,10 @@ const films = (settings.haze > 0 ? settings.sets : []).map((set) => {
 function show() {
   const fan = state.fan / settings.levels
   Object.assign(streaks, { fan: state.fan, on: state.on })
+  washes.forEach((wash, index) => {
+    const on = state.on[settings.sets[index].key] && state.fan > 0
+    wash.style.opacity = String(on ? settings.lights[0] + (settings.lights[1] - settings.lights[0]) * fan : 0)
+  })
   films.forEach((film, index) => {
     const on = state.on[settings.sets[index].key] && state.fan > 0
     film.style.opacity = String(on ? (settings.shows[0] + (settings.shows[1] - settings.shows[0]) * fan) * settings.haze : 0)

@@ -12,6 +12,7 @@
     "switch": "/Applications/Blender.app/Contents/MacOS/Blender --background --python blender/make_switch.py",
     "studies": "/Applications/Blender.app/Contents/MacOS/Blender --background --python blender/make_motion_studies.py --",
     "air": "/Applications/Blender.app/Contents/MacOS/Blender --background --python blender/make_air.py -- && python3 blender/finish_air.py",
+    "cabin": "/Applications/Blender.app/Contents/MacOS/Blender --background --python blender/make_cabin.py --",
     "illustration": "/Applications/Blender.app/Contents/MacOS/Blender --background --python blender/make_illustration.py",
     "switch-css": "/Applications/Blender.app/Contents/MacOS/Blender --background --python blender/render_switch_css.py",
     "export": "/Applications/Blender.app/Contents/MacOS/Blender --background blender/demo.blend --python blender/threejs_bridge.py -- --export public/scene.glb",
