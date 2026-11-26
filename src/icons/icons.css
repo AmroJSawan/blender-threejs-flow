@@ -1,0 +1,38 @@
+/* The Icons set: one icon shown large on its palette's backdrop, the rest of the set under it, and the rules they share. */
+.icons-page { --back: #eef0f5; --ink: #14161c; --quiet: rgba(20, 22, 28, 0.55); --line: rgba(20, 22, 28, 0.1); --a: #2447ff; --b: #9a4bff; --accent: #ff4f8b;
+  margin: 0; min-height: 100vh; background: var(--back); color: var(--ink); font: 500 15px/1.5 Inter, system-ui, -apple-system, 'Segoe UI', sans-serif; letter-spacing: -0.01em; transition: background 0.5s ease, color 0.5s ease; }
+.icons-page.dark { --ink: #f3f5f2; --quiet: rgba(243, 245, 242, 0.55); --line: rgba(243, 245, 242, 0.12); }
+.icons-page header { display: flex; justify-content: space-between; padding: 26px 30px; color: var(--quiet); }
+.icons-page header a { color: inherit; text-decoration: none; }
+.icons-page header span { color: var(--ink); }
+.icons-page main { display: grid; justify-items: center; gap: 22px; padding: 0 20px 80px; }
+/* The chosen icon. Its picture has its own backdrop, a little shaded by the studio's light, so its edges are faded into the page. */
+.icons-page .hero { display: grid; justify-items: center; width: 100%; }
+.icons-page #big { width: min(560px, 92vw); height: auto; aspect-ratio: 1; display: block; -webkit-mask-image: radial-gradient(closest-side, #000 68%, transparent 100%); mask-image: radial-gradient(closest-side, #000 68%, transparent 100%); animation: icons-float 6s ease-in-out infinite; transition: opacity 0.25s ease; }
+.icons-page #big.changing { opacity: 0; }
+@keyframes icons-float { 0%, 100% { transform: translateY(-5px); } 50% { transform: translateY(5px); } }
+.icons-page .words { text-align: center; margin-top: -34px; }
+.icons-page h1 { margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.03em; }
+.icons-page .words p { margin: 2px 0 0; color: var(--quiet); }
+/* The set. */
+.icons-page .row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; width: min(720px, 100%); }
+.icons-page .row button { padding: 0; border: 0; border-radius: 20px; overflow: hidden; background: none; cursor: pointer; aspect-ratio: 1; box-shadow: 0 0 0 1px var(--line); transition: box-shadow 0.2s ease, transform 0.2s ease; }
+.icons-page .row button img { width: 100%; height: 100%; display: block; object-fit: cover; transform: scale(1.25); }
+.icons-page .row button:hover { transform: translateY(-2px); }
+.icons-page .row button[aria-selected='true'] { box-shadow: 0 0 0 2px var(--ink); }
+/* The palettes. */
+.icons-page .bar { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--line); }
+.icons-page .bar button { display: flex; align-items: center; gap: 8px; border: 0; height: 36px; padding: 0 16px 0 8px; border-radius: 999px; font: inherit; font-size: 13px; color: var(--quiet); background: none; cursor: pointer; }
+.icons-page .bar button i { width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(135deg, var(--from), var(--to)); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25); }
+.icons-page .bar button[aria-checked='true'] { background: var(--ink); color: var(--back); }
+.icons-page :focus-visible { outline: 2px solid var(--a); outline-offset: 3px; }
+/* The rules. */
+.icons-page .system { width: min(720px, 100%); margin-top: 34px; padding-top: 26px; border-top: 1px solid var(--line); }
+.icons-page h2 { margin: 0 0 12px; font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--quiet); }
+.icons-page .system ol { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px 26px; font-size: 14px; font-weight: 400; color: var(--quiet); }
+.icons-page .system b { display: block; font-weight: 600; color: var(--ink); }
+.icons-page .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+.icons-page .chips span { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; font-size: 12px; color: var(--quiet); box-shadow: 0 0 0 1px var(--line); }
+.icons-page .chips i { width: 18px; height: 18px; border-radius: 6px; background: var(--chip); box-shadow: inset 0 0 0 1px rgba(128, 128, 128, 0.25); }
+@media (max-width: 560px) { .icons-page .row { grid-template-columns: repeat(3, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .icons-page #big { animation: none; } }

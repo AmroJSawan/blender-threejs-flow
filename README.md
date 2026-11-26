@@ -458,3 +458,20 @@ Set `config.cards.enabled = false` to show the scroll scene on every screen.
 - Lights are exported in "compat" units so Blender strengths roughly match three.js. Area lights are not part of glTF.
 - Hover scaling animates the object's scale; avoid tagging objects whose scale is also keyframed.
 - `.blend` and `.glb` are binary. For big scenes, set up Git LFS before committing them.
+
+## Icons: a vibrant 3D illustration system
+
+`icons.html` (lab study 13). Six icons (Folder, Wallet, Shield, Layers, Lock, Chart), each rendered in Blender in three palettes (Cobalt, Coral, Lime). The look comes from a board of references: single floating objects in frosted glass, gradient plastic, leather and metal.
+
+**The rules every icon follows** (they are what makes it a system, and they are all in `blender/make_icons.py`):
+
+- One object, floating over its own soft shadow on a plain backdrop.
+- Built from a few rounded slabs, stacked or fanned (`Icon.slab`), so the layers are what is read.
+- A fixed kit of materials (`materials`): gradient gloss in the palette's main pair of colours and in its second pair, stitched grained leather, frosted glass and frosted coloured crystal, holographic foil, matte metals (brushed, plain and gold), speckled stone, one lit layer, paper and ink. No metal is mirror-bright and no glass is clear: `LOOK["matte"]` and `LOOK["frost"]` set how matte and how frosted.
+- One palette at a time (`PALETTES`): a main pair of colours, a contrasting second pair, an accent, a backdrop.
+- One studio (`studio`): the same camera, a very soft sun so the backdrop is lit evenly, and two coloured lamps that light nothing matt and show only in reflections and through glass.
+- Small made details (stitches and dashed lines from `dashes`, printed lines from `rows`, a card's chip, screws) and one or two loose pieces.
+
+`npm run icons` renders everything (about half an hour); `-- --test` is small and quick; `-- --just wallet` renders one icon; `-- --just none` only rewrites `src/icons/icons.json`. That file lists the icons and palettes for the page, with each palette's backdrop as it actually came out under the light (`page`), so the page can take that colour and the large picture's edges fade into it. To add an icon, write a function like `wallet` and add it to `ICONS`; to add a palette, add a line to `PALETTES`.
+
+The page (`src/icons/main.ts`) only shows the pictures: one large, the set under it, a choice of palette, and the rules. The colours are shown as rendered (Blender's Standard view), because the film-like transforms wash a vivid palette out.

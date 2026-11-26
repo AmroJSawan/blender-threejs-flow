@@ -39,5 +39,5 @@ export default defineConfig({
   plugins: [reloadOnExport(), saveRecordings()],
   server: { port: 5173 },
   // The lab index (index.html) and one page per study.
-  build: { rollupOptions: { input: ['index.html', 'styles.html', 'glass.html', 'glow.html', 'materials.html', 'switch.html', 'switch3d.html', 'switch-css.html', 'expressions.html', 'illustrations.html', 'tactile.html', 'car.html', 'studies.html', 'air.html'] } },
+  build: { rollupOptions: { input: ['index.html', 'styles.html', 'glass.html', 'glow.html', 'materials.html', 'switch.html', 'switch3d.html', 'switch-css.html', 'expressions.html', 'illustrations.html', 'tactile.html', 'car.html', 'studies.html', 'air.html', 'icons.html'] } },
 })

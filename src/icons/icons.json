@@ -1,0 +1,72 @@
+{
+  "palettes": [
+    {
+      "name": "cobalt",
+      "title": "Cobalt",
+      "a": "#1f3fff",
+      "b": "#8a3dff",
+      "c": "#ff4d2e",
+      "d": "#ffa53c",
+      "accent": "#b9f227",
+      "glass": "#a9c2ff",
+      "back": "#e9ebf3",
+      "page": "#ebecf3"
+    },
+    {
+      "name": "coral",
+      "title": "Coral",
+      "a": "#ff3d24",
+      "b": "#ff8a3d",
+      "c": "#6a2bff",
+      "d": "#ff4fa8",
+      "accent": "#ffe033",
+      "glass": "#ffb7a3",
+      "back": "#f9c9bb",
+      "page": "#f6d2c5"
+    },
+    {
+      "name": "lime",
+      "title": "Lime",
+      "a": "#86dd00",
+      "b": "#0fbf73",
+      "c": "#1e9bff",
+      "d": "#7a4dff",
+      "accent": "#ff4f8b",
+      "glass": "#bff7cf",
+      "back": "#101312",
+      "page": "#353c37"
+    }
+  ],
+  "icons": [
+    {
+      "name": "folder",
+      "title": "Folder",
+      "about": "Documents kept together"
+    },
+    {
+      "name": "wallet",
+      "title": "Wallet",
+      "about": "Cards and money"
+    },
+    {
+      "name": "shield",
+      "title": "Shield",
+      "about": "Protection, in layers"
+    },
+    {
+      "name": "layers",
+      "title": "Layers",
+      "about": "A platform, built up"
+    },
+    {
+      "name": "lock",
+      "title": "Lock",
+      "about": "Private and secure"
+    },
+    {
+      "name": "chart",
+      "title": "Chart",
+      "about": "Shares of a whole"
+    }
+  ]
+}
