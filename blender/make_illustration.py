@@ -33,6 +33,7 @@ The script writes
 """
 import hashlib
 import json
+import sys
 import math
 from pathlib import Path
 
@@ -606,6 +607,8 @@ SCENES = [
             {"name": "calm", "title": "Calm", "set": {"Lines": 5, "Gap": 0.11, "Weave": 0.0, "Loosen": 1.0, "Arc": 0.12, "Dashes": 14, "Title": "Three sources,", "Title Two": "one answer"}},
             # "wire" picks how the page draws the lines: as glass tubes (the default), or gathered into one silk strand that fans out at each end.
             # "like" makes it the named variant over again, using that one's model and light; only the page's drawing differs.
+            # A silk one still gets its own picture of the light on the ground, worked out without the lines: gathered into one
+            # strand they are no longer where the model has them, so their shadows would lie beside it as dark stripes.
             {"name": "silk", "title": "Silk", "wire": "silk", "like": "flow"},
             {"name": "dense", "title": "Dense", "set": {"Lines": 15, "Gap": 0.06, "Weave": 0.32, "Loosen": 2.2, "Arc": 0.34, "Hub Radius": 1.8, "Span": 1.06, "Title": "All traffic,", "Title Two": "one protocol"}},
         ],
@@ -800,6 +803,9 @@ def light_on_ground(span, file):
     return {"span": span, "stored": LIGHT["stored"], "edge": [round(float(v), 4) for v in border]}
 
 
+MANIFEST = ROOT / "src" / "illustrations" / "scenes.json"
+
+
 def build_network(scene):
     tree = bpy.data.node_groups.new(scene["title"], "GeometryNodeTree")
     kinds = {"INT": "NodeSocketInt", "FLOAT": "NodeSocketFloat", "STRING": "NodeSocketString"}
@@ -849,16 +855,9 @@ def make(scene):
     sockets = {item.name: item for item in tree.interface.items_tree if item.item_type == "SOCKET" and item.in_out == "INPUT"}
     defaults = {name: default for name, _, default, *_ in scene["parameters"]}
 
-    out = ROOT / "public" / "illustrations" / scene["name"]
-    out.mkdir(parents=True, exist_ok=True)
-    listed = []
-    for variant in scene["variants"]:
-        if "like" in variant:
-            twin = next(entry for entry in listed if entry["name"] == variant["like"])
-            listed.append({**twin, "name": variant["name"], "title": variant["title"], "wire": variant.get("wire", "tubes")})
-            continue
-        values = {**defaults, **variant["set"]}
-        for name, value in {**values, **PAGE_DRAWS}.items():
+    def finished(numbers):
+        """The scene with these numbers, as a plain mesh of its own in the room."""
+        for name, value in numbers.items():
             modifier[sockets[name].identifier] = value
         scene_object.update_tag()
         graph = bpy.context.evaluated_depsgraph_get()
@@ -866,6 +865,38 @@ def make(scene):
         baked = bpy.data.meshes.new_from_object(scene_object.evaluated_get(graph), depsgraph=graph)
         shown = bpy.data.objects.new(title, baked)
         bpy.context.scene.collection.objects.link(shown)
+        return baked, shown
+
+    out = ROOT / "public" / "illustrations" / scene["name"]
+    out.mkdir(parents=True, exist_ok=True)
+    listed = []
+    # With --keep, variants already listed in scenes.json are not made again; only what is new or made "like" another is.
+    kept = {}
+    if "--keep" in sys.argv and MANIFEST.exists():
+        before = next((entry for entry in json.loads(MANIFEST.read_text()) if entry["name"] == scene["name"]), {"variants": []})
+        kept = {entry["name"]: entry for entry in before["variants"] if entry["name"] == entry["file"] and (out / f"{entry['file']}.glb").exists()}
+    for variant in scene["variants"]:
+        if "like" in variant:
+            twin = next(entry for entry in listed if entry["name"] == variant["like"])
+            again = {**twin, "name": variant["name"], "title": variant["title"], "wire": variant.get("wire", "tubes")}
+            if variant.get("wire") == "silk":
+                baked, shown = finished({**twin["values"], **PAGE_DRAWS})
+                for index, material in enumerate(baked.materials):
+                    if material and material.name == "Wire":
+                        baked.materials[index] = bpy.data.materials[UNSEEN[0]]   # seen through: no shadow, no glow
+                picture = out / f"{variant['name']}.webp"
+                again["ground"] = light_on_ground(scene["span"], picture)
+                again["light"] = variant["name"]
+                again["version"] = hashlib.md5((twin["version"]).encode() + picture.read_bytes()).hexdigest()[:8]
+                bpy.data.objects.remove(shown)
+                bpy.data.meshes.remove(baked)
+            listed.append(again)
+            continue
+        if variant["name"] in kept:   # --keep: this one was made before and is taken as it is
+            listed.append({"light": variant["name"], **kept[variant["name"]]})
+            continue
+        values = {**defaults, **variant["set"]}
+        baked, shown = finished({**values, **PAGE_DRAWS})
         bpy.ops.object.select_all(action="DESELECT")
         shown.select_set(True)
         bpy.context.view_layer.objects.active = shown
@@ -882,6 +913,7 @@ def make(scene):
             "title": variant["title"],
             "wire": variant.get("wire", "tubes"),
             "file": variant["name"],
+            "light": variant["name"],   # whose picture of the light on the ground it uses
             "version": hashlib.md5(file.read_bytes() + (out / f"{variant['name']}.webp").read_bytes() + (out / f"{variant['name']}-parts.webp").read_bytes()).hexdigest()[:8],
             "ground": lit,
             "parts": parts,
@@ -908,7 +940,7 @@ def make(scene):
 
 def main():
     manifest = [make(scene) for scene in SCENES]
-    target = ROOT / "src" / "illustrations" / "scenes.json"
+    target = MANIFEST
     target.write_text(json.dumps(manifest, indent=2) + "\n")
     print("wrote", target)
 

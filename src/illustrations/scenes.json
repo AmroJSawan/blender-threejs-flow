@@ -103,6 +103,7 @@
     ],
     "variants": [
       {
+        "light": "wide",
         "name": "wide",
         "title": "Wide",
         "wire": "tubes",
@@ -149,6 +150,7 @@
         }
       },
       {
+        "light": "tall",
         "name": "tall",
         "title": "Tall",
         "wire": "tubes",
@@ -195,6 +197,7 @@
         }
       },
       {
+        "light": "quiet",
         "name": "quiet",
         "title": "Quiet",
         "wire": "tubes",
@@ -374,6 +377,7 @@
     ],
     "variants": [
       {
+        "light": "flow",
         "name": "flow",
         "title": "Flow",
         "wire": "tubes",
@@ -427,6 +431,7 @@
         }
       },
       {
+        "light": "calm",
         "name": "calm",
         "title": "Calm",
         "wire": "tubes",
@@ -480,11 +485,12 @@
         }
       },
       {
+        "light": "silk",
         "name": "silk",
         "title": "Silk",
         "wire": "silk",
         "file": "flow",
-        "version": "c642c725",
+        "version": "316ac554",
         "ground": {
           "span": 28.0,
           "stored": 3.0,
@@ -533,6 +539,7 @@
         }
       },
       {
+        "light": "dense",
         "name": "dense",
         "title": "Dense",
         "wire": "tubes",
