@@ -64,9 +64,10 @@ const settings = {
    * `colour` is the silk. The middle line is the sharp `core`; the others are soft `veil`s, `wide` times thicker, that drift round it.
    * `tight` is how much of the bundle's width the gathered strand keeps (0–1), and `fan` how much of the line's length each fan takes.
    * `turns` is how many times the veils wind round the core on the way, `drift` how fast they slide (turns a second),
-   * `ends` how bright the fans are, and `seconds` how long the soft light running along the strand takes to cross it.
+   * `spread` is how far the strand opens at each end (0 = it stays one strand and ends in a single dot … 1 = it fans out to the modelled lines, each with its own dot).
+   * `ends` how bright the strand's two ends are, and `seconds` how long the soft light running along the strand takes to cross it.
    */
-  silk: { colour: '#eafff3', core: 0.95, veil: 0.09, wide: 2.4, tight: 0.5, fan: 0.07, turns: 1.3, drift: 0.07, ends: 0.32, seconds: 2.2 },
+  silk: { colour: '#eafff3', core: 0.95, veil: 0.09, wide: 2.4, tight: 0.5, fan: 0.07, spread: 0, turns: 1.3, drift: 0.07, ends: 0.05, seconds: 2.2 },
   /** Plain parts: colour, and how solid (1 = opaque). `bright` above 1 makes a part glow; `flat` marks parts with no thickness. */
   parts: {
     Outline: { colour: '#2c3b33' },
@@ -261,6 +262,7 @@ const groundMaterial = new THREE.ShaderMaterial({
       #include <colorspace_fragment>
     }`,
 })
+for (const dot of ['Port', 'Node']) materials.set(dot, materials.get('Dim')!)
 materials.set('Ground', groundMaterial)
 /** The hub's plate: dark, with a faint grid that fades out toward the rim, under the light Blender worked out (the ring's glow along its edge). */
 const plateMaterial = new THREE.ShaderMaterial({
@@ -373,6 +375,7 @@ const silkMaterial = new THREE.ShaderMaterial({
     uGather: { value: new THREE.Vector4(settings.silk.tight, settings.silk.fan, settings.silk.turns, settings.silk.drift) },
     uLines: { value: new THREE.Vector2(9, 0.011) }, // lines in a bundle, radius of one
     uPace: { value: 1 / settings.silk.seconds },
+    uSpread: { value: settings.silk.spread },
     uTime: clock,
   },
   vertexShader: /* glsl */ `
@@ -382,7 +385,7 @@ const silkMaterial = new THREE.ShaderMaterial({
     varying vec3 vStrand;   // how far along, how much of a fan, how much the core
     uniform vec4 uGather, uLook;
     uniform vec2 uLines;
-    uniform float uTime;
+    uniform float uTime, uSpread;
     void main() {
       float along = _flow.x;
       float fanned = min(exp(-along / uGather.y) + exp(-(1.0 - along) / uGather.y), 1.0);   // 1 at either end, 0 on the way
@@ -392,7 +395,7 @@ const silkMaterial = new THREE.ShaderMaterial({
       float own = fract(sin(_flow.y * 12.9898) * 43758.5453);
       float turn = 6.2831853 * (along * uGather.z * (0.7 + 0.6 * own) + own + uTime * uGather.w);
       float open = uGather.x * (1.0 - fanned) * sin(along * 3.1415927);                     // the veils leave the core and return to it
-      vec3 gathered = out3 * (fanned + open * sin(turn)) + vec3(0.0, far * open * (0.5 + 0.5 * cos(turn)), 0.0);
+      vec3 gathered = out3 * (fanned * uSpread + open * sin(turn)) + vec3(0.0, far * open * (0.5 + 0.5 * cos(turn)), 0.0);
       float thicker = mix(uLook.z, 1.0, max(core, fanned));
       vec3 placed = position - out3 + gathered + normal * uLines.y * (thicker - 1.0);
       vec4 seen = modelViewMatrix * vec4(placed, 1.0);
@@ -471,6 +474,8 @@ function load(illustration: Illustration, variant: Variant): Promise<Shown> {
         if (!(child instanceof THREE.Mesh)) return
         const part = (child.material as THREE.Material).name
         child.material = part === 'Wire' && variant.wire === 'silk' ? silkMaterial : (materials.get(part) ?? materials.get('Ink')!)
+        // A bundle ends either in a small dot for every line, or, gathered into one strand, in a single larger one.
+        if (part === 'Port' || part === 'Node') child.visible = (part === 'Node') === (variant.wire === 'silk' && settings.silk.spread < 0.5)
         if (part !== 'Ground') return
         child.renderOrder = -1
         child.scale.setScalar(settings.ground.reach) // the sheet carries on, dots and all, until its light has faded out

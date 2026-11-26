@@ -45,7 +45,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # The typeface: Inter (SIL Open Font License, see blender/fonts/OFL.txt). Headline words use the heavier one.
 FONTS = {"medium": "Inter-Medium.ttf", "bold": "Inter-SemiBold.ttf"}
 
-MATERIALS = ["Ground", "Dot", "Outline", "Card", "Panel", "Tile", "Ink", "Dim", "Accent", "Glow", "Chip", "Plate", "Ring", "Wire"]
+MATERIALS = ["Ground", "Dot", "Outline", "Card", "Panel", "Tile", "Ink", "Dim", "Accent", "Glow", "Chip", "Plate", "Ring", "Wire", "Port", "Node"]
 
 # The card's own layout, metres. These are proportions of the design rather than things to tune per variant.
 PAD = 0.3            # from the card's edge to its contents
@@ -73,7 +73,7 @@ LIGHT = {
 }
 # The colours the glowing parts shine with: a card's far-left and near-right corners, the line, the ring.
 RECEIVES = ("Card", "Chip", "Plate")                      # materials whose light is worked out, besides the ground
-UNSEEN = ("Ink", "Dim", "Accent", "Panel", "Tile")        # words and thin overlays: they cast no shadow and bounce no light
+UNSEEN = ("Ink", "Dim", "Accent", "Panel", "Tile", "Port", "Node")        # words and thin overlays: they cast no shadow and bounce no light
 SHINES = {"card_far": "#3bcf7b", "card_near": "#1b8fa9", "glow": "#46f58a", "ring": "#eefff4", "wire": "#7dffb0"}
 
 
@@ -542,7 +542,13 @@ def build_gateway(net, P):
         port = net.add("GeometryNodeMeshCircle", {"Vertices": 10, "Radius": m("MULTIPLY", P["Wire"], 2.6)})
         net.choose(port, "fill_type", "NGON", label="N-Gon")
         ports = net.add("GeometryNodeInstanceOnPoints", {"Points": lines, "Selection": net.out(ends, "Selection"), "Instance": port.outputs[0]})
-        return net.moved(net.join(wires, net.material(net.moved(ports.outputs[0], (0.0, 0.0, 0.012)), "Dim")), (0.0, 0.0, 0.016))
+        # One larger dot at each end of the whole bundle too, for when the page gathers the lines into a single strand: it shows
+        # either these ("Node") or the small ones at every line's end ("Port"), never both.
+        node = net.add("GeometryNodeMeshCircle", {"Vertices": 24, "Radius": m("MULTIPLY", P["Wire"], NODE)})
+        net.choose(node, "fill_type", "NGON", label="N-Gon")
+        nodes = net.add("GeometryNodeInstanceOnPoints", {"Points": net.out(path, "Curve"), "Selection": net.out(ends, "Selection"), "Instance": node.outputs[0]})
+        dots = net.join(net.material(net.moved(ports.outputs[0], (0.0, 0.0, 0.012)), "Port"), net.material(net.moved(nodes.outputs[0], (0.0, 0.0, 0.013)), "Node"))
+        return net.moved(net.join(wires, dots), (0.0, 0.0, 0.016))
 
     bundles = net.join(*[bundle(*each) for each in BUNDLES])
 
@@ -803,6 +809,7 @@ def light_on_ground(span, file):
     return {"span": span, "stored": LIGHT["stored"], "edge": [round(float(v), 4) for v in border]}
 
 
+NODE = 4.6   # the single dot at the end of a gathered bundle: its radius, in line radii
 MANIFEST = ROOT / "src" / "illustrations" / "scenes.json"
 
 
@@ -872,7 +879,8 @@ def make(scene):
     listed = []
     # With --keep, variants already listed in scenes.json are not made again; only what is new or made "like" another is.
     kept = {}
-    if "--keep" in sys.argv and MANIFEST.exists():
+    only = sys.argv[sys.argv.index("--just") + 1] if "--just" in sys.argv else scene["name"]   # --just <name>: make only that one again
+    if ("--keep" in sys.argv or only != scene["name"]) and MANIFEST.exists():
         before = next((entry for entry in json.loads(MANIFEST.read_text()) if entry["name"] == scene["name"]), {"variants": []})
         kept = {entry["name"]: entry for entry in before["variants"] if entry["name"] == entry["file"] and (out / f"{entry['file']}.glb").exists()}
     for variant in scene["variants"]:

@@ -377,12 +377,12 @@
     ],
     "variants": [
       {
-        "light": "flow",
         "name": "flow",
         "title": "Flow",
         "wire": "tubes",
         "file": "flow",
-        "version": "c642c725",
+        "light": "flow",
+        "version": "cbe364ce",
         "ground": {
           "span": 28.0,
           "stored": 3.0,
@@ -431,12 +431,12 @@
         }
       },
       {
-        "light": "calm",
         "name": "calm",
         "title": "Calm",
         "wire": "tubes",
         "file": "calm",
-        "version": "0ffa9d5d",
+        "light": "calm",
+        "version": "d70c8324",
         "ground": {
           "span": 28.0,
           "stored": 3.0,
@@ -485,12 +485,12 @@
         }
       },
       {
-        "light": "silk",
         "name": "silk",
         "title": "Silk",
         "wire": "silk",
         "file": "flow",
-        "version": "316ac554",
+        "light": "silk",
+        "version": "496eff6e",
         "ground": {
           "span": 28.0,
           "stored": 3.0,
@@ -539,12 +539,12 @@
         }
       },
       {
-        "light": "dense",
         "name": "dense",
         "title": "Dense",
         "wire": "tubes",
         "file": "dense",
-        "version": "2ded85bf",
+        "light": "dense",
+        "version": "0d898d51",
         "ground": {
           "span": 28.0,
           "stored": 3.0,
